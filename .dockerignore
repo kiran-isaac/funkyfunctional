@@ -1,0 +1,6 @@
+node_modules
+build
+
+wasm-lib/target
+wasm-lib/pkg
+wasm-lib/cargo-lock
