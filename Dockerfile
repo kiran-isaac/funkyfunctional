@@ -1,6 +1,6 @@
 FROM rust:1.80 AS wasm-builder
 
-COPY ./wasm-lib /redexplore/wasm-lib
+COPY wasm-lib /redexplore/wasm-lib
 
 # Install wasm-pack
 RUN cargo install wasm-pack
