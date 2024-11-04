@@ -14,7 +14,7 @@ pub fn greet() {
 
 #[wasm_bindgen]
 pub fn add(a: i32, b: i32) -> i32 {
-    a + b
+    sfl_lib::add(a as i64, b as i64) as i32
 }
 
 #[wasm_bindgen]
