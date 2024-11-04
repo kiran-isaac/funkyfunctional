@@ -1,0 +1,7 @@
+[package]
+name = "sfl_compiler"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sfl_lib = {path = "../sfl_compiler/sfl_lib"}
