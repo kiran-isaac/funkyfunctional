@@ -1,0 +1,3 @@
+[submodule "sfl_compiler"]
+	path = sfl_compiler
+	url = git@github.com:kiran-isaac/sfl_compiler.git
