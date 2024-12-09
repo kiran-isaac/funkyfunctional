@@ -116,6 +116,12 @@ impl Type {
   }
 }
 
+impl ToString for Type {
+  fn to_string(&self) -> String {
+    self.name.clone()
+  }
+}
+
 // eg List a = Cons a (List a) | Nil
 // would be represented as
 /*
