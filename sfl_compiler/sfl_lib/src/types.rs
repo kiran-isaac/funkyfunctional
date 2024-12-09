@@ -1,116 +1,176 @@
-use std::{collections::HashMap, hash::Hash};
-
 type TypeID = u64;
+
+use std::{collections::HashMap, primitive};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Primitive {
   Invalid,
   
-  Char,
-  Short,
-  Int,
-  Long,
+  Int8,
+  Int16,
+  Int32,
+  Int64,
 
-  Float,
-  Double,
+  F16,
+  F32,
+  F64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-enum TypeKind {
-  Primitive,
-  List,
-  Alias,
-  Tuple,
-  GenericParameter,
-  Function,
+#[derive(Debug, Clone)]
+pub enum TypeConstructorArg {
+  // Another type
+  Existing(TypeID, Vec<TypeConstructorArg>),
+  // This type
+  Recursive(Vec<TypeConstructorArg>),
+  // Index of the generic parameter
+  Generic(u64)
 }
 
+type TypeConstructor = Vec<TypeConstructorArg>;
+type FunctionSignature = Vec<TypeID>;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 enum TypeValue {
   Primitive(Primitive),
-  List(Box<Type>),
   Alias(TypeID),
-  Tuple(Vec<TypeID>),
-  GenericParameter(TypeID),
-  Function(Box<Type>, Box<Type>),
+  NotPrimitive(HashMap<String, TypeConstructor>),
+  Function(FunctionSignature),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct Type {
-  kindedness : usize,
-  kind : TypeKind,
-  name : String,
-  value : TypeValue
-}
+  name: String,
+  generic_params: Vec<String>,
 
-impl Clone for Type {
-  fn clone(&self) -> Type {
-    Type {
-      kind : self.kind.clone(),
-      kindedness : self.kindedness,
-      name : self.name.clone(),
-      value : match &self.value {
-        TypeValue::Primitive(p) => TypeValue::Primitive(*p),
-        TypeValue::List(ty) => TypeValue::List(Box::new(*ty.clone())),
-        TypeValue::Alias(id) => TypeValue::Alias(*id),
-        TypeValue::Tuple(ids) => TypeValue::Tuple(ids.clone()),
-        TypeValue::GenericParameter(id) => TypeValue::GenericParameter(*id),
-        TypeValue::Function(ty1, ty2) => TypeValue::Function(Box::new(*ty1.clone()), Box::new(*ty2.clone()))
-      }
-    }
-  }
+  value: TypeValue,
 }
 
 impl Type {
-  pub fn new_primitive(name : String, primitive : Primitive) -> Type {
-    Type {
-      kind : 0,
-      kindedness : TypeKind::Primitive,
-      name,
+  pub fn new_non_primitive(name : &str, generic_params : Vec<&str>, constructors : Vec<(&str, Vec<TypeConstructorArg>)>) -> Self {
+    let constructors = constructors.into_iter().map(|(k, v)| (k.to_string(), v)).collect();
+
+    Self {
+      name : name.to_string(),
+      generic_params : generic_params.into_iter().map(|n| n.to_string()).collect(),
+      value : TypeValue::NotPrimitive(constructors)
+    }
+  }
+
+  pub fn new_function(name : &str, signature : FunctionSignature) -> Self {
+    Self {
+      name : name.to_string(),
+      generic_params : vec![],
+      value : TypeValue::Function(signature),
+    }
+  }
+
+  pub fn from_primitive(primitive : Primitive) -> Self {
+    Self {
+      name : "".to_string(),
+      generic_params : vec![],
       value : TypeValue::Primitive(primitive)
     }
   }
 
-  pub fn new_list(name : String, ty : Type) -> Type {
-    Type {
-      kind : 0,
-      kindedness : TypeKind::List,
-      name,
-      value : TypeValue::List(Box::new(ty))
+  pub fn make_alias(name : &str, type_id : TypeID) -> Self {
+    Self {
+      name : name.to_string(),
+      generic_params : vec![],
+      value : TypeValue::Alias(type_id)
     }
+  }
+
+  pub fn id_from_primitive(primitive : Primitive) -> TypeID {
+    match primitive {
+      Primitive::Invalid => 0,
+      Primitive::Int8 => 1,
+      Primitive::Int16 => 2,
+      Primitive::Int32 => 3,
+      Primitive::Int64 => 4,
+      Primitive::F16 => 5,
+      Primitive::F32 => 6,
+      Primitive::F64 => 7,
+    }
+  }
+
+  pub fn fill_generic(&self, type_constructor_arg : TypeConstructorArg) -> Result<Type, ()> {
+    match &self.value {
+      TypeValue::Alias(_) | TypeValue::Primitive(_) | TypeValue::Function(_) => {
+        return Err(());
+      },
+      TypeValue::NotPrimitive(_) => {}
+    }
+
+    let cloned = self.clone();
+
+    for (i, param) in self.generic_params.iter().enumerate() {
+      match type_constructor_arg {
+        TypeConstructorArg::Generic(n) if n == i as u64 => {
+          return Ok(cloned);
+        },
+        _ => {}
+      }
+    }
+
+    Ok(cloned)
   }
 }
 
-// struct TypeTable {
-//   map : HashMap<TypeID, Type>
-// }
+// eg List a = Cons a (List a) | Nil
+// would be represented as
+/*
+Type {
+  name: "List",
+  generic_params: ["a"],
+  constructors: {
+    "Cons": [[Generic(0), Recursive(Generic(0))]],
+    "Nil": []
+  }
+}
+*/
 
-// impl TypeTable {
-//   fn new() -> TypeTable {
-//     let mut map: HashMap<TypeID, Type> = HashMap::new();
+pub struct TypeTable {
+  types : Vec<Type>
+}
 
-//     map.insert(0, Type::Primitive(Primitive::Invalid));
+impl TypeTable {
+  pub fn new() -> Self {
+    let mut man = Self {
+      types : Vec::new()
+    };
 
-//     map.insert(1, Type::Primitive(Primitive::Char));
-//     map.insert(2, Type::Primitive(Primitive::Short));
-//     map.insert(3, Type::Primitive(Primitive::Int));
-//     map.insert(4, Type::Primitive(Primitive::Long));
+    man.add_type(Type::from_primitive(Primitive::Invalid));
 
-//     map.insert(5, Type::Primitive(Primitive::Float));
-//     map.insert(6, Type::Primitive(Primitive::Double));
+    man.add_type(Type::from_primitive(Primitive::Int8));
+    man.add_type(Type::from_primitive(Primitive::Int16));
+    man.add_type(Type::from_primitive(Primitive::Int32));
+    man.add_type(Type::from_primitive(Primitive::Int64));
 
-//     TypeTable {
-//       map : HashMap::new()
-//     }
-//   }
+    man.add_type(Type::from_primitive(Primitive::F16));
+    man.add_type(Type::from_primitive(Primitive::F32));
+    man.add_type(Type::from_primitive(Primitive::F64));
+
+    let unit = Type::new_non_primitive("Unit", vec![], vec![("()", vec![])]);
+    let list = Type::new_non_primitive("List", vec!["T"], vec![("Nil", vec![]), ("Cons", vec![TypeConstructorArg::Generic(0), TypeConstructorArg::Recursive(vec![TypeConstructorArg::Generic(0)])])]);
+
+    man
+  }
+
+  pub fn len(&self) -> usize {
+    self.types.len()
+  }
+
+  pub fn add_type(&mut self, type_ : Type) -> TypeID {
+    let id = self.types.len() as TypeID;
+    self.types.push(type_);
+    id
+  }
   
-//   pub fn get(&self, id : TypeID) -> Option<&Type> {
-//     self.map.get(&id)
-//   }
+  pub fn get_type(&self, id : TypeID) -> Result<Type, ()> {
+    if (self.types.len() as TypeID) <= id {
+      return Err(());
+    }
 
-//   pub fn insert(&mut self, ty : Type) {
-//     let id = self.map.len() as TypeID;
-//     self.map.insert(id, ty);
-//   }
-// }
+    Ok(self.types[id as usize].clone())
+  }
+}
