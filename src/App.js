@@ -9,6 +9,7 @@ function App() {
         <img src={logo} className="App-logo" alt="logo" />
         <p>
           {wasm.hello_world()}
+          {wasm.add(1, 2)}
         </p>
       </header>
     </div>
