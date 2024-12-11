@@ -2,12 +2,15 @@ use sfl_lib::parser::SflParser;
 use pest::Parser;
 use sfl_lib::parser::Rule;
 
-fn parse(input : &str, level : Rule) -> Rule {
+fn parse(input : &str, level : Rule) -> Result<Rule, ()> {
   let parse_result = SflParser::parse(level, input);
 
   match parse_result {
-    Ok(p) => {return p.next().unwrap().se},
-    Err(e) => {println!("{}", e.to_string())}
+    Ok(mut p) => {Ok(p.next().unwrap().as_rule())},
+    Err(e) => {
+      println!("{}", e.to_string());
+      Err(())
+    }
   }
 }
 
