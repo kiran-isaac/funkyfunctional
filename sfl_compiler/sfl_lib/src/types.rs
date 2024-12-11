@@ -1,6 +1,6 @@
 type TypeID = u64;
 
-use std::{collections::HashMap, primitive};
+use std::{collections::HashMap};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Primitive {

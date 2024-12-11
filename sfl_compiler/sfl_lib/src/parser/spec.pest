@@ -1,0 +1,18 @@
+File = { SOI ~ (TopLevelStatement | Comment)* ~ EOI }
+
+Comment = _{ SingleLineComment | MultiLineComment }
+SingleLineComment = { "//" ~ (!"\n" ~ ANY)* }
+MultiLineComment  = { "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+
+Identifier = @{ ASCII_ALPHA_LOWER ~ (ASCII_ALPHANUMERIC | "_")* }
+
+TopLevelStatement = {Identifier ~ "=" ~ Expression}
+
+FunctionCall = { Identifier ~ (Expression)* }
+
+Expression = { "(" ~ Expression ~ ")" | Primary }
+Primary = _{ FunctionCall | Identifier | "(" ~ Expression ~ ")" | IntLit }
+
+IntLit = @{ ASCII_DIGIT+ }
+
+WHITESPACE = _{ " " }
