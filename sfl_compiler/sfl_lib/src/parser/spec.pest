@@ -1,4 +1,4 @@
-File = { SOI ~ (TopLevelStatement | Comment)* ~ EOI }
+File = { SOI ~ (TopLevelStatement | "\n" | Comment)* ~ EOI }
 
 Comment = _{ SingleLineComment | MultiLineComment }
 SingleLineComment = { "//" ~ (!"\n" ~ ANY)* }
@@ -6,12 +6,22 @@ MultiLineComment  = { "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
 
 Identifier = @{ ASCII_ALPHA_LOWER ~ (ASCII_ALPHANUMERIC | "_")* }
 
+FunctionName = { Identifier }
+FunctionDefinition = { FunctionName ~ (Identifier)* ~ "=" ~ Expression }
+Function = { Identifier | "\\" ~ (Identifier+ | "_") ~ "." ~ Function }
+
 TopLevelStatement = {Identifier ~ "=" ~ Expression}
 
 FunctionCall = { Identifier ~ (Expression)* }
 
 Expression = { "(" ~ Expression ~ ")" | Primary }
 Primary = _{ FunctionCall | Identifier | "(" ~ Expression ~ ")" | IntLit }
+
+Application = { "(" ~ Term ~ Term ~ ")" }
+
+Term = { Identifier | Literal | Application }
+
+Literal = { IntLit }
 
 IntLit = @{ ASCII_DIGIT+ }
 
