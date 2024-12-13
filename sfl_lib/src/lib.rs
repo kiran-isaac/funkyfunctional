@@ -6,6 +6,8 @@ pub mod types2;
 pub mod parser;
 pub mod terms;
 
+pub use parser::lexer::Lexer;
+
 pub fn add(left: i64, right: i64) -> i64 {
     left + right
 }
