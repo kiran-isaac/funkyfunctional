@@ -1,20 +1,26 @@
 pub use super::token::*;
 
-pub type LexerError = String;
+pub struct LexerError {
+    pub e : String,
+    pub line : usize,
+    pub col : usize,
+}
 
 pub struct Lexer {
-    filename: String,
     file: Vec<char>,
     i: usize,
+    pub line: usize,
+    pub col: usize
 }
 
 impl Lexer {
-    pub fn new(filename: String, file: String) -> Self {
+    pub fn new(file: String) -> Self {
         let vec = file.chars().collect();
         Lexer {
-            filename,
             file: vec,
             i: 0,
+            line: 0,
+            col: 0,
         }
     }
 
@@ -23,10 +29,24 @@ impl Lexer {
         self.file[self.i]
     }
 
-    #[inline(always)]
+    fn next(&mut self) {
+        self.col += 1;
+        self.i += 1;
+    }
+
+    fn error(&self, msg : String) -> LexerError {
+        LexerError {e: msg, line : self.line, col : self.col}
+    }
+
     fn skip_whitespace(&mut self) {
         while self.i < self.file.len() && self.file[self.i].is_whitespace() {
-            self.i += 1;
+            if self.c() == '\n' {
+                self.line += 1;
+                self.col = 0;
+                self.i += 1;
+            } else {
+                self.next();
+            }
         }
     }
 
