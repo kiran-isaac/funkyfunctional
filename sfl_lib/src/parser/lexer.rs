@@ -1,23 +1,25 @@
 pub use super::token::*;
 
 pub struct LexerError {
-    pub e : String,
-    pub line : usize,
-    pub col : usize,
+    pub e: String,
+    pub line: usize,
+    pub col: usize,
 }
 
 pub struct Lexer {
     file: Vec<char>,
+    filename: Option<String>,
     i: usize,
     pub line: usize,
-    pub col: usize
+    pub col: usize,
 }
 
 impl Lexer {
-    pub fn new(file: String) -> Self {
+    pub fn new(file: String, filename: Option<String>) -> Self {
         let vec = file.chars().collect();
         Lexer {
             file: vec,
+            filename,
             i: 0,
             line: 0,
             col: 0,
@@ -29,13 +31,30 @@ impl Lexer {
         self.file[self.i]
     }
 
-    fn next(&mut self) {
+    fn advance(&mut self) {
         self.col += 1;
         self.i += 1;
     }
 
-    fn error(&self, msg : String) -> LexerError {
-        LexerError {e: msg, line : self.line, col : self.col}
+    fn error(&self, msg: String) -> LexerError {
+        LexerError {
+            e: format!("error: [{}]: {}", self.pos_string(), msg),
+            line: self.line,
+            col: self.col,
+        }
+    }
+
+    #[inline(always)]
+    pub fn pos_string(&self) -> String {
+        format!(
+            "{}:{}/{}",
+            match &self.filename {
+                None => "".to_string(),
+                Some(f) => f.clone(),
+            },
+            self.line,
+            self.col
+        )
     }
 
     fn skip_whitespace(&mut self) {
@@ -45,7 +64,7 @@ impl Lexer {
                 self.col = 0;
                 self.i += 1;
             } else {
-                self.next();
+                self.advance();
             }
         }
     }
@@ -66,9 +85,45 @@ impl Lexer {
         }
 
         return Ok(Token {
-            tt: TokenType::Identifier,
+            tt: TokenType::Id,
             value: str,
         });
+    }
+
+    fn parse_num_lit(&mut self) -> Result<Token, LexerError> {
+        let mut str = String::new();
+
+        let mut has_point = false;
+
+        while !self.c().is_whitespace() {
+            match self.c() {
+                '0'..'9' => {
+                    str.push(self.c());
+                }
+                '.' => {
+                    if has_point {
+                        return Err(self.error(format!("Unexpected char: {}", self.c())));
+                    }
+                    has_point = true;
+                    str.push(self.c());
+                }
+                _ => return Err(self.error(format!("Unexpected char in char literal: {}", self.c()))),
+            }
+
+            self.advance();
+        }
+
+        if has_point {
+            return Ok(Token {
+                tt: TokenType::FloatLit,
+                value: str,
+            });
+        } else {
+            return Ok(Token {
+                tt: TokenType::IntLit,
+                value: str,
+            });
+        }
     }
 
     pub fn get_token(&mut self) -> Result<Token, LexerError> {

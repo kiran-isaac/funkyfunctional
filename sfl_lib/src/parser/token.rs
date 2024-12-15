@@ -1,5 +1,15 @@
+use std::fmt::Debug;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TokenType {
-    Identifier,
+    EOF,
+
+    Id,
+
+    IntLit,
+    FloatLit,
+    StringLit,
+    CharLit,
 
     LParen,
     RParen,
@@ -7,7 +17,17 @@ pub enum TokenType {
     Assignment,
 }
 
+#[derive(Clone)]
 pub struct Token {
     pub tt: TokenType,
     pub value: String,
+}
+
+impl Debug for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.tt {
+            TokenType::Id => write!(f, "{:?}:{}", self.tt, self.value),
+            _ => write!(f, "{:?}", self.tt),
+        }
+    }
 }
