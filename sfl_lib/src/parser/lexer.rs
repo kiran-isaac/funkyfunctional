@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 pub use super::token::*;
 
 pub struct LexerError {
@@ -6,6 +8,11 @@ pub struct LexerError {
     pub col: usize,
 }
 
+impl Debug for LexerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", self.e)
+    }
+}
 pub struct Lexer {
     file: Vec<char>,
     filename: Option<String>,
@@ -28,6 +35,9 @@ impl Lexer {
 
     #[inline(always)]
     fn c(&self) -> char {
+        if self.i >= self.file.len() {
+            return '\0';
+        }
         self.file[self.i]
     }
 
@@ -47,10 +57,10 @@ impl Lexer {
     #[inline(always)]
     pub fn pos_string(&self) -> String {
         format!(
-            "{}:{}/{}",
+            "{}{}:{}",
             match &self.filename {
                 None => "".to_string(),
-                Some(f) => f.clone(),
+                Some(f) => f.clone() + " ",
             },
             self.line,
             self.col
@@ -58,7 +68,7 @@ impl Lexer {
     }
 
     fn skip_whitespace(&mut self) {
-        while self.i < self.file.len() && self.file[self.i].is_whitespace() {
+        while self.i < self.file.len() && self.c().is_whitespace() {
             if self.c() == '\n' {
                 self.line += 1;
                 self.col = 0;
@@ -72,16 +82,20 @@ impl Lexer {
     fn parse_word(&mut self) -> Result<Token, LexerError> {
         let mut str = self.c().to_string();
 
-        self.i += 1;
+        self.advance();
 
-        while !self.c().is_whitespace() {
+        'loopdyloop: while !self.c().is_whitespace() {
             match self.c() {
-                'a'..'z' | 'A'..'Z' | '0'..'9' | '_' => {}
-
-                _ => {}
+                'a'..'z' | 'A'..'Z' | '0'..'9' | '_' => {
+                    str.push(self.c());
+                    self.advance();
+                }
+                _ => {
+                    break 'loopdyloop;
+                }
             };
-            str.push(self.c());
-            self.i += 1;
+
+            println!("str: {}", str);
         }
 
         return Ok(Token {
@@ -95,7 +109,7 @@ impl Lexer {
 
         let mut has_point = false;
 
-        while !self.c().is_whitespace() {
+        while !(self.c().is_whitespace() || self.c() == '\0') {
             match self.c() {
                 '0'..'9' => {
                     str.push(self.c());
@@ -107,7 +121,9 @@ impl Lexer {
                     has_point = true;
                     str.push(self.c());
                 }
-                _ => return Err(self.error(format!("Unexpected char in char literal: {}", self.c()))),
+                _ => {
+                    return Err(self.error(format!("Unexpected char in num literal: {}", self.c())))
+                }
             }
 
             self.advance();
@@ -131,19 +147,33 @@ impl Lexer {
 
         match self.c() {
             'a'..'z' => self.parse_word(),
-            '(' => Ok(Token {
-                tt: TokenType::RParen,
-                value: "(".to_string(),
+            '0'..'9' | '.' => self.parse_num_lit(),
+            '(' => {
+                self.advance();
+                Ok(Token {
+                    tt: TokenType::LParen,
+                    value: "(".to_string(),
+                })
+            }
+            ')' => {
+                self.advance();
+                Ok(Token {
+                    tt: TokenType::RParen,
+                    value: ")".to_string(),
+                })
+            }
+            '=' => {
+                self.advance();
+                Ok(Token {
+                    tt: TokenType::Assignment,
+                    value: "=".to_string(),
+                })
+            }
+            '\0' => Ok(Token {
+                tt: TokenType::EOF,
+                value: "".to_string(),
             }),
-            ')' => Ok(Token {
-                tt: TokenType::RParen,
-                value: ")".to_string(),
-            }),
-            '=' => Ok(Token {
-                tt: TokenType::Assignment,
-                value: "=".to_string(),
-            }),
-            _ => unreachable!(),
+            _ => Err(self.error(format!("Unexpected char: {}", self.c()))),
         }
     }
 }

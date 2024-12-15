@@ -1,10 +1,9 @@
-use crate::parser::ast::ASTNodeType;
-
 use super::ast::ASTNode;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
-use std::cmp::{max, min};
 use std::collections::VecDeque;
+use std::error::Error;
+use std::fmt::Debug;
 use std::fs::File;
 use std::io::{self, prelude::*};
 
@@ -17,6 +16,12 @@ pub struct ParserError {
     e: String,
     line: usize,
     col: usize,
+}
+
+impl Debug for ParserError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", self.e)
+    }
 }
 
 impl From<LexerError> for ParserError {
@@ -135,7 +140,7 @@ impl Parser {
 
         // At the top level its just a set of assignments
 
-        'assloop : loop {
+        'assloop: loop {
             match t.tt {
                 TokenType::Id => match self.peek(1)?.tt {
                     TokenType::Assignment => ass_vec.push(self.parse_assignment()?),
