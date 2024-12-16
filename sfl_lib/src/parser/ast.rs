@@ -1,8 +1,8 @@
-use std::collections::btree_set::Union;
+use std::{fmt::{write, Debug}, vec};
 
 use super::token::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ASTNodeType {
     Identifier,
     Literal,
@@ -64,5 +64,72 @@ impl ASTNode {
             },
             _ => unreachable!("get_lit_type called on non-literal node"),
         }
+    }
+
+    fn to_string(&self, indent : usize) -> String {
+        let indent_str = "  ".repeat(indent);
+        let mut s = format!("{}- ", &indent_str);
+
+        match &self.t {
+            ASTNodeType::Identifier => {
+                let vname = match &self.info {
+                    Some(tk) => &tk.value,
+                    None => unreachable!()
+                };
+                
+                s.push_str("Id: ");
+                s.push_str(&vname);
+                s
+            }
+            ASTNodeType::Literal => {
+                let value = match &self.info {
+                    Some(tk) => &tk.value,
+                    None => unreachable!()
+                };
+                
+                s.push_str("Id: ");
+                s.push_str(&value);
+                s
+            }
+            ASTNodeType::Application => {
+                assert!(self.children.len() == 2);
+                let f = &self.children[0];
+                let x = &self.children[1];
+
+                s.push_str("Application:\n");
+                s.push_str(&f.to_string(indent + 1));
+                s.push('\n');
+                s.push_str(&x.to_string(indent + 1));
+                s.push('\n');
+                s
+            }
+            ASTNodeType::Assignment => {
+                assert!(self.children.len() == 2);
+                let id = &self.children[0];
+                let exp = &self.children[1];
+
+                s.push_str("Assignment:\n");
+                s.push_str(&id.to_string(indent + 1));
+                s.push('\n');
+                s.push_str(&exp.to_string(indent + 1));
+                s.push('\n');
+                s
+            }
+            ASTNodeType::Module => {
+                s.push_str("Module:\n");
+                for ass in &self.children {
+                    s.push_str(&ass.to_string(indent + 1));
+                    s.push('\n');
+                }
+
+                s
+            }
+        }
+    }
+}
+
+impl Debug for ASTNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string(0))
     }
 }

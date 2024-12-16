@@ -60,6 +60,7 @@ impl Parser {
         }
     }
 
+    // Add tk to queue
     fn queue_tk(&mut self) -> Result<(), ParserError> {
         let t = self.lexer.get_token()?;
         self.t_queue.push_back(t);
@@ -72,18 +73,20 @@ impl Parser {
         self.t_queue.pop_front();
     }
 
-    // Get token without advancing, with offset of 1
-    fn peek(&mut self, i: usize) -> Result<Token, ParserError> {
-        while i < self.t_queue.len() {
+    // Get nth token without advancing
+    fn peek(&mut self, n: usize) -> Result<Token, ParserError> {
+        while n >= self.t_queue.len() {
             self.queue_tk()?;
         }
-        Ok(self.t_queue[i].clone())
+        Ok(self.t_queue[n].clone())
     }
 
+    // Get 0th token and advance
     #[inline(always)]
     fn consume(&mut self) -> Result<Token, ParserError> {
+        let peek_result = self.peek(0);
         self.advance();
-        self.peek(0)
+        peek_result
     }
 
     fn parse_expression(&mut self) -> Result<ASTNode, ParserError> {
@@ -95,7 +98,7 @@ impl Parser {
                     self.advance();
                     left = ASTNode::new_app(left, self.parse_expression()?)
                 }
-                TokenType::RParen => {
+                TokenType::RParen | TokenType::EOF => {
                     self.advance();
                     return Ok(left);
                 }
@@ -106,7 +109,7 @@ impl Parser {
                 | TokenType::CharLit
                 | TokenType::IntLit
                 | TokenType::StringLit => left = ASTNode::new_app(left, self.parse_primary()?),
-
+                
                 _ => {
                     let e = format!("Unexpected token in expression: {:?}", self.peek(0)?);
                     return Err(self.error(e));
@@ -130,17 +133,18 @@ impl Parser {
 
         let assid = self.peek(0)?;
         self.advance();
+        self.advance();
 
         Ok(ASTNode::new_assignment(assid, self.parse_expression()?))
     }
 
     pub fn parse(&mut self) -> Result<ASTNode, ParserError> {
-        let t = self.peek(0)?;
+        // At the top level its just a set of assignments
         let mut ass_vec: Vec<ASTNode> = vec![];
 
-        // At the top level its just a set of assignments
-
         'assloop: loop {
+            let t = self.peek(0)?;
+
             match t.tt {
                 TokenType::Id => match self.peek(1)?.tt {
                     TokenType::Assignment => ass_vec.push(self.parse_assignment()?),

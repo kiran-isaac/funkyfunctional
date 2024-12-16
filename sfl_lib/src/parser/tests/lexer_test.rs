@@ -1,4 +1,4 @@
-use super::super::*;
+use crate::parser::*;
 
 fn test_lex(str: String) -> Result<Vec<Token>, LexerError> {
     let mut lexer = Lexer::new(str, None);
@@ -21,7 +21,6 @@ macro_rules! lexer_tokentype_test {
         assert_eq!(tokens.len(), desired.len());
         for (i, token) in tokens.iter().enumerate() {
             assert_eq!(token.tt, desired[i]);
-            println!("{:?} ", token);
         }
     };
 }
