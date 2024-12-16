@@ -23,7 +23,8 @@ pub struct Lexer {
 
 impl Lexer {
     pub fn new(file: String, filename: Option<String>) -> Self {
-        let vec = file.chars().collect();
+        // Add a cheeky couple of null bytes to the end of the file to make sure we don't go out of bounds
+        let vec = (file + &"\0".repeat(10)).chars().collect();
         Lexer {
             file: vec,
             filename,
@@ -67,18 +68,6 @@ impl Lexer {
         )
     }
 
-    fn skip_whitespace(&mut self) {
-        while self.i < self.file.len() && self.c().is_whitespace() {
-            if self.c() == '\n' {
-                self.line += 1;
-                self.col = 0;
-                self.i += 1;
-            } else {
-                self.advance();
-            }
-        }
-    }
-
     fn parse_word(&mut self) -> Result<Token, LexerError> {
         let mut str = self.c().to_string();
 
@@ -94,8 +83,6 @@ impl Lexer {
                     break 'loopdyloop;
                 }
             };
-
-            println!("str: {}", str);
         }
 
         return Ok(Token {
@@ -109,7 +96,7 @@ impl Lexer {
 
         let mut has_point = false;
 
-        while !(self.c().is_whitespace() || self.c() == '\0') {
+        while !(self.c().is_whitespace() || self.c() == '\0' || self.c() == ')') {
             match self.c() {
                 '0'..'9' => {
                     str.push(self.c());
@@ -143,17 +130,58 @@ impl Lexer {
     }
 
     pub fn get_token(&mut self) -> Result<Token, LexerError> {
-        self.skip_whitespace();
+        // Advance, and if we hit a newline, return a newline token
+        // If we hit multiple newlines, skip all but one
+        // If we hit other whitespace, skip it
+        while self.i < self.file.len() && self.c().is_whitespace() {
+            if self.c() == '\n' {
+                self.line += 1;
+                self.col = 0;
+                self.i += 1;
 
-        match self.c() {
-            'a'..'z' => self.parse_word(),
-            '0'..'9' | '.' => self.parse_num_lit(),
+                while self.c().is_whitespace() {
+                    self.advance();
+                }
+
+                return Ok(Token {
+                    tt: TokenType::Newline,
+                    value: "\n".to_string(),
+                });
+            } else {
+                self.advance();
+            }
+        }
+        let c = self.c();
+
+        match c {
+            'a'..='z' => self.parse_word(),
+            '0'..='9' | '.' => self.parse_num_lit(),
             '(' => {
                 self.advance();
                 Ok(Token {
                     tt: TokenType::LParen,
                     value: "(".to_string(),
                 })
+            }
+            '/' => {
+                self.advance();
+                match self.c() {
+                    '/' => {
+                        while self.c() != '\n' {
+                            self.advance();
+                        }
+                    }
+                    '*' => {
+                        self.advance();
+                        while !(self.c() == '*' && self.file[self.i + 1] == '/') {
+                            self.advance();
+                        }
+                        self.advance();
+                        self.advance();
+                    }
+                    _ => return Err(self.error(format!("Unexpected char: {}", self.c()))),
+                }
+                self.get_token()
             }
             ')' => {
                 self.advance();

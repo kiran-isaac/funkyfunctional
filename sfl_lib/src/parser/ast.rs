@@ -2,7 +2,7 @@ use std::{fmt::{write, Debug}, vec};
 
 use super::token::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ASTNodeType {
     Identifier,
     Literal,
@@ -15,7 +15,7 @@ pub enum ASTNodeType {
 
 #[derive(Clone)]
 pub struct ASTNode { 
-    t : ASTNodeType,
+    pub t : ASTNodeType,
     info : Option<Token>,
     children : Vec<ASTNode>
 }
@@ -66,6 +66,52 @@ impl ASTNode {
         }
     }
 
+    // Get the string value of the identifier or literal
+    pub fn get_value(&self) -> String {
+        assert!(self.t == ASTNodeType::Identifier || self.t == ASTNodeType::Literal);
+        match &self.info {
+            Some(tk) => tk.value.clone(),
+            None => unreachable!()
+        }
+    }
+
+    // Get the function of an application node
+    pub fn get_func(&self) -> &ASTNode {
+        assert!(self.t == ASTNodeType::Application);
+        assert!(self.children.len() == 2);
+        &self.children[0]
+    }
+
+    // Get the argument of an application node
+    pub fn get_arg(&self) -> &ASTNode {
+        assert!(self.t == ASTNodeType::Application);
+        assert!(self.children.len() == 2);
+        &self.children[1]
+    }
+
+    // Get the expression of an assignment node
+    pub fn get_exp(&self) -> &ASTNode {
+        assert!(self.t == ASTNodeType::Assignment);
+        assert!(self.children.len() == 2);
+        &self.children[1]
+    }
+
+    pub fn get_assignee(&self) -> &ASTNode {
+        assert!(self.t == ASTNodeType::Assignment);
+        assert!(self.children.len() == 2);
+        &self.children[0]
+    }
+
+    pub fn get_assign_to(&self, name : String) -> Result<&ASTNode, ()> {
+        assert!(self.t == ASTNodeType::Module);
+        for child in &self.children {
+            if child.get_assignee().get_value() == name {
+                return Ok(child)
+            }
+        }
+        Err(())
+    }
+
     fn to_string(&self, indent : usize) -> String {
         let indent_str = "  ".repeat(indent);
         let mut s = format!("{}- ", &indent_str);
@@ -100,7 +146,6 @@ impl ASTNode {
                 s.push_str(&f.to_string(indent + 1));
                 s.push('\n');
                 s.push_str(&x.to_string(indent + 1));
-                s.push('\n');
                 s
             }
             ASTNodeType::Assignment => {

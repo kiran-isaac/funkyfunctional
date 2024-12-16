@@ -54,3 +54,19 @@ fn float_lit() {
         ]
     );
 }
+
+#[test]
+fn comment() {
+    lexer_tokentype_test!(
+        "//Hello\n\nx\n",
+        vec![TokenType::Newline, TokenType::Id, TokenType::Newline, TokenType::EOF]
+    );
+}
+
+#[test]
+fn multi_line_comment() {
+    lexer_tokentype_test!(
+        "/*Hello\nWorld*/\n\nx\n",
+        vec![TokenType::Newline, TokenType::Id, TokenType::Newline, TokenType::EOF]
+    );
+}

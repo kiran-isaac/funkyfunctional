@@ -91,6 +91,7 @@ impl Parser {
 
     fn parse_expression(&mut self) -> Result<ASTNode, ParserError> {
         let mut left = self.parse_primary()?;
+        let leftstring = format!("{:?}", left);
         loop {
             match &self.peek(0)?.tt {
                 // If paren, apply to paren
@@ -98,7 +99,7 @@ impl Parser {
                     self.advance();
                     left = ASTNode::new_app(left, self.parse_expression()?)
                 }
-                TokenType::RParen | TokenType::EOF => {
+                TokenType::RParen | TokenType::EOF | TokenType::Newline => {
                     self.advance();
                     return Ok(left);
                 }
@@ -115,6 +116,8 @@ impl Parser {
                     return Err(self.error(e));
                 }
             }
+
+            let leftstring = format!("{:?}", left);
         }
     }
 
@@ -123,7 +126,7 @@ impl Parser {
         match t.tt {
             TokenType::Id => Ok(ASTNode::new_id(t)),
             TokenType::IntLit | TokenType::FloatLit => Ok(ASTNode::new_lit(t)),
-            _ => Err(self.error(format!("Unexpected Token: {:?}", t))),
+            _ => Err(self.error(format!("Unexpected Token in primary: {:?}", t))),
         }
     }
 
@@ -156,6 +159,7 @@ impl Parser {
                         )))
                     }
                 },
+                TokenType::Newline => {self.advance();}
                 TokenType::EOF => {
                     break 'assloop;
                 }

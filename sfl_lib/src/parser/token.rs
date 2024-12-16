@@ -3,6 +3,7 @@ use std::fmt::Debug;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TokenType {
     EOF,
+    Newline,
 
     Id,
 
