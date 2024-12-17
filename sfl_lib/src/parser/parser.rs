@@ -72,6 +72,10 @@ impl Parser {
         self.bound.add_binding(name);
     }
 
+    pub fn unbind(&mut self, name : String) {
+        self.bound.remove_binding(name);
+    }
+
     fn parse_error(&self, msg: String) -> ParserError {
         ParserError {
             e: format!("parse error: [{}]: {}", self.lexer.pos_string(), msg),
@@ -109,6 +113,44 @@ impl Parser {
         peek_result
     }
 
+    fn parse_abstraction(&mut self, ast : &mut AST) -> Result<usize, ParserError> {
+        match self.peek(0)?.tt {
+            TokenType::Id => {
+                let id = self.consume()?;
+                let varname = id.value.clone();
+                self.bind(varname.clone());
+                let line = self.lexer.line;
+                let col = self.lexer.col;
+                let id = ast.add_id(id, line, col);
+                match self.peek(0)?.tt {
+                    TokenType::Dot => {
+                        self.advance();
+                        let expr = self.parse_expression(ast)?;
+                        self.unbind(varname);
+                        Ok(ast.add_abstraction(id, expr, line, col))
+                    }
+                    TokenType::Id => self.parse_abstraction(ast),
+                    _ => Err(self.parse_error("Expected dot after lambda id".to_string())),
+                }
+            }
+            // if no arg we can just create a fake id that nothing can match
+            TokenType::Dot => {
+                let line = self.lexer.line;
+                let col = self.lexer.col;
+                let body = self.parse_expression(ast)?;
+                // Its impossible to define a variable with a null name
+                // so this is a safe fake id and wont be matched
+                let fake_id = Token {
+                    tt: TokenType::Id,
+                    value: "".to_string(),
+                };
+                let id = ast.add_id(fake_id, line, col);
+                Ok(ast.add_abstraction(id, body, line, col))
+            }
+            _ => Err(self.parse_error("Expected identifier after lambda".to_string())),
+        }
+    }
+
     fn parse_expression(&mut self, ast : &mut AST) -> Result<usize, ParserError> {
         let line = self.lexer.line;
         let col = self.lexer.col;
@@ -124,6 +166,11 @@ impl Parser {
                 TokenType::RParen | TokenType::EOF | TokenType::Newline => {
                     self.advance();
                     return Ok(left);
+                }
+
+                TokenType::Lambda => {
+                    self.advance();
+                    self.parse_abstraction(ast)?;
                 }
 
                 // If Primary
@@ -144,6 +191,7 @@ impl Parser {
         }
     }
 
+    // Parse a primary expression
     fn parse_primary(&mut self, ast : &mut AST) -> Result<usize, ParserError> {
         let line = self.lexer.line;
         let col = self.lexer.col;
@@ -157,6 +205,15 @@ impl Parser {
                 Ok(ast.add_id(t, line, col))
             },
             TokenType::IntLit | TokenType::FloatLit | TokenType::BoolLit | TokenType::CharLit => Ok(ast.add_lit(t, line, col)),
+            TokenType::Lambda => {
+                self.advance();
+                self.parse_abstraction(ast)
+            }
+            TokenType::LParen => {
+                let exp = self.parse_expression(ast)?;
+                self.advance();
+                Ok(exp)
+            }
             _ => Err(self.parse_error(format!("Unexpected Token in primary: {:?}", t))),
         }
     }

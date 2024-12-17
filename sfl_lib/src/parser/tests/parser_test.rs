@@ -84,3 +84,20 @@ fn bound() -> Result<(), ParserError> {
 
     Ok(())
 }
+
+#[test]
+fn abstraction () -> Result<(), ParserError> {
+    let str = "x = (\\y . add y 5) 2";
+    let mut parser = Parser::from_string(str.to_string());
+
+    let ast = parser.parse_module()?;
+    let module = 0;
+    assert!(ast.to_string(module) == "x = (\\y . add y 5) 2".to_string());
+
+    // Should error because y is unbound
+    let unbound_str = "x = (\\y . add y 5) y";
+    let mut parser = Parser::from_string(unbound_str.to_string());
+    assert!(parser.parse_module().is_err());
+
+    Ok(())
+}

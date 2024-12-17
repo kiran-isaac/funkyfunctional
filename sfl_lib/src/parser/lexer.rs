@@ -213,7 +213,21 @@ impl Lexer {
 
         match c {
             'a'..='z' => self.parse_word(),
-            '0'..='9' | '.' => self.parse_num_lit(),
+            '0'..='9' => self.parse_num_lit(),
+            '.' => {
+                match self.file[self.i + 1] {
+                    '0'..='9' => {
+                        self.parse_num_lit()
+                    }
+                    _ => {
+                        self.advance();
+                        Ok(Token {
+                            tt: TokenType::Dot,
+                            value: ".".to_string(),
+                        })
+                    }
+                }
+            }
             '(' => {
                 self.advance();
                 Ok(Token {
@@ -240,6 +254,13 @@ impl Lexer {
                     _ => return Err(self.error(format!("Unexpected char: {}", self.c()))),
                 }
                 self.get_token()
+            }
+            '\\' => {
+                self.advance();
+                Ok(Token {
+                    tt: TokenType::Lambda,
+                    value: "\\".to_string(),
+                })
             }
             ')' => {
                 self.advance();
