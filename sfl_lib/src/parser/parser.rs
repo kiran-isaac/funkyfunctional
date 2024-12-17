@@ -1,4 +1,4 @@
-use super::ast::ASTNode;
+use super::ast::{ASTNode, AST};
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
@@ -13,6 +13,7 @@ pub struct Parser {
     t_queue: VecDeque<Token>,
     lexer: Lexer,
     bound : BoundChecker,
+    ast : AST
 }
 
 pub struct ParserError {
@@ -47,6 +48,7 @@ impl Parser {
             t_queue: VecDeque::new(),
             lexer: Lexer::new(contents, Some(filename)),
             bound : BoundChecker::new(),
+            ast : AST::new()
         })
     }
 
@@ -56,16 +58,12 @@ impl Parser {
             t_queue: VecDeque::new(),
             lexer: Lexer::new(str, None),
             bound : BoundChecker::new(),
+            ast : AST::new()
         }
     }
 
     pub fn bind(&mut self, name : String) {
         self.bound.add_binding(name);
-    }
-
-    fn node_id(&mut self) -> usize {
-        self.i += 1;
-        self.i
     }
 
     fn error(&self, msg: String) -> ParserError {
@@ -105,14 +103,15 @@ impl Parser {
         peek_result
     }
 
-    fn parse_expression(&mut self) -> Result<ASTNode, ParserError> {
-        let mut left = self.parse_primary()?;
+    fn parse_expression(&mut self, ast : &mut AST) -> Result<usize, ParserError> {
+        let mut left = self.parse_primary(ast)?;
         loop {
             match &self.peek(0)?.tt {
                 // If paren, apply to paren
                 TokenType::LParen => {
                     self.advance();
-                    left = ASTNode::new_app(left, self.parse_expression()?, self.i)
+                    let right = self.parse_expression(ast)?;
+                    left = ast.add_app(left, right);
                 }
                 TokenType::RParen | TokenType::EOF | TokenType::Newline => {
                     self.advance();
@@ -124,7 +123,10 @@ impl Parser {
                 | TokenType::FloatLit
                 | TokenType::CharLit
                 | TokenType::IntLit
-                | TokenType::StringLit => left = ASTNode::new_app(left, self.parse_primary()?, self.node_id()),
+                | TokenType::StringLit => {
+                    let right = self.parse_primary(ast)?;
+                    left = ast.add_app(left, right);
+                }
                 
                 _ => {
                     let e = format!("Unexpected token in expression: {:?}", self.peek(0)?);
@@ -134,7 +136,7 @@ impl Parser {
         }
     }
 
-    fn parse_primary(&mut self) -> Result<ASTNode, ParserError> {
+    fn parse_primary(&mut self, ast : &mut AST) -> Result<usize, ParserError> {
         let t = self.consume()?;
         match t.tt {
             TokenType::Id => {
@@ -142,14 +144,14 @@ impl Parser {
                 if !self.bound.is_bound(&id_name) {
                     return Err(self.error(format!("Unbound identifier: {}", id_name)));
                 }
-                Ok(ASTNode::new_id(t, self.node_id()))
+                Ok(ast.add_id(t))
             },
-            TokenType::IntLit | TokenType::FloatLit => Ok(ASTNode::new_lit(t, self.node_id())),
+            TokenType::IntLit | TokenType::FloatLit => Ok(ast.add_lit(t)),
             _ => Err(self.error(format!("Unexpected Token in primary: {:?}", t))),
         }
     }
 
-    fn parse_assignment(&mut self) -> Result<ASTNode, ParserError> {
+    fn parse_assignment(&mut self, ast : &mut AST) -> Result<usize, ParserError> {
         assert_eq!(self.peek(0)?.tt, TokenType::Id);
         assert_eq!(self.peek(1)?.tt, TokenType::Assignment);
 
@@ -161,19 +163,27 @@ impl Parser {
             return Err(self.error(format!("Identifier already bound: {}", assid.value)));
         }
 
-        Ok(ASTNode::new_assignment(assid, self.parse_expression()?, self.node_id()))
+        self.bind(assid.value.clone());
+        let exp = self.parse_expression(ast)?;
+        let id = ast.add_id(assid);
+
+        Ok(ast.new_assignment(id, exp))
     }
 
-    pub fn parse(&mut self) -> Result<ASTNode, ParserError> {
+    pub fn parse(&mut self) -> Result<AST, ParserError> {
         // At the top level its just a set of assignments
-        let mut ass_vec: Vec<ASTNode> = vec![];
+        let mut ast = AST::new();
+        let module = ast.add_module(Vec::new());
 
         'assloop: loop {
             let t = self.peek(0)?;
 
             match t.tt {
                 TokenType::Id => match self.peek(1)?.tt {
-                    TokenType::Assignment => ass_vec.push(self.parse_assignment()?),
+                    TokenType::Assignment => {
+                        let assignment = self.parse_assignment(&mut ast)?;
+                        ast.add_to_module(module, assignment);
+                    }
                     _ => {
                         return Err(self.error(format!(
                             "Unexpected Token: {:?}. Expected assignment operator: {:?}",
@@ -190,6 +200,6 @@ impl Parser {
             }
         }
 
-        Ok(ASTNode::new_module(ass_vec, self.node_id()))
+        Ok(ast)
     }
 }

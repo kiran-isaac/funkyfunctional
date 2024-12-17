@@ -15,6 +15,10 @@ pub enum ASTNodeType {
     Module,
 }
 
+pub struct AST {
+    vec: Vec<ASTNode>,
+}
+
 #[derive(Clone)]
 pub struct ASTNode {
     // Ids needed for identifying redexes
@@ -22,7 +26,7 @@ pub struct ASTNode {
 
     pub t: ASTNodeType,
     info: Option<Token>,
-    children: Vec<ASTNode>,
+    children: Vec<usize>,
 }
 
 pub enum Type {
@@ -35,51 +39,6 @@ pub enum Type {
 }
 
 impl ASTNode {
-    pub fn new_id(tk: Token, n: usize) -> Self {
-        Self {
-            t: ASTNodeType::Identifier,
-            info: Some(tk),
-            children: vec![],
-            id: n,
-        }
-    }
-
-    pub fn new_lit(tk: Token, n: usize) -> Self {
-        Self {
-            t: ASTNodeType::Literal,
-            info: Some(tk),
-            children: vec![],
-            id: n,
-        }
-    }
-
-    pub fn new_app(f: ASTNode, arg: ASTNode, n: usize) -> Self {
-        Self {
-            t: ASTNodeType::Application,
-            info: None,
-            children: vec![f, arg],
-            id: n,
-        }
-    }
-
-    pub fn new_assignment(id: Token, exp: ASTNode, n: usize) -> Self {
-        Self {
-            t: ASTNodeType::Assignment,
-            info: None,
-            children: vec![Self::new_id(id, n), exp],
-            id: n,
-        }
-    }
-
-    pub fn new_module(children: Vec<ASTNode>, n: usize) -> Self {
-        Self {
-            t: ASTNodeType::Module,
-            info: None,
-            children,
-            id: n,
-        }
-    }
-
     pub fn get_lit_type(&self) -> Type {
         match &self.t {
             ASTNodeType::Literal => match &self.info {
@@ -104,126 +63,141 @@ impl ASTNode {
             None => unreachable!(),
         }
     }
+}
 
-    // Get the function of an application node
-    pub fn get_func(&self) -> &ASTNode {
-        assert!(self.t == ASTNodeType::Application);
-        assert!(self.children.len() == 2);
-        &self.children[0]
+impl AST {
+    pub fn new() -> Self {
+        Self {
+            vec : vec![]
+        }
     }
 
-    // Get the argument of an application node
-    pub fn get_arg(&self) -> &ASTNode {
-        assert!(self.t == ASTNodeType::Application);
-        assert!(self.children.len() == 2);
-        &self.children[1]
+    fn add(&mut self, n : ASTNode) -> usize {
+        self.vec.push(n);
+        self.vec.len() - 1
     }
 
-    // Get the expression of an assignment node
-    pub fn get_exp(&self) -> &ASTNode {
-        assert!(self.t == ASTNodeType::Assignment);
-        assert!(self.children.len() == 2);
-        &self.children[1]
+    pub fn add_id(&mut self, tk: Token) -> usize {
+        self.add(ASTNode {
+            t: ASTNodeType::Identifier,
+            info: Some(tk),
+            children: vec![],
+            id: self.vec.len(),
+        })
     }
 
-    pub fn get_assignee(&self) -> &ASTNode {
-        assert!(self.t == ASTNodeType::Assignment);
-        assert!(self.children.len() == 2);
-        &self.children[0]
+    pub fn add_lit(&mut self, tk : Token) -> usize {
+        self.add(ASTNode {
+            t: ASTNodeType::Literal,
+            info: Some(tk),
+            children: vec![],
+            id: self.vec.len(),
+        })
     }
 
-    pub fn get_assign_to(&self, name: String) -> Result<&ASTNode, ()> {
-        assert!(self.t == ASTNodeType::Module);
-        for child in &self.children {
-            if child.get_assignee().get_value() == name {
-                return Ok(child);
+    pub fn add_app(&mut self, f : usize, x : usize) -> usize {
+        self.add(ASTNode {
+            t: ASTNodeType::Application,
+            info: None,
+            children: vec![f, x],
+            id: self.vec.len(),
+        })
+    }
+
+    pub fn new_assignment(&mut self, id : usize, exp : usize) -> usize {
+        self.add(ASTNode {
+            t: ASTNodeType::Assignment,
+            info: None,
+            children: vec![id, exp],
+            id: self.vec.len(),
+        })
+    }
+
+    pub fn add_module(&mut self, assigns : Vec<usize>) -> usize {
+        self.add(ASTNode {
+            t: ASTNodeType::Module,
+            info: None,
+            children: assigns,
+            id: self.vec.len(),
+        })
+    }
+
+    pub fn add_to_module(&mut self, module : usize, assign : usize) {
+        assert!(self.vec[module].t == ASTNodeType::Module);
+        self.vec[module].children.push(assign);
+    }
+
+    pub fn get(&self, i : usize) -> &ASTNode {
+        &self.vec[i]
+    }
+
+    // Get assignment within module
+    pub fn get_assign_to(&self, module : usize, name : String) -> Option<usize> {
+        assert!(self.vec[module].t == ASTNodeType::Module);
+
+        let assigns = &self.vec[module].children;
+        for a in assigns {
+            let assign = self.get(*a);
+            let id = self.get(assign.children[0]);
+            if id.get_value() == name {
+                return Some(*a);
             }
         }
-        Err(())
+
+        None
     }
 
-    pub fn get_assigns(&self) -> Vec<String> {
-        let mut vec = vec![];
-        for assign in &self.children {
-            vec.push(assign.get_assignee().get_value());
-        }
-        
-        vec
+    pub fn get_func(&self, app : usize) -> usize {
+        assert!(self.vec[app].t == ASTNodeType::Application);
+        self.vec[app].children[0]
     }
 
-    pub fn get_id(&self) -> usize {
-        self.id
+    pub fn get_arg(&self, app : usize) -> usize {
+        assert!(self.vec[app].t == ASTNodeType::Application);
+        self.vec[app].children[1]
     }
 
-    fn to_string(&self, indent: usize) -> String {
-        let indent_str = "  ".repeat(indent);
-        let mut s = format!("{}- ", &indent_str);
+    pub fn get_exp(&self, assign : usize) -> usize {
+        assert!(self.vec[assign].t == ASTNodeType::Assignment);
+        self.vec[assign].children[1]
+    }
 
-        match &self.t {
+    pub fn get_assignee(&self, assign : usize) -> String {
+        assert!(self.vec[assign].t == ASTNodeType::Assignment);
+        self.get(self.vec[assign].children[0]).get_value().clone()
+    }
+
+    fn to_string_indent(&self, node : usize, indent : usize) -> String {
+        let n = self.get(node);
+        let ind = " ".repeat(indent);
+        match n.t {
             ASTNodeType::Identifier => {
-                let vname = match &self.info {
-                    Some(tk) => &tk.value,
-                    None => unreachable!(),
-                };
-
-                s.push_str("Id: ");
-                s.push_str(&vname);
-                s
+                format!("{}Identifier: {}", ind, n.get_value())
             }
             ASTNodeType::Literal => {
-                let value = match &self.info {
-                    Some(tk) => &tk.value,
-                    None => unreachable!(),
-                };
-
-                s.push_str("Id: ");
-                s.push_str(&value);
-                s
+                format!("{}Literal: {}", ind, n.get_value())
             }
             ASTNodeType::Application => {
-                assert!(self.children.len() == 2);
-                let f = &self.children[0];
-                let x = &self.children[1];
-
-                s.push_str("Application:\n");
-                s.push_str(&f.to_string(indent + 1));
-                s.push('\n');
-                s.push_str(&x.to_string(indent + 1));
-                s
+                let left = self.to_string_indent(self.get_func(node), indent + 2);
+                let right = self.to_string_indent(self.get_arg(node), indent + 2);
+                format!("{}Application\n{}\n{}", ind, left, right)
             }
             ASTNodeType::Assignment => {
-                assert!(self.children.len() == 2);
-                let id = &self.children[0];
-                let exp = &self.children[1];
-
-                s.push_str("Assignment:\n");
-                s.push_str(&id.to_string(indent + 1));
-                s.push('\n');
-                s.push_str(&exp.to_string(indent + 1));
-                s.push('\n');
-                s
+                let id = self.get(self.get(node).children[0]);
+                let exp = self.to_string_indent(self.get_exp(node), indent + 2);
+                format!("{}Assignment: {}\n{}", ind, id.get_value(), exp)
             }
             ASTNodeType::Module => {
-                s.push_str("Module:\n");
-                for ass in &self.children {
-                    s.push_str(&ass.to_string(indent + 1));
-                    s.push('\n');
+                let mut s = format!("{}Module\n", ind);
+                for c in &n.children {
+                    s.push_str(&self.to_string_indent(*c, indent + 2));
                 }
-
                 s
             }
         }
     }
-}
 
-impl Debug for ASTNode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string(0))
-    }
-}
-
-impl ToString for ASTNode {
-    fn to_string(&self) -> String {
-        format!("{:?}", self)
+    pub fn to_string(&self, node : usize) -> String {
+        self.to_string_indent(node, 0)
     }
 }
