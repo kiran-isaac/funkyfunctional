@@ -1,3 +1,5 @@
+use crate::types::TypeError;
+
 use super::ast::{ASTNode, AST};
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
@@ -70,9 +72,9 @@ impl Parser {
         self.bound.add_binding(name);
     }
 
-    fn error(&self, msg: String) -> ParserError {
+    fn parse_error(&self, msg: String) -> ParserError {
         ParserError {
-            e: format!("error: [{}]: {}", self.lexer.pos_string(), msg),
+            e: format!("parse error: [{}]: {}", self.lexer.pos_string(), msg),
             line: self.lexer.line,
             col: self.lexer.col,
         }
@@ -108,6 +110,8 @@ impl Parser {
     }
 
     fn parse_expression(&mut self, ast : &mut AST) -> Result<usize, ParserError> {
+        let line = self.lexer.line;
+        let col = self.lexer.col;
         let mut left = self.parse_primary(ast)?;
         loop {
             match &self.peek(0)?.tt {
@@ -115,7 +119,7 @@ impl Parser {
                 TokenType::LParen => {
                     self.advance();
                     let right = self.parse_expression(ast)?;
-                    left = ast.add_app(left, right);
+                    left = ast.add_app(left, right, line, col);
                 }
                 TokenType::RParen | TokenType::EOF | TokenType::Newline => {
                     self.advance();
@@ -127,31 +131,33 @@ impl Parser {
                 | TokenType::FloatLit
                 | TokenType::CharLit
                 | TokenType::IntLit
-                | TokenType::StringLit => {
+                | TokenType::BoolLit => {
                     let right = self.parse_primary(ast)?;
-                    left = ast.add_app(left, right);
+                    left = ast.add_app(left, right, line, col);
                 }
                 
                 _ => {
                     let e = format!("Unexpected token in expression: {:?}", self.peek(0)?);
-                    return Err(self.error(e));
+                    return Err(self.parse_error(e));
                 }
             }
         }
     }
 
     fn parse_primary(&mut self, ast : &mut AST) -> Result<usize, ParserError> {
+        let line = self.lexer.line;
+        let col = self.lexer.col;
         let t = self.consume()?;
         match t.tt {
             TokenType::Id => {
                 let id_name = t.value.clone();
                 if !self.bound.is_bound(&id_name) {
-                    return Err(self.error(format!("Unbound identifier: {}", id_name)));
+                    return Err(self.parse_error(format!("Unbound identifier: {}", id_name)));
                 }
-                Ok(ast.add_id(t))
+                Ok(ast.add_id(t, line, col))
             },
-            TokenType::IntLit | TokenType::FloatLit => Ok(ast.add_lit(t)),
-            _ => Err(self.error(format!("Unexpected Token in primary: {:?}", t))),
+            TokenType::IntLit | TokenType::FloatLit | TokenType::BoolLit | TokenType::CharLit => Ok(ast.add_lit(t, line, col)),
+            _ => Err(self.parse_error(format!("Unexpected Token in primary: {:?}", t))),
         }
     }
 
@@ -164,20 +170,23 @@ impl Parser {
         self.advance();
 
         if self.bound.is_bound(&assid.value) {
-            return Err(self.error(format!("Identifier already bound: {}", assid.value)));
+            return Err(self.parse_error(format!("Identifier already bound: {}", assid.value)));
         }
+
+        let line = self.lexer.line;
+        let col = self.lexer.col;
 
         self.bind(assid.value.clone());
         let exp = self.parse_expression(ast)?;
-        let id = ast.add_id(assid);
+        let id = ast.add_id(assid, line, col);
 
-        Ok(ast.new_assignment(id, exp))
+        Ok(ast.new_assignment(id, exp, line, col))
     }
 
     pub fn parse_module(&mut self) -> Result<AST, ParserError> {
         // At the top level its just a set of assignments
         let mut ast = AST::new();
-        let module = ast.add_module(Vec::new());
+        let module = ast.add_module(Vec::new(), self.lexer.line, self.lexer.col);
 
         'assloop: loop {
             let t = self.peek(0)?;
@@ -189,7 +198,7 @@ impl Parser {
                         ast.add_to_module(module, assignment);
                     }
                     _ => {
-                        return Err(self.error(format!(
+                        return Err(self.parse_error(format!(
                             "Unexpected Token: {:?}. Expected assignment operator: {:?}",
                             t,
                             TokenType::Assignment
@@ -200,7 +209,7 @@ impl Parser {
                 TokenType::EOF => {
                     break 'assloop;
                 }
-                _ => return Err(self.error(format!("Unexpected Token: {:?}", t))),
+                _ => return Err(self.parse_error(format!("Unexpected Token: {:?}", t))),
             }
         }
 

@@ -4,6 +4,8 @@ use std::{
     vec,
 };
 
+use crate::{types::TypeError, Primitive, Type};
+
 use super::token::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -27,15 +29,9 @@ pub struct ASTNode {
     pub t: ASTNodeType,
     info: Option<Token>,
     children: Vec<usize>,
-}
 
-pub enum Type {
-    Int,
-    Float,
-    String,
-    Char,
-    Bool,
-    Unit,
+    line : usize,
+    col : usize
 }
 
 impl ASTNode {
@@ -43,10 +39,11 @@ impl ASTNode {
         match &self.t {
             ASTNodeType::Literal => match &self.info {
                 Some(tk) => match tk.tt {
-                    TokenType::IntLit => Type::Int,
-                    TokenType::FloatLit => Type::Float,
-                    TokenType::StringLit => Type::String,
-                    TokenType::CharLit => Type::Char,
+                    TokenType::IntLit => Type::Primitive(Primitive::Int64),
+                    TokenType::FloatLit => Type::Primitive(Primitive::Float64),
+                    TokenType::CharLit => Type::Primitive(Primitive::Char),
+                    TokenType::BoolLit => Type::Primitive(Primitive::Bool),
+                    TokenType::StringLit => unimplemented!("String literal type"),
                     _ => unreachable!("Literal node with bad token"),
                 },
                 None => unreachable!("Literal node with no token"),
@@ -106,24 +103,24 @@ impl AST {
     pub fn append(&mut self, other: &AST, node: usize) -> usize {
         let n = other.get(node);
         match n.t {
-            ASTNodeType::Identifier => self.add_id(n.info.clone().unwrap()),
-            ASTNodeType::Literal => self.add_lit(n.info.clone().unwrap()),
+            ASTNodeType::Identifier => self.add_id(n.info.clone().unwrap(), n.line, n.col),
+            ASTNodeType::Literal => self.add_lit(n.info.clone().unwrap(), n.line, n.col),
             ASTNodeType::Application => {
                 let f = self.append(other, other.get_func(node));
                 let x = self.append(other, other.get_arg(node));
-                self.add_app(f, x)
+                self.add_app(f, x, n.line, n.col)
             }
             ASTNodeType::Assignment => {
                 let id = self.append(other, n.children[0]);
                 let exp = self.append(other, other.get_exp(node));
-                self.new_assignment(id, exp)
+                self.new_assignment(id, exp, n.line, n.col)
             }
             ASTNodeType::Module => {
                 let mut assigns = vec![];
                 for a in n.children.clone() {
                     assigns.push(self.append(other, a));
                 }
-                self.add_module(assigns)
+                self.add_module(assigns, n.line, n.col)
             }
         }
     }
@@ -140,43 +137,53 @@ impl AST {
         map
     }
 
-    pub fn add_id(&mut self, tk: Token) -> usize {
+    pub fn add_id(&mut self, tk: Token, line : usize, col : usize) -> usize {
         self.add(ASTNode {
             t: ASTNodeType::Identifier,
             info: Some(tk),
             children: vec![],
+            line,
+            col
         })
     }
 
-    pub fn add_lit(&mut self, tk: Token) -> usize {
+    pub fn add_lit(&mut self, tk: Token, line : usize, col : usize) -> usize {
         self.add(ASTNode {
             t: ASTNodeType::Literal,
             info: Some(tk),
             children: vec![],
+            line,
+            col
         })
     }
 
-    pub fn add_app(&mut self, f: usize, x: usize) -> usize {
+    pub fn add_app(&mut self, f: usize, x: usize, line : usize, col : usize) -> usize {
         self.add(ASTNode {
             t: ASTNodeType::Application,
             info: None,
             children: vec![f, x],
+            line,
+            col
         })
     }
 
-    pub fn new_assignment(&mut self, id: usize, exp: usize) -> usize {
+    pub fn new_assignment(&mut self, id: usize, exp: usize, line : usize, col : usize) -> usize {
         self.add(ASTNode {
             t: ASTNodeType::Assignment,
             info: None,
             children: vec![id, exp],
+            line,
+            col
         })
     }
 
-    pub fn add_module(&mut self, assigns: Vec<usize>) -> usize {
+    pub fn add_module(&mut self, assigns: Vec<usize>, line : usize, col : usize) -> usize {
         self.add(ASTNode {
             t: ASTNodeType::Module,
             info: None,
             children: assigns,
+            line,
+            col
         })
     }
 
@@ -298,6 +305,22 @@ impl AST {
 
     pub fn display_string(&self, node: usize) -> String {
         self.to_string_indent(node, 0)
+    }
+
+    fn type_error(&self, e: String, node: usize) -> TypeError {
+        let n = self.get(node);
+        TypeError {
+            e,
+            line: n.line,
+            col: n.col,
+        }
+    }
+
+    pub fn get_type(&self, node: usize) -> Result<Type, TypeError> {
+        match self.get(node).t {
+            ASTNodeType::Literal => Ok(self.get(node).get_lit_type()),
+            _ => Err(self.type_error("Smoingus".to_string(), node))
+        }
     }
 }
 

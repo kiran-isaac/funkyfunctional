@@ -1,7 +1,3 @@
-use std::collections::HashSet;
-
-use crate::inbuilts::get_starting_bindings;
-
 use super::*;
 
 pub fn get_replacement_targets(
@@ -9,7 +5,6 @@ pub fn get_replacement_targets(
     exp_ast: &AST,
     exp: usize,
 ) -> Vec<(usize, usize)> {
-    let inbuilts = get_starting_bindings();
     let assign_map = mod_ast.get_assign_map(mod_ast.root);
 
     let mut pairs: Vec<(usize, usize)> = vec![];

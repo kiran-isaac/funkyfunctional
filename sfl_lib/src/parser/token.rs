@@ -11,6 +11,7 @@ pub enum TokenType {
     FloatLit,
     StringLit,
     CharLit,
+    BoolLit,
 
     LParen,
     RParen,
