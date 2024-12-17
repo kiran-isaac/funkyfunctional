@@ -7,57 +7,59 @@ fn assign() -> Result<(), ParserError> {
 
     let ast = parser.parse()?;
     let module = 0;
-    println!("{}", ast.to_string(0));
     let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
     let exp = ast.get_exp(assign);
 
     let left = ast.get_func(exp);
     let right = ast.get_arg(exp);
     assert!(ast.get(right).get_value() == "5");
+    assert!(ast.get(ast.get_func(left)).get_value() == "add");
+    assert!(ast.get(ast.get_arg(left)).get_value() == "2");
     
     Ok(())
 }
 
-// #[test]
-// fn assign_2() -> Result<(), ParserError> {
-//     let str = "x = add (y z) 5";
-//     let mut parser = Parser::from_string(str.to_string());
+#[test]
+fn assign_2() -> Result<(), ParserError> {
+    let str = "x = add (y z) 5";
+    let mut parser = Parser::from_string(str.to_string());
     
-//     parser.bind("y".to_string());
-//     parser.bind("z".to_string());
+    parser.bind("y".to_string());
+    parser.bind("z".to_string());
 
-//     let ast = parser.parse()?;
-//     let assign = ast.get_assign_to("x".to_string()).unwrap();
+    let ast = parser.parse()?;
+    let module = 0;
+    let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
+    let exp = ast.get_exp(assign);
 
-//     assert!(assign.get_assignee().get_value() == "x");
-//     assert!(assign.get_exp().get_func().get_func().get_value() == "add");
-//     assert!(assign.get_exp().get_func().get_arg().get_func().get_value() == "y");
-//     assert!(assign.get_exp().get_func().get_arg().get_arg().get_value() == "z");
-//     assert!(assign.get_exp().get_arg().get_value() == "5");
-    
-//     Ok(())
-// }
+    let left = ast.get_func(exp);
+    let right = ast.get_arg(exp);
+    assert!(ast.get(right).get_value() == "5");
+    assert!(ast.get(ast.get_func(left)).get_value() == "add");
 
-// #[test]
-// fn multi_assign() -> Result<(), ParserError> {
-//     let str = "x = 5\n\n//Hello\ny = 6\nz = 7";
-//     let mut parser = Parser::from_string(str.to_string());
+    let y_z = ast.get_arg(left);
+    assert!(ast.get(ast.get_func(y_z)).get_value() == "y");
+    assert!(ast.get(ast.get_arg(y_z)).get_value() == "z");
 
-//     let ast = parser.parse()?;
-//     let assign = ast.get_assign_to("x".to_string()).unwrap();
+    Ok(())
+}
 
-//     assert!(assign.get_assignee().get_value() == "x");
-//     assert!(assign.get_exp().get_value() == "5");
+#[test]
+fn multi_assign() -> Result<(), ParserError> {
+    let str = "x = 5\n\n//Hello\ny = 6\nz = 7";
+    let mut parser = Parser::from_string(str.to_string());
 
-//     let assign = ast.get_assign_to("y".to_string()).unwrap();
+    let ast = parser.parse()?;
+    let module = 0;
 
-//     assert!(assign.get_assignee().get_value() == "y");
-//     assert!(assign.get_exp().get_value() == "6");
+    let ass1 = ast.get_assign_to(module, "x".to_string()).unwrap();
+    assert!(ast.get(ast.get_exp(ass1)).get_value() == "5");
 
-//     let assign = ast.get_assign_to("z".to_string()).unwrap();
+    let ass2 = ast.get_assign_to(module, "y".to_string()).unwrap();
+    assert!(ast.get(ast.get_exp(ass2)).get_value() == "6");
 
-//     assert!(assign.get_assignee().get_value() == "z");
-//     assert!(assign.get_exp().get_value() == "7");
-    
-//     Ok(())
-// }
+    let ass3 = ast.get_assign_to(module, "z".to_string()).unwrap();
+    assert!(ast.get(ast.get_exp(ass3)).get_value() == "7");
+
+    Ok(())
+}

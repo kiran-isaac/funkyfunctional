@@ -172,10 +172,10 @@ impl AST {
         let ind = " ".repeat(indent);
         match n.t {
             ASTNodeType::Identifier => {
-                format!("{}Identifier: {}", ind, n.get_value())
+                format!("{}Identifier: {}\n", ind, n.get_value())
             }
             ASTNodeType::Literal => {
-                format!("{}Literal: {}", ind, n.get_value())
+                format!("{}Literal: {}\n", ind, n.get_value())
             }
             ASTNodeType::Application => {
                 let left = self.to_string_indent(self.get_func(node), indent + 2);
