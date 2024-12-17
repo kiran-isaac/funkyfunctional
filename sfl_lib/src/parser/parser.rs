@@ -1,4 +1,5 @@
 use super::ast::ASTNode;
+use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
 use std::collections::VecDeque;
@@ -6,10 +7,12 @@ use std::fmt::Debug;
 use std::fs::File;
 use std::io::{self, prelude::*};
 
+
 pub struct Parser {
     i: usize,
     t_queue: VecDeque<Token>,
     lexer: Lexer,
+    bound : BoundChecker,
 }
 
 pub struct ParserError {
@@ -43,6 +46,7 @@ impl Parser {
             i: 0,
             t_queue: VecDeque::new(),
             lexer: Lexer::new(contents, Some(filename)),
+            bound : BoundChecker::new(),
         })
     }
 
@@ -51,7 +55,12 @@ impl Parser {
             i: 0,
             t_queue: VecDeque::new(),
             lexer: Lexer::new(str, None),
+            bound : BoundChecker::new(),
         }
+    }
+
+    pub fn bind(&mut self, name : String) {
+        self.bound.add_binding(name);
     }
 
     fn node_id(&mut self) -> usize {
@@ -128,7 +137,13 @@ impl Parser {
     fn parse_primary(&mut self) -> Result<ASTNode, ParserError> {
         let t = self.consume()?;
         match t.tt {
-            TokenType::Id => Ok(ASTNode::new_id(t, self.node_id())),
+            TokenType::Id => {
+                let id_name = t.value.clone();
+                if !self.bound.is_bound(&id_name) {
+                    return Err(self.error(format!("Unbound identifier: {}", id_name)));
+                }
+                Ok(ASTNode::new_id(t, self.node_id()))
+            },
             TokenType::IntLit | TokenType::FloatLit => Ok(ASTNode::new_lit(t, self.node_id())),
             _ => Err(self.error(format!("Unexpected Token in primary: {:?}", t))),
         }
@@ -141,6 +156,10 @@ impl Parser {
         let assid = self.peek(0)?;
         self.advance();
         self.advance();
+
+        if self.bound.is_bound(&assid.value) {
+            return Err(self.error(format!("Identifier already bound: {}", assid.value)));
+        }
 
         Ok(ASTNode::new_assignment(assid, self.parse_expression()?, self.node_id()))
     }

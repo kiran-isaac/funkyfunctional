@@ -20,6 +20,9 @@ fn assign() -> Result<(), ParserError> {
 fn assign_2() -> Result<(), ParserError> {
     let str = "x = add (y z) 5";
     let mut parser = Parser::from_string(str.to_string());
+    
+    parser.bind("y".to_string());
+    parser.bind("z".to_string());
 
     let ast = parser.parse()?;
     let assign = ast.get_assign_to("x".to_string()).unwrap();

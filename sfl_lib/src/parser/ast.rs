@@ -1,6 +1,5 @@
 use std::{
-    fmt::{write, Debug},
-    vec,
+    collections::HashSet, fmt::{write, Debug}, vec
 };
 
 use super::token::*;
@@ -141,6 +140,15 @@ impl ASTNode {
             }
         }
         Err(())
+    }
+
+    pub fn get_assigns(&self) -> Vec<String> {
+        let mut vec = vec![];
+        for assign in &self.children {
+            vec.push(assign.get_assignee().get_value());
+        }
+        
+        vec
     }
 
     pub fn get_id(&self) -> usize {

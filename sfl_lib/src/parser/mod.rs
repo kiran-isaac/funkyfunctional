@@ -1,5 +1,6 @@
 mod token;
 mod lexer;
+mod bound;
 pub mod parser;
 pub mod ast;
 
