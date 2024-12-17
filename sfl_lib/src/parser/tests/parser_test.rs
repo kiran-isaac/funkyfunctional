@@ -5,7 +5,7 @@ fn assign() -> Result<(), ParserError> {
     let str = "x = add 2 5";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse()?;
+    let ast = parser.parse_module()?;
     let module = 0;
     let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
     let exp = ast.get_exp(assign);
@@ -27,7 +27,7 @@ fn assign_2() -> Result<(), ParserError> {
     parser.bind("y".to_string());
     parser.bind("z".to_string());
 
-    let ast = parser.parse()?;
+    let ast = parser.parse_module()?;
     let module = 0;
     let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
     let exp = ast.get_exp(assign);
@@ -41,6 +41,8 @@ fn assign_2() -> Result<(), ParserError> {
     assert!(ast.get(ast.get_func(y_z)).get_value() == "y");
     assert!(ast.get(ast.get_arg(y_z)).get_value() == "z");
 
+    println!("{}", ast.to_string(module));
+
     Ok(())
 }
 
@@ -49,7 +51,7 @@ fn multi_assign() -> Result<(), ParserError> {
     let str = "x = 5\n\n//Hello\ny = 6\nz = 7";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse()?;
+    let ast = parser.parse_module()?;
     let module = 0;
 
     let ass1 = ast.get_assign_to(module, "x".to_string()).unwrap();
@@ -60,6 +62,25 @@ fn multi_assign() -> Result<(), ParserError> {
 
     let ass3 = ast.get_assign_to(module, "z".to_string()).unwrap();
     assert!(ast.get(ast.get_exp(ass3)).get_value() == "7");
+
+    assert!(ast.to_string(module) == "x = 5\ny = 6\nz = 7".to_string());
+
+    Ok(())
+}
+
+#[test]
+fn bound() -> Result<(), ParserError> {
+    // recursive
+    let str = "x = x 5";
+    Parser::from_string(str.to_string()).parse_module()?;
+
+    // add is an inbuilt
+    let str = "x = add 2 x";
+    Parser::from_string(str.to_string()).parse_module()?;
+
+    // y is unbound
+    let str = "x = add 2 y";
+    Parser::from_string(str.to_string()).parse_module().unwrap_err();
 
     Ok(())
 }

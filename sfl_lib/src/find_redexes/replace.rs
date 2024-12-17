@@ -1,59 +1,55 @@
-use std::{fmt::format, iter::Map};
 use std::collections::HashSet;
+
+use crate::inbuilts::get_starting_bindings;
 
 use super::*;
 
-fn get_unique_ids(root : &ASTNode) -> HashSet<String> {
-    let mut ids = HashSet::new();
-    match &root.t {
-        ASTNodeType::Literal => {ids}
+pub fn get_replacement_targets(
+    mod_ast: &AST,
+    exp_ast: &AST,
+    exp: usize,
+) -> Vec<(usize, usize)> {
+    let inbuilts = get_starting_bindings();
+    let assign_map = mod_ast.get_assign_map(mod_ast.root);
+
+    let mut pairs: Vec<(usize, usize)> = vec![];
+
+    match exp_ast.get(exp).t {
+        ASTNodeType::Literal => {}
         ASTNodeType::Identifier => {
-            ids.insert(root.get_value());
-            ids
+            for (name, target) in assign_map {
+                if exp_ast.get(exp).get_value() == name {
+                    pairs.push((exp, target));
+                }
+            }
         }
         ASTNodeType::Application => {
-            let mut left_ids = get_unique_ids(&root.get_func());
-            let right_ids = get_unique_ids(&root.get_arg());
-            
-            left_ids.extend(right_ids);
-            left_ids
+            let left = exp_ast.get_func(exp);
+            let right = exp_ast.get_arg(exp);
+
+            let left_pairs = get_replacement_targets(mod_ast, exp_ast, left);
+            let right_pairs = get_replacement_targets(mod_ast, exp_ast, right);
+
+            for (l, r) in left_pairs {
+                pairs.push((l, r));
+            }
+
+            for (l, r) in right_pairs {
+                pairs.push((l, r));
+            }
         }
-        _ => {unreachable!()}
+        _ => {
+            unreachable!()
+        }
     }
+
+    pairs
 }
 
-fn get_replacement_candidates(root : &ASTNode, n : &str) -> Vec<ASTNode> {
-    match &root.t {
-        ASTNodeType::Literal => {vec![]}
-        ASTNodeType::Identifier => {
-            if n == root.get_value() {
-                vec![root.clone()]
-            } else {vec![]}
-        }
-        ASTNodeType::Application => {
-            let mut left_candidates = get_replacement_candidates(&root.get_func(), n);
-            let mut right_candidates = get_replacement_candidates(&root.get_arg(), n);
-            
-            left_candidates.append(&mut right_candidates);
-            left_candidates
-        }
-        _ => {unreachable!()}
-    }
-}
-
-pub fn find(root : &ASTNode) -> Result<Vec<ASTNode>, ()> {
-    let mut candidates = vec![];
-
-    for assign_name in root.get_assigns() {
-        let exp = root.get_assign_to(assign_name).unwrap().get_exp();
-        let ids = get_unique_ids(exp);
-
-        // check bindigs 
-        for id in ids {
-            let replacements = get_replacement_candidates(exp, &id);
-            candidates.extend(replacements);
-        }
-    }
-
-    Ok(candidates)
+pub fn do_replacement(
+    mod_ast: &AST,
+    exp_ast: &mut AST,
+    replacement: (usize, usize),
+) {
+    exp_ast.replace(mod_ast, replacement.0, replacement.1);
 }

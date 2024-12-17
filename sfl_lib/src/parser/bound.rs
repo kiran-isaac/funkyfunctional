@@ -27,4 +27,10 @@ impl BoundChecker {
     pub fn is_bound(&self, name: &str) -> bool {
         self.bound.contains(name)
     }
+
+    pub fn append(&mut self, other: &BoundChecker) {
+        for binding in &other.bound {
+            self.bound.insert(binding.clone());
+        }
+    }
 }

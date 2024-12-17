@@ -62,6 +62,10 @@ impl Parser {
         }
     }
 
+    pub fn add_bindings_from(&mut self, other : &Parser) {
+        self.bound.append(&other.bound);
+    }
+
     pub fn bind(&mut self, name : String) {
         self.bound.add_binding(name);
     }
@@ -170,7 +174,7 @@ impl Parser {
         Ok(ast.new_assignment(id, exp))
     }
 
-    pub fn parse(&mut self) -> Result<AST, ParserError> {
+    pub fn parse_module(&mut self) -> Result<AST, ParserError> {
         // At the top level its just a set of assignments
         let mut ast = AST::new();
         let module = ast.add_module(Vec::new());
@@ -200,6 +204,12 @@ impl Parser {
             }
         }
 
+        Ok(ast)
+    }
+
+    pub fn parse_tl_expression(&mut self) -> Result<AST, ParserError> {
+        let mut ast = AST::new();
+        ast.root = self.parse_expression(&mut ast)?;
         Ok(ast)
     }
 }

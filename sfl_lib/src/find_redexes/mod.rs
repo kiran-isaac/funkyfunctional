@@ -1,6 +1,7 @@
-use crate::{ASTNode, ASTNodeType};
+use crate::{ASTNode, ASTNodeType, AST};
 mod replace;
 mod reduce;
+
 
 #[cfg(test)]
 mod tests;
@@ -14,21 +15,12 @@ pub enum ProgressType {
 
 #[derive(Debug)]
 pub struct Progress {
-    pub redex : ASTNode,
-    pub contraction : Option<ASTNode>,
+    pub redex : usize,
+    pub contraction : usize,
     pub progress_type : ProgressType
 }
 
-pub fn find_redexes(root : &ASTNode) -> Result<Vec<Progress>, ()> {
-    let mut progress = vec![];
-
-    for redex in replace::find(root)? {
-        progress.push(Progress {
-            redex,
-            contraction : None,
-            progress_type : ProgressType::Replace
-        });
-    }
-
-    Ok(progress)
+// Get the things in the expression tree that can be replaced by definitions in the module
+pub fn get_replacements(expr_ast : &AST, mod_ast : &AST) -> Vec<(usize, usize)> {
+    replace::get_replacement_targets(mod_ast, expr_ast, expr_ast.root)
 }
