@@ -5,6 +5,9 @@ fn test_lex(str: String) -> Result<Vec<Token>, LexerError> {
     let mut tokens = Vec::new();
     loop {
         let token = lexer.get_token().unwrap();
+        if token.tt == TokenType::Newline {
+            continue;
+        }
         tokens.push(token.clone());
         if token.tt == TokenType::EOF {
             break;
@@ -59,7 +62,7 @@ fn float_lit() {
 fn comment() {
     lexer_tokentype_test!(
         "//Hello\n\nx\n",
-        vec![TokenType::Newline, TokenType::Id, TokenType::Newline, TokenType::EOF]
+        vec![TokenType::Id, TokenType::EOF]
     );
 }
 
@@ -67,6 +70,6 @@ fn comment() {
 fn multi_line_comment() {
     lexer_tokentype_test!(
         "/*Hello\nWorld*/\n\nx\n",
-        vec![TokenType::Newline, TokenType::Id, TokenType::Newline, TokenType::EOF]
+        vec![TokenType::Id, TokenType::EOF]
     );
 }

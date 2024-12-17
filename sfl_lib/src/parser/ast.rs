@@ -1,4 +1,7 @@
-use std::{fmt::{write, Debug}, vec};
+use std::{
+    fmt::{write, Debug},
+    vec,
+};
 
 use super::token::*;
 
@@ -10,14 +13,17 @@ pub enum ASTNodeType {
     Application,
     Assignment,
 
-    Module
-} 
+    Module,
+}
 
 #[derive(Clone)]
-pub struct ASTNode { 
-    pub t : ASTNodeType,
-    info : Option<Token>,
-    children : Vec<ASTNode>
+pub struct ASTNode {
+    // Ids needed for identifying redexes
+    id: usize,
+
+    pub t: ASTNodeType,
+    info: Option<Token>,
+    children: Vec<ASTNode>,
 }
 
 pub enum Type {
@@ -30,24 +36,49 @@ pub enum Type {
 }
 
 impl ASTNode {
-    pub fn new_id(tk : Token) -> Self {
-        Self {t : ASTNodeType::Identifier, info : Some(tk), children : vec![]}
+    pub fn new_id(tk: Token, n: usize) -> Self {
+        Self {
+            t: ASTNodeType::Identifier,
+            info: Some(tk),
+            children: vec![],
+            id: n,
+        }
     }
 
-    pub fn new_lit(tk : Token) -> Self {
-        Self {t : ASTNodeType::Literal, info : Some(tk), children : vec![]}
+    pub fn new_lit(tk: Token, n: usize) -> Self {
+        Self {
+            t: ASTNodeType::Literal,
+            info: Some(tk),
+            children: vec![],
+            id: n,
+        }
     }
 
-    pub fn new_app(f : ASTNode, arg : ASTNode) -> Self {
-        Self {t : ASTNodeType::Application, info : None, children : vec![f, arg]}
+    pub fn new_app(f: ASTNode, arg: ASTNode, n: usize) -> Self {
+        Self {
+            t: ASTNodeType::Application,
+            info: None,
+            children: vec![f, arg],
+            id: n,
+        }
     }
 
-    pub fn new_assignment(id : Token, exp : ASTNode) -> Self {
-        Self {t : ASTNodeType::Assignment, info : None, children : vec![Self::new_id(id), exp]}
+    pub fn new_assignment(id: Token, exp: ASTNode, n: usize) -> Self {
+        Self {
+            t: ASTNodeType::Assignment,
+            info: None,
+            children: vec![Self::new_id(id, n), exp],
+            id: n,
+        }
     }
 
-    pub fn new_module(children : Vec<ASTNode>) -> Self {
-        Self {t : ASTNodeType::Module, info : None, children }
+    pub fn new_module(children: Vec<ASTNode>, n: usize) -> Self {
+        Self {
+            t: ASTNodeType::Module,
+            info: None,
+            children,
+            id: n,
+        }
     }
 
     pub fn get_lit_type(&self) -> Type {
@@ -71,7 +102,7 @@ impl ASTNode {
         assert!(self.t == ASTNodeType::Identifier || self.t == ASTNodeType::Literal);
         match &self.info {
             Some(tk) => tk.value.clone(),
-            None => unreachable!()
+            None => unreachable!(),
         }
     }
 
@@ -102,17 +133,21 @@ impl ASTNode {
         &self.children[0]
     }
 
-    pub fn get_assign_to(&self, name : String) -> Result<&ASTNode, ()> {
+    pub fn get_assign_to(&self, name: String) -> Result<&ASTNode, ()> {
         assert!(self.t == ASTNodeType::Module);
         for child in &self.children {
             if child.get_assignee().get_value() == name {
-                return Ok(child)
+                return Ok(child);
             }
         }
         Err(())
     }
 
-    fn to_string(&self, indent : usize) -> String {
+    pub fn get_id(&self) -> usize {
+        self.id
+    }
+
+    fn to_string(&self, indent: usize) -> String {
         let indent_str = "  ".repeat(indent);
         let mut s = format!("{}- ", &indent_str);
 
@@ -120,9 +155,9 @@ impl ASTNode {
             ASTNodeType::Identifier => {
                 let vname = match &self.info {
                     Some(tk) => &tk.value,
-                    None => unreachable!()
+                    None => unreachable!(),
                 };
-                
+
                 s.push_str("Id: ");
                 s.push_str(&vname);
                 s
@@ -130,9 +165,9 @@ impl ASTNode {
             ASTNodeType::Literal => {
                 let value = match &self.info {
                     Some(tk) => &tk.value,
-                    None => unreachable!()
+                    None => unreachable!(),
                 };
-                
+
                 s.push_str("Id: ");
                 s.push_str(&value);
                 s
@@ -176,5 +211,11 @@ impl ASTNode {
 impl Debug for ASTNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_string(0))
+    }
+}
+
+impl ToString for ASTNode {
+    fn to_string(&self) -> String {
+        format!("{:?}", self)
     }
 }

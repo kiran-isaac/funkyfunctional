@@ -2,12 +2,12 @@ use super::ast::ASTNode;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
 use std::collections::VecDeque;
-use std::error::Error;
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::{self, prelude::*};
 
 pub struct Parser {
+    i: usize,
     t_queue: VecDeque<Token>,
     lexer: Lexer,
 }
@@ -40,6 +40,7 @@ impl Parser {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
         Ok(Self {
+            i: 0,
             t_queue: VecDeque::new(),
             lexer: Lexer::new(contents, Some(filename)),
         })
@@ -47,9 +48,15 @@ impl Parser {
 
     pub fn from_string(str: String) -> Self {
         Self {
+            i: 0,
             t_queue: VecDeque::new(),
             lexer: Lexer::new(str, None),
         }
+    }
+
+    fn node_id(&mut self) -> usize {
+        self.i += 1;
+        self.i
     }
 
     fn error(&self, msg: String) -> ParserError {
@@ -91,13 +98,12 @@ impl Parser {
 
     fn parse_expression(&mut self) -> Result<ASTNode, ParserError> {
         let mut left = self.parse_primary()?;
-        let leftstring = format!("{:?}", left);
         loop {
             match &self.peek(0)?.tt {
                 // If paren, apply to paren
                 TokenType::LParen => {
                     self.advance();
-                    left = ASTNode::new_app(left, self.parse_expression()?)
+                    left = ASTNode::new_app(left, self.parse_expression()?, self.i)
                 }
                 TokenType::RParen | TokenType::EOF | TokenType::Newline => {
                     self.advance();
@@ -109,23 +115,21 @@ impl Parser {
                 | TokenType::FloatLit
                 | TokenType::CharLit
                 | TokenType::IntLit
-                | TokenType::StringLit => left = ASTNode::new_app(left, self.parse_primary()?),
+                | TokenType::StringLit => left = ASTNode::new_app(left, self.parse_primary()?, self.node_id()),
                 
                 _ => {
                     let e = format!("Unexpected token in expression: {:?}", self.peek(0)?);
                     return Err(self.error(e));
                 }
             }
-
-            let leftstring = format!("{:?}", left);
         }
     }
 
     fn parse_primary(&mut self) -> Result<ASTNode, ParserError> {
         let t = self.consume()?;
         match t.tt {
-            TokenType::Id => Ok(ASTNode::new_id(t)),
-            TokenType::IntLit | TokenType::FloatLit => Ok(ASTNode::new_lit(t)),
+            TokenType::Id => Ok(ASTNode::new_id(t, self.node_id())),
+            TokenType::IntLit | TokenType::FloatLit => Ok(ASTNode::new_lit(t, self.node_id())),
             _ => Err(self.error(format!("Unexpected Token in primary: {:?}", t))),
         }
     }
@@ -138,7 +142,7 @@ impl Parser {
         self.advance();
         self.advance();
 
-        Ok(ASTNode::new_assignment(assid, self.parse_expression()?))
+        Ok(ASTNode::new_assignment(assid, self.parse_expression()?, self.node_id()))
     }
 
     pub fn parse(&mut self) -> Result<ASTNode, ParserError> {
@@ -167,6 +171,6 @@ impl Parser {
             }
         }
 
-        Ok(ASTNode::new_module(ass_vec))
+        Ok(ASTNode::new_module(ass_vec, self.node_id()))
     }
 }
