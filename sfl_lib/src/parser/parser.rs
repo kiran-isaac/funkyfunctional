@@ -129,7 +129,11 @@ impl Parser {
                         self.unbind(varname);
                         Ok(ast.add_abstraction(id, expr, line, col))
                     }
-                    TokenType::Id => self.parse_abstraction(ast),
+                    TokenType::Id => {
+                        let abst2 =  self.parse_abstraction(ast)?;
+                        self.unbind(varname);
+                        Ok(ast.add_abstraction(id, abst2, line, col))
+                    }
                     _ => Err(self.parse_error("Expected dot after lambda id".to_string())),
                 }
             }
