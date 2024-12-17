@@ -16,6 +16,15 @@ fn test_lex(str: String) -> Result<Vec<Token>, LexerError> {
     Ok(tokens)
 }
 
+fn test_lex_should_err(str: String) -> Result<LexerError, Token> {
+    let mut lexer = Lexer::new(str, None);
+    let token = lexer.get_token();
+    match token {
+        Ok(t) => return Err(t),
+        Err(e) => return Ok(e),
+    }
+}
+
 macro_rules! lexer_tokentype_test {
     ($x:expr, $y:expr) => {
         let desired: Vec<TokenType> = $y;
@@ -59,11 +68,36 @@ fn float_lit() {
 }
 
 #[test]
-fn comment() {
+fn char_lit() {
+    let string = "'\\n' '\\r' 'a'";
+    let tokens = test_lex(string.to_string()).unwrap();
+
+    assert!(tokens[0].tt == TokenType::CharLit);
+    assert!(tokens[0].value == "\n");
+
+    assert!(tokens[1].tt == TokenType::CharLit);
+    assert!(tokens[1].value == "\r");
+
+    assert!(tokens[2].tt == TokenType::CharLit);
+    assert!(tokens[2].value == "a");
+
+    let invalid_char_lits = vec!["'\t'", "''", "'aa'", "'aaa'", "'\\a'"];
+    for lit in invalid_char_lits {
+        let errors = test_lex_should_err(lit.to_string()).unwrap();
+    }
+}
+
+#[test]
+fn bool_lit() {
     lexer_tokentype_test!(
-        "//Hello\n\nx\n",
-        vec![TokenType::Id, TokenType::EOF]
+        "true false",
+        vec![TokenType::BoolLit, TokenType::BoolLit, TokenType::EOF]
     );
+}
+
+#[test]
+fn comment() {
+    lexer_tokentype_test!("//Hello\n\nx\n", vec![TokenType::Id, TokenType::EOF]);
 }
 
 #[test]

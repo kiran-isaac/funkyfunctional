@@ -73,16 +73,26 @@ impl Lexer {
 
         self.advance();
 
-        'loopdyloop: while !self.c().is_whitespace() {
+        while !self.c().is_whitespace() {
             match self.c() {
                 'a'..'z' | 'A'..'Z' | '0'..'9' | '_' => {
                     str.push(self.c());
                     self.advance();
                 }
                 _ => {
-                    break 'loopdyloop;
+                    break;
                 }
             };
+        }
+
+        match str.as_str() {
+            "true" | "false" => {
+                return Ok(Token {
+                    tt: TokenType::BoolLit,
+                    value: str,
+                });
+            }
+            _ => {}
         }
 
         return Ok(Token {
@@ -127,6 +137,54 @@ impl Lexer {
                 value: str,
             });
         }
+    }
+
+    fn parse_char_lit(&mut self) -> Result<Token, LexerError> {
+        let mut str = String::new();
+
+        self.advance();
+
+        while self.c() != '\'' {
+            if self.c().is_ascii_control() {
+                return Err(self.error(format!("Unexpected char in char literal: {}", self.c())));
+            }
+            str.push(self.c());
+            self.advance();
+
+            if str.len() > 2 {
+                return Err(self.error(format!("Unterminated char literal")));
+            }
+        }
+
+        self.advance();
+
+        // convert str to char accounting for escape sequences
+        let char = match str.as_str() {
+            "\\n" => '\n',
+            "\\t" => '\t',
+            "\\r" => '\r',
+            "\\0" => '\0',
+            _ => {
+                if str.len() == 2 {
+                    // check if first char is a backslash
+                    if str.chars().next().unwrap() == '\\' {
+                        return Err(self.error(format!("Invalid escape sequence: {}", str)));
+                    } else {
+                        return Err(self.error(format!("Invalid char literal: {}", str)));
+                    }
+                }
+                if str.len() == 0 {
+                    return Err(self.error(format!("Empty char literal")));
+                }
+
+                str.chars().next().unwrap()
+            },
+        };
+
+        Ok(Token {
+            tt: TokenType::CharLit,
+            value: char.to_string(),
+        })
     }
 
     pub fn get_token(&mut self) -> Result<Token, LexerError> {
@@ -197,6 +255,7 @@ impl Lexer {
                     value: "=".to_string(),
                 })
             }
+            '\'' => self.parse_char_lit(),
             '\0' => Ok(Token {
                 tt: TokenType::EOF,
                 value: "".to_string(),
