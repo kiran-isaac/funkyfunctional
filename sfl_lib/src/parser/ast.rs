@@ -249,10 +249,10 @@ impl AST {
         let ind = " ".repeat(indent);
         match n.t {
             ASTNodeType::Identifier => {
-                format!("{}Identifier: {}\n", ind, n.get_value())
+                format!("{}Identifier: {}", ind, n.get_value())
             }
             ASTNodeType::Literal => {
-                format!("{}Literal: {}\n", ind, n.get_value())
+                format!("{}Literal: {}", ind, n.get_value())
             }
             ASTNodeType::Application => {
                 let left = self.to_string_indent(self.get_func(node), indent + 2);
@@ -299,11 +299,11 @@ impl AST {
                     ASTNodeType::Abstraction => format!("({})", func_str),
                     _ => func_str,
                 };
-
+                
                 let arg_str = self.to_string(arg);
                 // If the argument is an application, wrap it in parens
                 let arg_str = match self.get(arg).t {
-                    ASTNodeType::Application => format!("({})", arg_str),
+                    ASTNodeType::Application | ASTNodeType::Abstraction => format!("({})", arg_str),
                     _ => arg_str,
                 };
 
