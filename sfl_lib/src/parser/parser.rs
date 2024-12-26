@@ -165,10 +165,10 @@ impl Parser {
                 TokenType::LParen => {
                     self.advance();
                     let right = self.parse_expression(ast)?;
+                    self.advance();
                     left = ast.add_app(left, right, line, col);
                 }
                 TokenType::RParen | TokenType::EOF | TokenType::Newline => {
-                    self.advance();
                     return Ok(left);
                 }
 

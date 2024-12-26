@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use ast::AST;
 
-use crate::{inbuilts::get_starting_type_env, parser::*};
+use crate::parser::*;
 
 #[test]
 fn assign() -> Result<(), ParserError> {
@@ -103,11 +103,12 @@ fn abstraction () -> Result<(), ParserError> {
     let mut parser = Parser::from_string(unbound_str.to_string());
     assert!(parser.parse_module().is_err());
 
+    // Should be same for both
     let multi_abstr = "x = (\\y z . add y 5) 2";
+    let multi_abstr2 = "x = (\\y . (\\z . add y 5)) 2";
     let ast = Parser::from_string(multi_abstr.to_string()).parse_module()?;
-    let mut env = get_starting_type_env();
-    let mut constrains = HashMap::new();
-    ast.get_type(ast.root, &mut env, &mut constrains).unwrap();
+    let ast2 = Parser::from_string(multi_abstr2.to_string()).parse_module()?;
+    assert_eq!(ast.to_string(ast.root), ast2.to_string(ast2.root));
 
     Ok(())
 }
