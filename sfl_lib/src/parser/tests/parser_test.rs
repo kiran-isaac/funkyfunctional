@@ -1,4 +1,8 @@
-use crate::parser::*;
+use std::collections::HashMap;
+
+use ast::AST;
+
+use crate::{inbuilts::get_starting_type_env, parser::*};
 
 #[test]
 fn assign() -> Result<(), ParserError> {
@@ -81,6 +85,29 @@ fn bound() -> Result<(), ParserError> {
     // y is unbound
     let str = "x = add 2 y";
     Parser::from_string(str.to_string()).parse_module().unwrap_err();
+
+    Ok(())
+}
+
+#[test]
+fn abstraction () -> Result<(), ParserError> {
+    let str = "x = (\\y . add y 5) 2";
+    let mut parser = Parser::from_string(str.to_string());
+
+    let ast = parser.parse_module()?;
+    let module = 0;
+    assert!(ast.to_string(module) == "x = (\\y . add y 5) 2".to_string());
+
+    // Should error because y is unbound
+    let unbound_str = "x = (\\y . add y 5) y";
+    let mut parser = Parser::from_string(unbound_str.to_string());
+    assert!(parser.parse_module().is_err());
+
+    let multi_abstr = "x = (\\y z . add y 5) 2";
+    let ast = Parser::from_string(multi_abstr.to_string()).parse_module()?;
+    let mut env = get_starting_type_env();
+    let mut constrains = HashMap::new();
+    ast.get_type(ast.root, &mut env, &mut constrains).unwrap();
 
     Ok(())
 }

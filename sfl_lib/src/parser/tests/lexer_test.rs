@@ -107,3 +107,17 @@ fn multi_line_comment() {
         vec![TokenType::Id, TokenType::EOF]
     );
 }
+
+#[test]
+fn lex_abstraction() {
+    lexer_tokentype_test!(
+        "\\x . x",
+        vec![
+            TokenType::Lambda,
+            TokenType::Id,
+            TokenType::Dot,
+            TokenType::Id,
+            TokenType::EOF
+        ]
+    );
+}

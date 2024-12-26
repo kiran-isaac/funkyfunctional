@@ -16,6 +16,8 @@ pub enum ASTNodeType {
     Application,
     Assignment,
 
+    Abstraction,
+
     Module,
 }
 
@@ -29,7 +31,6 @@ pub struct ASTNode {
     pub t: ASTNodeType,
     info: Option<Token>,
     children: Vec<usize>,
-
     line : usize,
     col : usize
 }
@@ -122,6 +123,7 @@ impl AST {
                 }
                 self.add_module(assigns, n.line, n.col)
             }
+            _ => unimplemented!("append for {:?}", n.t),
         }
     }
 
@@ -162,6 +164,16 @@ impl AST {
             t: ASTNodeType::Application,
             info: None,
             children: vec![f, x],
+            line,
+            col
+        })
+    }
+
+    pub fn add_abstraction(&mut self, id: usize, exp: usize, line : usize, col : usize) -> usize {
+        self.add(ASTNode {
+            t: ASTNodeType::Abstraction,
+            info: None,
+            children: vec![id, exp],
             line,
             col
         })
@@ -259,6 +271,11 @@ impl AST {
                 }
                 s
             }
+            ASTNodeType::Abstraction => {
+                let id = self.get(n.children[0]);
+                let exp = self.to_string_indent(n.children[1], indent + 2);
+                format!("{}Abstraction: {}\n{}", ind, id.get_value(), exp)
+            }
         }
     }
 
@@ -276,6 +293,12 @@ impl AST {
                 let arg = self.get_arg(node);
 
                 let func_str = self.to_string(func);
+
+                // If the func is an abstraction, wrap it in parens
+                let func_str = match self.get(func).t {
+                    ASTNodeType::Abstraction => format!("({})", func_str),
+                    _ => func_str,
+                };
 
                 let arg_str = self.to_string(arg);
                 // If the argument is an application, wrap it in parens
@@ -299,6 +322,11 @@ impl AST {
                 }
 
                 s.trim().to_string()
+            }
+            ASTNodeType::Abstraction => {
+                let id = self.get(n.children[0]);
+                let exp = self.to_string(n.children[1]);
+                format!("\\{} . {}", id.get_value(), exp)
             }
         }
     }

@@ -16,6 +16,10 @@ pub enum TokenType {
     LParen,
     RParen,
 
+    Lambda,
+
+    Dot,
+
     Assignment,
 }
 
