@@ -1,24 +1,9 @@
-extern crate pest;
-#[macro_use]
-extern crate pest_derive;
+mod parser;
+mod find_redexes;
+mod inbuilts;
+mod types;
 
-pub mod types2;
-pub mod parser;
-pub mod terms;
-
-pub use parser::lexer::Lexer;
-
-pub fn add(left: i64, right: i64) -> i64 {
-    left + right
-}
-
-#[cfg(test)]
-pub mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use parser::Parser;
+pub use parser::ast::{ASTNode, ASTNodeType, AST};
+pub use find_redexes::get_replacements;
+pub use types::{Type, Primitive, TypeError};

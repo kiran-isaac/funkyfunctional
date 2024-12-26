@@ -1,4 +1,3 @@
-type String = [Char]
+addone = \x -> add x 1
 
-type Result<T> = (T, String)
-
+main = addone 2

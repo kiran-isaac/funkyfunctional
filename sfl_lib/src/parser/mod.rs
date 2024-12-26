@@ -1,7 +1,11 @@
-pub mod token;
-pub use pest::Parser;
-pub mod lexer;
+mod token;
+mod lexer;
+mod bound;
+pub mod parser;
+pub mod ast;
 
-#[derive(Parser)]
-#[grammar = "parser/spec.pest"]
-pub struct SflParser;
+pub use lexer::*;
+pub use parser::*;
+
+#[cfg(test)]
+mod tests;
