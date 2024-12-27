@@ -40,8 +40,10 @@ macro_rules! lexer_tokentype_test {
 #[test]
 fn int_lit() {
     lexer_tokentype_test!(
-        "123 12 23 0",
+        "123 12 23 0 -10 -10",
         vec![
+            TokenType::IntLit,
+            TokenType::IntLit,
             TokenType::IntLit,
             TokenType::IntLit,
             TokenType::IntLit,
@@ -54,8 +56,14 @@ fn int_lit() {
 #[test]
 fn float_lit() {
     lexer_tokentype_test!(
-        "123.0 12.0 23.0 0.0 0. .0",
+        "123.0 12.0 23.0 0.0 0. .0 -123.0 -12.0 -23.0 -0.0 -0. -.0",
         vec![
+            TokenType::FloatLit,
+            TokenType::FloatLit,
+            TokenType::FloatLit,
+            TokenType::FloatLit,
+            TokenType::FloatLit,
+            TokenType::FloatLit,
             TokenType::FloatLit,
             TokenType::FloatLit,
             TokenType::FloatLit,

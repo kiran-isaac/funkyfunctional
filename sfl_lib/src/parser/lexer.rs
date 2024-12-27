@@ -105,10 +105,25 @@ impl Lexer {
         let mut str = String::new();
 
         let mut has_point = false;
+        let mut char_before_point = false;
+        let mut char_after_point = false;
+
+        match self.c() {
+            '-' => {
+                str.push(self.c());
+                self.advance();
+            }
+            _ => {}
+        }
 
         while !(self.c().is_whitespace() || self.c() == '\0' || self.c() == ')') {
             match self.c() {
                 '0'..='9' => {
+                    if has_point {
+                        char_after_point = true;
+                    } else {
+                        char_before_point = true;
+                    }
                     str.push(self.c());
                 }
                 '.' => {
@@ -124,6 +139,10 @@ impl Lexer {
             }
 
             self.advance();
+        }
+
+        if !(char_before_point || char_after_point) {
+            return Err(self.error(format!("Empty number literal")));
         }
 
         if has_point {
@@ -178,7 +197,7 @@ impl Lexer {
                 }
 
                 str.chars().next().unwrap()
-            },
+            }
         };
 
         Ok(Token {
@@ -213,21 +232,17 @@ impl Lexer {
 
         match c {
             'a'..='z' => self.parse_word(),
-            '0'..='9' => self.parse_num_lit(),
-            '.' => {
-                match self.file[self.i + 1] {
-                    '0'..='9' => {
-                        self.parse_num_lit()
-                    }
-                    _ => {
-                        self.advance();
-                        Ok(Token {
-                            tt: TokenType::Dot,
-                            value: ".".to_string(),
-                        })
-                    }
+            '0'..='9' | '-' => self.parse_num_lit(),
+            '.' => match self.file[self.i + 1] {
+                '0'..='9' => self.parse_num_lit(),
+                _ => {
+                    self.advance();
+                    Ok(Token {
+                        tt: TokenType::Dot,
+                        value: ".".to_string(),
+                    })
                 }
-            }
+            },
             '(' => {
                 self.advance();
                 Ok(Token {

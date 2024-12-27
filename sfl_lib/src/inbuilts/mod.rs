@@ -83,6 +83,11 @@ impl InbuiltsLookupTable {
         self.add_inbuilt("mulf".to_string(), 2, inbuilt_float_mul);
         self.add_inbuilt("divf".to_string(), 2, inbuilt_float_div);
 
+        self.add_inbuilt("neg".to_string(), 1, inbuilt_int_neg);
+        self.add_inbuilt("negf".to_string(), 1, inbuilt_float_neg);
+
+        #[cfg(test)]
+        self.add_inbuilt("zero_ary_test".to_string(), 0, inbuilt_int_zero);
     }
 
     /// Get all strings that are inbuilts so that they can be added to the bound checker

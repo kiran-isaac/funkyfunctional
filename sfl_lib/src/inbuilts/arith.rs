@@ -46,6 +46,19 @@ pub fn inbuilt_int_div(call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
     inbuilt_binary(call, args, i64::div, Primitive::Int64)
 }
 
+pub fn inbuilt_int_neg(call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
+    assert_eq!(args.len(), 1);
+    let x : i64 = args[0].get_value().parse().unwrap();
+    ASTNode::new_lit(
+        Token {
+            tt: TokenType::IntLit,
+            value: format!("{}", -x),
+        },
+        call.line,
+        call.col,
+    )
+}
+
 pub fn inbuilt_float_add(call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
     inbuilt_binary(call, args, f64::add, Primitive::Float64)
 }
@@ -62,6 +75,18 @@ pub fn inbuilt_float_div(call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
     inbuilt_binary(call, args, f64::div, Primitive::Float64)
 }
 
+pub fn inbuilt_float_neg(call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
+    assert_eq!(args.len(), 1);
+    let x : f64 = args[0].get_value().parse().unwrap();
+    ASTNode::new_lit(
+        Token {
+            tt: TokenType::IntLit,
+            value: format!("{}", -x),
+        },
+        call.line,
+        call.col,
+    )
+}
 
 pub fn inbuilt_int_zero(call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
     assert!(args.len() == 0);
