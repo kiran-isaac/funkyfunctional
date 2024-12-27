@@ -9,13 +9,12 @@ use std::fmt::Debug;
 use std::fs::File;
 use std::io::{self, prelude::*};
 
-
 pub struct Parser {
     i: usize,
     t_queue: VecDeque<Token>,
     lexer: Lexer,
-    bound : BoundChecker,
-    ast : AST
+    bound: BoundChecker,
+    ast: AST,
 }
 
 pub struct ParserError {
@@ -49,8 +48,8 @@ impl Parser {
             i: 0,
             t_queue: VecDeque::new(),
             lexer: Lexer::new(contents, Some(filename)),
-            bound : BoundChecker::new(),
-            ast : AST::new()
+            bound: BoundChecker::new(),
+            ast: AST::new(),
         })
     }
 
@@ -59,20 +58,20 @@ impl Parser {
             i: 0,
             t_queue: VecDeque::new(),
             lexer: Lexer::new(str, None),
-            bound : BoundChecker::new(),
-            ast : AST::new()
+            bound: BoundChecker::new(),
+            ast: AST::new(),
         }
     }
 
-    pub fn add_bindings_from(&mut self, other : &Parser) {
+    pub fn add_bindings_from(&mut self, other: &Parser) {
         self.bound.append(&other.bound);
     }
 
-    pub fn bind(&mut self, name : String) {
+    pub fn bind(&mut self, name: String) {
         self.bound.add_binding(name);
     }
 
-    pub fn unbind(&mut self, name : String) {
+    pub fn unbind(&mut self, name: String) {
         self.bound.remove_binding(name);
     }
 
@@ -113,7 +112,7 @@ impl Parser {
         peek_result
     }
 
-    fn parse_abstraction(&mut self, ast : &mut AST) -> Result<usize, ParserError> {
+    fn parse_abstraction(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
         match self.peek(0)?.tt {
             TokenType::Id => {
                 let id = self.consume()?;
@@ -130,7 +129,7 @@ impl Parser {
                         Ok(ast.add_abstraction(id, expr, line, col))
                     }
                     TokenType::Id => {
-                        let abst2 =  self.parse_abstraction(ast)?;
+                        let abst2 = self.parse_abstraction(ast)?;
                         self.unbind(varname);
                         Ok(ast.add_abstraction(id, abst2, line, col))
                     }
@@ -155,7 +154,7 @@ impl Parser {
         }
     }
 
-    fn parse_expression(&mut self, ast : &mut AST) -> Result<usize, ParserError> {
+    fn parse_expression(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
         let line = self.lexer.line;
         let col = self.lexer.col;
         let mut left = self.parse_primary(ast)?;
@@ -186,7 +185,7 @@ impl Parser {
                     let right = self.parse_primary(ast)?;
                     left = ast.add_app(left, right, line, col);
                 }
-                
+
                 _ => {
                     let e = format!("Unexpected token in expression: {:?}", self.peek(0)?);
                     return Err(self.parse_error(e));
@@ -196,7 +195,7 @@ impl Parser {
     }
 
     // Parse a primary expression
-    fn parse_primary(&mut self, ast : &mut AST) -> Result<usize, ParserError> {
+    fn parse_primary(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
         let line = self.lexer.line;
         let col = self.lexer.col;
         let t = self.consume()?;
@@ -207,8 +206,10 @@ impl Parser {
                     return Err(self.parse_error(format!("Unbound identifier: {}", id_name)));
                 }
                 Ok(ast.add_id(t, line, col))
-            },
-            TokenType::IntLit | TokenType::FloatLit | TokenType::BoolLit | TokenType::CharLit => Ok(ast.add_lit(t, line, col)),
+            }
+            TokenType::IntLit | TokenType::FloatLit | TokenType::BoolLit | TokenType::CharLit => {
+                Ok(ast.add_lit(t, line, col))
+            }
             TokenType::Lambda => {
                 self.advance();
                 self.parse_abstraction(ast)
@@ -222,7 +223,7 @@ impl Parser {
         }
     }
 
-    fn parse_assignment(&mut self, ast : &mut AST) -> Result<usize, ParserError> {
+    fn parse_assignment(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
         assert_eq!(self.peek(0)?.tt, TokenType::Id);
         assert_eq!(self.peek(1)?.tt, TokenType::Assignment);
 
@@ -248,6 +249,7 @@ impl Parser {
         // At the top level its just a set of assignments
         let mut ast = AST::new();
         let module = ast.add_module(Vec::new(), self.lexer.line, self.lexer.col);
+        let mut main_found = false;
 
         'assloop: loop {
             let t = self.peek(0)?;
@@ -255,8 +257,18 @@ impl Parser {
             match t.tt {
                 TokenType::Id => match self.peek(1)?.tt {
                     TokenType::Assignment => {
+                        if main_found {
+                            return Err(self.parse_error(
+                                "Main should be the last assignment in the module".to_string(),
+                            ));
+                        }
+
                         let assignment = self.parse_assignment(&mut ast)?;
                         ast.add_to_module(module, assignment);
+
+                        if ast.get_assignee(assignment) == "main" {
+                            main_found = true;
+                        }
                     }
                     _ => {
                         return Err(self.parse_error(format!(
@@ -266,7 +278,9 @@ impl Parser {
                         )))
                     }
                 },
-                TokenType::Newline => {self.advance();}
+                TokenType::Newline => {
+                    self.advance();
+                }
                 TokenType::EOF => {
                     break 'assloop;
                 }
