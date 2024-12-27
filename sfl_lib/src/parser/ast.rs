@@ -145,6 +145,17 @@ impl AST {
         ast
     }
 
+    pub fn clone_node(&self, n : usize) -> AST {
+        let node = self.get(n);
+        let mut ast = AST::single_node(node.clone());
+        for i in 0..node.children.len() {
+            let index = ast.append_root(&self.clone_node(node.children[i]));
+            ast.vec[ast.root].children[i] = index;
+        }
+
+        ast
+    }
+
     pub fn replace_from_other_root(&mut self, other: &AST, old: usize) {
         let new = self.append(other, other.root);
         self.replace_references_to_node(old, new);
@@ -153,7 +164,6 @@ impl AST {
     pub fn replace(&mut self, old: usize, new: usize) {
         // Replace references to the old node with the new node
         self.replace_references_to_node(old, new);
-        self.remove(old);
     }
 
     fn get_all_children_recurse(&self, node : usize) -> Vec<usize> {
@@ -210,7 +220,12 @@ impl AST {
             ASTNodeType::Assignment => {
                 let id = self.append(other, n.children[0]);
                 let exp = self.append(other, other.get_exp(node));
-                self.new_assignment(id, exp, n.line, n.col)
+                self.add_assignment(id, exp, n.line, n.col)
+            }
+            ASTNodeType::Abstraction => {
+                let var = self.append(other, n.children[0]);
+                let exp = self.append(other, other.get_abstr_exp(node));
+                self.add_abstraction(var, exp, n.line, n.col)
             }
             ASTNodeType::Module => {
                 let mut assigns = vec![];
@@ -219,8 +234,11 @@ impl AST {
                 }
                 self.add_module(assigns, n.line, n.col)
             }
-            _ => unimplemented!("append for {:?}", n.t),
         }
+    }
+
+    pub fn append_root(&mut self, other : &AST) -> usize {
+        self.append(other, other.root)
     }
 
     pub fn add_id(&mut self, tk: Token, line : usize, col : usize) -> usize {
@@ -239,7 +257,7 @@ impl AST {
         self.add(ASTNode::new_abstraction(id, exp, line, col))
     }
 
-    pub fn new_assignment(&mut self, id: usize, exp: usize, line : usize, col : usize) -> usize {
+    pub fn add_assignment(&mut self, id: usize, exp: usize, line : usize, col : usize) -> usize {
         self.add(ASTNode {
             t: ASTNodeType::Assignment,
             info: None,
@@ -260,6 +278,47 @@ impl AST {
 
     pub fn get(&self, i: usize) -> &ASTNode {
         &self.vec[i]
+    }
+
+    pub fn get_abstr_var(&self, abst: usize) -> usize {
+        assert!(self.vec[abst].t == ASTNodeType::Abstraction);
+        self.vec[abst].children[0]
+    }
+
+    pub fn get_abstr_exp(&self, abst: usize) -> usize {
+        assert!(self.vec[abst].t == ASTNodeType::Abstraction);
+        self.vec[abst].children[1]
+    }
+
+    pub fn get_all_instances_of_var_in_exp(&self, exp: usize, var : &String) -> Vec<usize> {
+        match self.get(exp).t {
+            ASTNodeType::Literal => {vec![]}
+            ASTNodeType::Identifier => {
+                if var == &self.get(exp).get_value() {
+                    vec![exp]
+                } else {
+                    vec![]
+                }
+            }
+            ASTNodeType::Application => {
+                let mut left = self.get_all_instances_of_var_in_exp(self.get_func(exp), &var);
+                let right = self.get_all_instances_of_var_in_exp(self.get_arg(exp), &var);
+                left.extend(right);
+                left
+            }
+            ASTNodeType::Abstraction => {
+                let abst_var = self.get_abstr_var(exp);
+                assert_ne!(&self.get(abst_var).get_value(), var);
+
+                self.get_all_instances_of_var_in_exp(self.get_abstr_exp(exp), var)
+            }
+            _ => unreachable!("Cannot find var instances in non exp")
+        }
+    }
+
+    pub fn get_abst_var_usages(&self, abst : usize) -> Vec<usize> {
+        let var_name = self.get(self.get_abstr_var(abst)).get_value();
+        self.get_all_instances_of_var_in_exp(self.get_abstr_exp(abst), &var_name)
     }
 
     pub fn get_func(&self, app: usize) -> usize {

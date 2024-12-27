@@ -10,13 +10,12 @@ use super::*;
 /// App[[App add 2], 3]
 /// This function checks that the rhs is a literal, and the lhs is
 /// either an ID or an App of an ID in the set of inbuilts and a literal
-fn check_for_correct_call_to_inbuilts(
+fn check_for_ready_call_to_inbuilts(
     ast: &AST,
     module: usize,
     exp: usize,
     inbuilts: &InbuiltsLookupTable,
 ) -> Option<ASTNode> {
-    let app = ast.get(exp);
     let mut f = ast.get_func(exp);
     let mut x = ast.get_arg(exp);
     let mut argv = vec![];
@@ -80,13 +79,33 @@ pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec
         }
         ASTNodeType::Application => {
             if let Some(inbuilt_reduction) =
-                check_for_correct_call_to_inbuilts(ast, module, exp, &inbuilts)
+                check_for_ready_call_to_inbuilts(ast, module, exp, &inbuilts)
             {
                 pairs.push((exp, AST::single_node(inbuilt_reduction)));
             } else {
-                let lhs = ast.to_string(ast.get_func(exp));
-                let rhs = ast.to_string(ast.get_arg(exp));
-                pairs.extend(find_redex_contraction_pairs(ast, module, ast.get_func(exp)));
+                let f = ast.get_func(exp);
+                let x = ast.get_arg(exp);
+                match ast.get(f).t {
+                    ASTNodeType::Application => {
+                        pairs.extend(find_redex_contraction_pairs(ast, module, f));
+                    }
+                    ASTNodeType::Abstraction => {
+                        // All usages of the abstracted variable
+                        let var_name = ast.get(ast.get_abstr_var(f)).get_value();
+                        let mut cloned_abst_expr = ast.clone_node(ast.get_abstr_exp(f));
+
+                        let usages = cloned_abst_expr.get_all_instances_of_var_in_exp(cloned_abst_expr.root, &var_name);
+                        let arg_id = cloned_abst_expr.append(&ast, x);
+
+                        for usage in usages {
+                            cloned_abst_expr.replace(usage, arg_id);
+                        }
+
+                        pairs.push((exp, cloned_abst_expr))
+                    }
+                    _ => unimplemented!()
+                }
+
                 pairs.extend(find_redex_contraction_pairs(ast, module, ast.get_arg(exp)));
             }
         }

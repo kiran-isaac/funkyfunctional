@@ -242,7 +242,7 @@ impl Parser {
         let exp = self.parse_expression(ast)?;
         let id = ast.add_id(assid, line, col);
 
-        Ok(ast.new_assignment(id, exp, line, col))
+        Ok(ast.add_assignment(id, exp, line, col))
     }
 
     pub fn parse_module(&mut self) -> Result<AST, ParserError> {

@@ -46,10 +46,7 @@ fn main() {
         }
 
         let choice = &rcs[choice - 1];
-
-        let old = ast.get(choice.0);
-        let new = choice.1.get(choice.1.root);
-
+        
         ast.replace_from_other_root(&choice.1, choice.0);
 
         let exp = ast.get_exp(ast.get_main(ast.root));

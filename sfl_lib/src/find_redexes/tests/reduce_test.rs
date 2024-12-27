@@ -25,7 +25,7 @@ fn zero_test() {
         .unwrap();
 
     let module = ast.root;
-    let exp = ast.get_exp(ast.get_main(module).unwrap());
+    let exp = ast.get_exp(ast.get_main(module));
 
     let rcs = find_redex_contraction_pairs(&ast, module, exp);
     assert!(rcs.len() == 1);
@@ -48,7 +48,7 @@ fn basic_add_test() {
         .unwrap();
 
     let module = ast.root;
-    let exp = ast.get_exp(ast.get_main(module).unwrap());
+    let exp = ast.get_exp(ast.get_main(module));
 
     let rcs = find_redex_contraction_pairs(&ast, module, exp);
     assert!(rcs.len() == 1);
@@ -70,7 +70,7 @@ fn multi_op_test() {
     let mut ast = Parser::from_string(program).parse_module().unwrap();
 
     let module = ast.root;
-    let exp = ast.get_exp(ast.get_main(module).unwrap());
+    let exp = ast.get_exp(ast.get_main(module));
 
     let rcs = find_redex_contraction_pairs(&ast, module, exp);
 
@@ -100,3 +100,17 @@ fn multi_op_test() {
 
 }
 
+#[test]
+fn basic_abst_test() {
+    let program = "main = (\\x.add 1 x) 2".to_string();
+
+    let mut ast = Parser::from_string(program).parse_module().unwrap();
+
+    let module = ast.root;
+    let exp = ast.get_exp(ast.get_main(module));
+
+    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    assert_eq!(rcs.len(), 1);
+
+    assert_eq!("(\\x . add 1 x) 2 => add 1 2", rc_pair_to_string(&ast, &rcs[0]));
+}
