@@ -24,8 +24,10 @@ fn check_for_correct_call_to_inbuilts(
     // can add type assertion here that there exists B and A s.t. x :: B and f :: B -> A
     for _ in 1..inbuilts.get_max_arity() {
         match ast.get(x).t {
-            ASTNodeType::Literal => {argv.push(ast.get(x));}
-            _ => return None
+            ASTNodeType::Literal => {
+                argv.push(ast.get(x));
+            }
+            _ => return None,
         }
 
         match ast.get(f).t {
@@ -33,16 +35,16 @@ fn check_for_correct_call_to_inbuilts(
                 let inbuilts_of_arity = inbuilts.get_n_ary_inbuilts(argv.len());
                 let val = ast.get(f).get_value();
                 if inbuilts_of_arity.contains_key(&val) {
-                    return Some(inbuilts_of_arity.get(&val).unwrap().call(ast.get(f), argv))
+                    return Some(inbuilts_of_arity.get(&val).unwrap().call(ast.get(f), argv));
                 } else {
-                    return None
+                    return None;
                 }
             }
             ASTNodeType::Application => {
                 x = ast.get_arg(f);
                 f = ast.get_func(f);
             }
-            _ => return None
+            _ => return None,
         }
     }
 
@@ -51,6 +53,9 @@ fn check_for_correct_call_to_inbuilts(
 
 pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec<(usize, AST)> {
     let mut pairs: Vec<(usize, AST)> = vec![];
+    
+    // Dont need to worry about this as main must be at the end, so everything defined in 
+    // the module is defined here
     let previous_assignments = ast.get_assigns_map(module);
     let inbuilts = InbuiltsLookupTable::new();
 
@@ -68,12 +73,19 @@ pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec
                 res_ast.root = res_i;
 
                 pairs.push((exp, res_ast));
+            } else if previous_assignments.contains_key(&value) {
+                let n = ast.get(*previous_assignments.get(&value).unwrap());
+                pairs.push((exp, AST::single_node(n.clone())));
             }
         }
         ASTNodeType::Application => {
-            if let Some(inbuilt_reduction) = check_for_correct_call_to_inbuilts(ast, module, exp, &inbuilts) {
+            if let Some(inbuilt_reduction) =
+                check_for_correct_call_to_inbuilts(ast, module, exp, &inbuilts)
+            {
                 pairs.push((exp, AST::single_node(inbuilt_reduction)));
             } else {
+                let lhs = ast.to_string(ast.get_func(exp));
+                let rhs = ast.to_string(ast.get_arg(exp));
                 pairs.extend(find_redex_contraction_pairs(ast, module, ast.get_func(exp)));
                 pairs.extend(find_redex_contraction_pairs(ast, module, ast.get_arg(exp)));
             }

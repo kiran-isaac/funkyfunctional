@@ -67,7 +67,7 @@ fn multi_add_test() {
         "main = sub (add {} {}) (mul {} {})",
         a_int, b_int, c_int, d_int
     );
-    let ast = Parser::from_string(program).parse_module().unwrap();
+    let mut ast = Parser::from_string(program).parse_module().unwrap();
 
     let module = ast.root;
     let exp = ast.get_exp(ast.get_main(module).unwrap());
@@ -85,4 +85,18 @@ fn multi_add_test() {
         .collect();
 
     assert_eq_in_any_order(&correct, &proposed);
+
+    for (old, new) in rcs {
+        ast.replace_from_other_root(&new, old);
+    }
+
+    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    assert!(rcs.len() == 1);
+    for (old, new) in rcs {
+        ast.replace_from_other_root(&new, old);
+    }
+
+    assert_eq!(format!("main = {}", (a_int + b_int) - (c_int * d_int)), format!{"{:?}", ast})
+
 }
+

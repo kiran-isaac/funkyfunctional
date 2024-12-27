@@ -21,6 +21,7 @@ pub enum ASTNodeType {
     Module,
 }
 
+#[derive(Clone)]
 pub struct AST {
     vec: Vec<ASTNode>,
     pub root: usize,
@@ -142,6 +143,11 @@ impl AST {
         ast.root = id;
 
         ast
+    }
+
+    pub fn replace_from_other_root(&mut self, other: &AST, old: usize) {
+        let new = self.append(other, other.root);
+        self.replace(old, new);
     }
 
     pub fn replace(&mut self, old: usize, new: usize) {
