@@ -2,9 +2,18 @@ use parser::{Token, TokenType};
 
 use super::assert_prim_type;
 use crate::*;
-use std::{fmt::Display, ops::{Add, Div, Mul, Sub}, str::FromStr};
+use std::{
+    fmt::Display,
+    ops::{Add, Div, Mul, Sub},
+    str::FromStr,
+};
 
-fn inbuilt_binary<T>(call: &ASTNode, args: Vec<&ASTNode>, op: fn(T, T) -> T, p : Primitive) -> ASTNode 
+fn inbuilt_binary<T>(
+    call: &ASTNode,
+    args: Vec<&ASTNode>,
+    op: fn(T, T) -> T,
+    p: Primitive,
+) -> ASTNode
 where
     T: FromStr + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Display,
     <T as FromStr>::Err: std::fmt::Debug,
@@ -48,7 +57,7 @@ pub fn inbuilt_int_div(call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
 
 pub fn inbuilt_int_neg(call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
     assert_eq!(args.len(), 1);
-    let x : i64 = args[0].get_value().parse().unwrap();
+    let x: i64 = args[0].get_value().parse().unwrap();
     ASTNode::new_lit(
         Token {
             tt: TokenType::IntLit,
@@ -77,7 +86,7 @@ pub fn inbuilt_float_div(call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
 
 pub fn inbuilt_float_neg(call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
     assert_eq!(args.len(), 1);
-    let x : f64 = args[0].get_value().parse().unwrap();
+    let x: f64 = args[0].get_value().parse().unwrap();
     ASTNode::new_lit(
         Token {
             tt: TokenType::IntLit,

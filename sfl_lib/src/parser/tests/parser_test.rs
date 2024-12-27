@@ -19,7 +19,7 @@ fn assign() -> Result<(), ParserError> {
     assert!(ast.get(right).get_value() == "5");
     assert!(ast.get(ast.get_func(left)).get_value() == "add");
     assert!(ast.get(ast.get_arg(left)).get_value() == "2");
-    
+
     Ok(())
 }
 
@@ -27,7 +27,7 @@ fn assign() -> Result<(), ParserError> {
 fn assign_2() -> Result<(), ParserError> {
     let str = "x = add (y z) 5";
     let mut parser = Parser::from_string(str.to_string());
-    
+
     parser.bind("y".to_string());
     parser.bind("z".to_string());
 
@@ -84,13 +84,15 @@ fn bound() -> Result<(), ParserError> {
 
     // y is unbound
     let str = "x = add 2 y";
-    Parser::from_string(str.to_string()).parse_module().unwrap_err();
+    Parser::from_string(str.to_string())
+        .parse_module()
+        .unwrap_err();
 
     Ok(())
 }
 
 #[test]
-fn abstraction () -> Result<(), ParserError> {
+fn abstraction() -> Result<(), ParserError> {
     let str = "x = (\\y . add y 5) 2";
     let mut parser = Parser::from_string(str.to_string());
 

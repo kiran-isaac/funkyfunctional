@@ -8,29 +8,29 @@ mod arith;
 #[cfg(test)]
 mod test;
 
-fn assert_prim_type(x : &Type, p : Primitive) {
+fn assert_prim_type(x: &Type, p: Primitive) {
     match x {
         Type::Primitive(prim) => {
             if *prim != p {
                 panic!("ASSERT_PRIM_TYPE failed: Invalid type, wrong primitive")
             }
         }
-        _ => panic!("ASSERT_PRIM_TYPE failed: Invalid type, not a primitive")
+        _ => panic!("ASSERT_PRIM_TYPE failed: Invalid type, not a primitive"),
     }
 }
 
 type InbuiltFuncPointer = fn(&ASTNode, Vec<&ASTNode>) -> ASTNode;
 
-/// Will be used to store inbuilt functions and their arities. will eventually 
+/// Will be used to store inbuilt functions and their arities. will eventually
 /// have some sort of function pointer or something to the actual function
 #[derive(Clone)]
 pub struct InbuiltFunc {
-    arity : usize,
-    func : InbuiltFuncPointer
+    arity: usize,
+    func: InbuiltFuncPointer,
 }
 
 impl InbuiltFunc {
-    pub fn call(&self, call : &ASTNode, args : Vec<&ASTNode>) -> ASTNode {
+    pub fn call(&self, call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
         assert!(self.arity == args.len());
         (self.func)(call, args)
     }
@@ -39,13 +39,13 @@ impl InbuiltFunc {
 pub struct InbuiltsLookupTable {
     /// Sorted by arity. So inbuilts[0] will be all inbuilts with arity 0
     /// inbuilts[1] will be all inbuilts with arity 1, etc.
-    inbuilts : Vec<HashMap<String, InbuiltFunc>>,
+    inbuilts: Vec<HashMap<String, InbuiltFunc>>,
 }
 
 impl InbuiltsLookupTable {
     pub fn new() -> Self {
         let mut s = Self {
-            inbuilts : vec![HashMap::new()]
+            inbuilts: vec![HashMap::new()],
         };
         s.populate();
         s
@@ -55,7 +55,7 @@ impl InbuiltsLookupTable {
         self.inbuilts.len()
     }
 
-    fn add_inbuilt(&mut self, name : String, arity : usize, func : InbuiltFuncPointer) {
+    fn add_inbuilt(&mut self, name: String, arity: usize, func: InbuiltFuncPointer) {
         if arity >= self.inbuilts.len() {
             self.inbuilts.resize(arity + 1, HashMap::new());
         }
@@ -63,12 +63,12 @@ impl InbuiltsLookupTable {
         self.inbuilts[arity].insert(name, InbuiltFunc { arity, func });
     }
 
-    pub fn get_n_ary_inbuilts(&self, arity : usize) -> &HashMap<String, InbuiltFunc> {
+    pub fn get_n_ary_inbuilts(&self, arity: usize) -> &HashMap<String, InbuiltFunc> {
         &self.inbuilts[arity]
     }
 
     #[cfg(test)]
-    pub fn get(&self, arity : usize, name : String) -> Option<&InbuiltFunc> {
+    pub fn get(&self, arity: usize, name: String) -> Option<&InbuiltFunc> {
         self.get_n_ary_inbuilts(arity).get(&name)
     }
 
