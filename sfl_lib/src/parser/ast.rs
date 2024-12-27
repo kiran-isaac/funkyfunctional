@@ -147,12 +147,13 @@ impl AST {
 
     pub fn replace_from_other_root(&mut self, other: &AST, old: usize) {
         let new = self.append(other, other.root);
-        self.replace(old, new);
+        self.replace_references_to_node(old, new);
     }
 
     pub fn replace(&mut self, old: usize, new: usize) {
         // Replace references to the old node with the new node
         self.replace_references_to_node(old, new);
+        self.remove(old);
     }
 
     fn get_all_children_recurse(&self, node : usize) -> Vec<usize> {
@@ -294,8 +295,8 @@ impl AST {
         names
     }
 
-    pub fn get_main(&self, module: usize) -> Option<usize> {
-        self.get_assign_to(module, "main".to_string())
+    pub fn get_main(&self, module: usize) -> usize {
+        self.get_assign_to(module, "main".to_string()).unwrap()
     }
 
         // Get assignment within module

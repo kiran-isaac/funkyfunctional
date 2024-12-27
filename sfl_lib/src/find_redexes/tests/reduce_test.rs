@@ -58,7 +58,7 @@ fn basic_add_test() {
 }
 
 #[test]
-fn multi_add_test() {
+fn multi_op_test() {
     let a_int = rand::random::<u16>() as i64;
     let b_int = rand::random::<u16>() as i64;
     let c_int = rand::random::<u16>() as i64;
