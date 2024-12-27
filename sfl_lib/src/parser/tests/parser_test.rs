@@ -114,3 +114,35 @@ fn abstraction() -> Result<(), ParserError> {
 
     Ok(())
 }
+
+#[test]
+fn type_assignment() -> Result<(), ParserError> {
+    let str = "x :: Int\nx = 5";
+    let mut parser = Parser::from_string(str.to_string());
+
+    let ast = parser.parse_module()?;
+    let module = 0;
+    let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
+
+    let type_assignment = ast.get(assign).type_assignment.clone();
+    assert!(type_assignment.is_some());
+    assert!(type_assignment.unwrap().to_string() == "Int".to_string());
+
+    Ok(())
+}
+
+#[test]
+fn type_assignment_right_assoc() -> Result<(), ParserError> {
+    let str = "x :: (Int -> Int) -> (Int -> Float) -> Int\nx = 5";
+    let mut parser = Parser::from_string(str.to_string());
+
+    let ast = parser.parse_module()?;
+    let module = 0;
+    let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
+
+    let type_assignment = ast.get(assign).type_assignment.clone();
+    assert!(type_assignment.is_some());
+    assert_eq!(format!("{:?}", type_assignment.unwrap()), "(Int -> Int) -> ((Int -> Float) -> Int)");
+
+    Ok(())
+}
