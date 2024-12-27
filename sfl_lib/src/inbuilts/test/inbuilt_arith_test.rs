@@ -28,10 +28,10 @@ fn test_basic_arith() {
 
         let call = ASTNode::new_id(Token {tt : parser::TokenType::Id, value : "_".to_string()}, 0, 0);
 
-        let c_add = add.call(&call,vec![ast.get(a), ast.get(b)]);
-        let c_sub = sub.call(&call,vec![ast.get(a), ast.get(b)]);
-        let c_mul = mul.call(&call,vec![ast.get(a), ast.get(b)]);
-        let c_div = div.call(&call,vec![ast.get(a), ast.get(b)]);
+        let c_add = add.call(&call,vec![ast.get(b), ast.get(a)]);
+        let c_sub = sub.call(&call,vec![ast.get(b), ast.get(a)]);
+        let c_mul = mul.call(&call,vec![ast.get(b), ast.get(a)]);
+        let c_div = div.call(&call,vec![ast.get(b), ast.get(a)]);
 
         matches!(c_add.get_lit_type(), Type::Primitive(Primitive::Int64));
         matches!(c_sub.get_lit_type(), Type::Primitive(Primitive::Int64));

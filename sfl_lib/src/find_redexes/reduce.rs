@@ -2,12 +2,6 @@ use crate::inbuilts::InbuiltsLookupTable;
 
 use super::*;
 
-struct InbuiltReduction {
-    name : String,
-    arity : usize,
-    args : Vec<usize>,
-}
-
 /// This will need to be significantly changed when types introduced
 /// This will check for applications to inbuilts with the right num
 /// of chars. For example, a call to a inbuilt add could be:
@@ -16,18 +10,47 @@ struct InbuiltReduction {
 /// App[[App add 2], 3]
 /// This function checks that the rhs is a literal, and the lhs is
 /// either an ID or an App of an ID in the set of inbuilts and a literal
-fn check_for_correct_call_to_inbuilts(ast : &AST, module : usize, exp : usize, inbuilts : &InbuiltsLookupTable) -> Option<ASTNode> {
+fn check_for_correct_call_to_inbuilts(
+    ast: &AST,
+    module: usize,
+    exp: usize,
+    inbuilts: &InbuiltsLookupTable,
+) -> Option<ASTNode> {
     let app = ast.get(exp);
-    let f = ast.get_func(exp);
-    let x = ast.get_arg(exp);
+    let mut f = ast.get_func(exp);
+    let mut x = ast.get_arg(exp);
+    let mut argv = vec![];
 
+    // can add type assertion here that there exists B and A s.t. x :: B and f :: B -> A
+    for _ in 1..inbuilts.get_max_arity() {
+        match ast.get(x).t {
+            ASTNodeType::Literal => {argv.push(ast.get(x));}
+            _ => return None
+        }
 
+        match ast.get(f).t {
+            ASTNodeType::Identifier => {
+                let inbuilts_of_arity = inbuilts.get_n_ary_inbuilts(argv.len());
+                let val = ast.get(f).get_value();
+                if inbuilts_of_arity.contains_key(&val) {
+                    return Some(inbuilts_of_arity.get(&val).unwrap().call(ast.get(f), argv))
+                } else {
+                    return None
+                }
+            }
+            ASTNodeType::Application => {
+                x = ast.get_arg(f);
+                f = ast.get_func(f);
+            }
+            _ => return None
+        }
+    }
 
     None
 }
 
-pub fn find_redex_contraction_pairs(ast : &AST, module : usize, exp : usize) -> Vec<(usize, AST)> {
-    let mut pairs : Vec<(usize, AST)> = vec![];
+pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec<(usize, AST)> {
+    let mut pairs: Vec<(usize, AST)> = vec![];
     let previous_assignments = ast.get_assigns_map(module);
     let inbuilts = InbuiltsLookupTable::new();
 
@@ -48,9 +71,11 @@ pub fn find_redex_contraction_pairs(ast : &AST, module : usize, exp : usize) -> 
             }
         }
         ASTNodeType::Application => {
-            let inbuilt_check_result = check_for_correct_call_to_inbuilts(ast, module, exp, &inbuilts);
+            if let Some(inbuilt_reduction) = check_for_correct_call_to_inbuilts(ast, module, exp, &inbuilts) {
+                pairs.push((exp, AST::single_node(inbuilt_reduction)));
+            }
         }
-        _ => unimplemented!("Unimplemented: {:?}", ast.get(exp).t)
+        _ => unimplemented!("Unimplemented: {:?}", ast.get(exp).t),
     }
 
     pairs

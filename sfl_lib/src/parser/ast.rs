@@ -136,6 +136,14 @@ impl AST {
         self.vec.len() - 1
     }
 
+    pub fn single_node(n : ASTNode) -> Self {
+        let mut ast = Self::new();
+        let id = ast.add(n);
+        ast.root = id;
+
+        ast
+    }
+
     pub fn replace(&mut self, old: usize, new: usize) {
         // Replace references to the old node with the new node
         self.replace_references_to_node(old, new);

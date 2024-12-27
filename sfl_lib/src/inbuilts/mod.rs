@@ -52,6 +52,10 @@ impl InbuiltsLookupTable {
         s
     }
 
+    pub fn get_max_arity(&self) -> usize {
+        self.inbuilts.len()
+    }
+
     fn add_inbuilt(&mut self, name : String, arity : usize, func : InbuiltFuncPointer) {
         if arity >= self.inbuilts.len() {
             self.inbuilts.resize(arity + 1, HashMap::new());

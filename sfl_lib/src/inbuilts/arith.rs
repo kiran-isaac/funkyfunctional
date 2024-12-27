@@ -14,7 +14,7 @@ fn inbuilt_int_binary(call: &ASTNode, args: Vec<&ASTNode>, op: fn(i64, i64) -> i
     let a_int: i64 = a.get_value().parse().unwrap();
     let b_int: i64 = b.get_value().parse().unwrap();
 
-    let c_int = op(a_int, b_int);
+    let c_int = op(b_int, a_int);
 
     ASTNode::new_lit(
         Token {
