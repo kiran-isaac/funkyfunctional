@@ -1,4 +1,21 @@
-use crate::{find_redexes::reduce::*, ASTNodeType, Parser};
+use crate::{find_redexes::reduce::*, parser::ParserError, ASTNodeType, Parser, AST};
+
+/// O(n^2) so only use for small things
+fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
+    for x in a {
+        let mut found = false;
+        for y in b {
+            if x == y {
+                found = true;
+            }
+        }
+        assert!(found);
+    }
+}
+
+fn rc_pair_to_string(ast: &AST, rc: &(usize, AST)) -> String {
+    format!("{} => {:?}", ast.to_string(rc.0), rc.1)
+}
 
 #[test]
 fn zero_test() {
@@ -37,7 +54,35 @@ fn basic_add_test() {
     assert!(rcs.len() == 1);
 
     let rc = &rcs[0];
-    let redex = ast.get(rc.0);
-    let contraction = rc.1.get(rc.1.root);
-    assert_eq!(format!("{} => {:?}", ast.to_string(rc.0), rc.1), "add 5 1 => 6")
+    assert_eq!(rc_pair_to_string(&ast, rc), "add 5 1 => 6")
+}
+
+#[test]
+fn multi_add_test() {
+    let a_int = rand::random::<u16>() as i64;
+    let b_int = rand::random::<u16>() as i64;
+    let c_int = rand::random::<u16>() as i64;
+    let d_int = rand::random::<u16>() as i64;
+    let program = format!(
+        "main = sub (add {} {}) (mul {} {})",
+        a_int, b_int, c_int, d_int
+    );
+    let ast = Parser::from_string(program).parse_module().unwrap();
+
+    let module = ast.root;
+    let exp = ast.get_exp(ast.get_main(module).unwrap());
+
+    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+
+    let correct = vec![
+        format!("add {} {} => {}", a_int, b_int, a_int + b_int),
+        format!("mul {} {} => {}", c_int, d_int, c_int * d_int),
+    ];
+
+    let proposed: Vec<String> = rcs.clone()
+        .into_iter()
+        .map(|rc| rc_pair_to_string(&ast, &rc))
+        .collect();
+
+    assert_eq_in_any_order(&correct, &proposed);
 }
