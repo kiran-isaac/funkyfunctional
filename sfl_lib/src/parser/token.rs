@@ -6,12 +6,16 @@ pub enum TokenType {
     Newline,
 
     Id,
+    TypeId,
 
     IntLit,
     FloatLit,
     StringLit,
     CharLit,
     BoolLit,
+
+    DoubleColon,
+    RArrow,
 
     LParen,
     RParen,

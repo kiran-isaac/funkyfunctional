@@ -68,7 +68,7 @@ impl Lexer {
         )
     }
 
-    fn parse_word(&mut self) -> Result<Token, LexerError> {
+    fn parse_id(&mut self) -> Result<Token, LexerError> {
         let mut str = self.c().to_string();
 
         self.advance();
@@ -99,6 +99,15 @@ impl Lexer {
             tt: TokenType::Id,
             value: str,
         });
+    }
+
+    /// Hijack the parse_id function to parse type ids and then
+    /// change the TokenType to TypeId
+    fn parse_type_id(&mut self) -> Result<Token, LexerError> {
+        Ok(Token {
+            tt: TokenType::TypeId,
+            value: self.parse_id()?.value
+        })
     }
 
     fn parse_num_lit(&mut self) -> Result<Token, LexerError> {
@@ -231,8 +240,23 @@ impl Lexer {
         let c = self.c();
 
         match c {
-            'a'..='z' => self.parse_word(),
-            '0'..='9' | '-' => self.parse_num_lit(),
+            'a'..='z' => self.parse_id(),
+            'A'..='Z' => self.parse_type_id(),
+            '0'..='9' => self.parse_num_lit(),
+            '-' => {
+                match self.file[self.i + 1] {
+                    '>' => {
+                        self.advance();
+                        self.advance();
+                        Ok(Token {
+                            tt: TokenType::RArrow,
+                            value: "->".to_string(),
+                        })
+                    }
+                    '0'..='9' | '.' => self.parse_num_lit(),
+                    _ => Err(self.error(format!("Unexpected char: {}", self.c()))),
+                }
+            }
             '.' => match self.file[self.i + 1] {
                 '0'..='9' => self.parse_num_lit(),
                 _ => {
@@ -269,6 +293,19 @@ impl Lexer {
                     _ => return Err(self.error(format!("Unexpected char: {}", self.c()))),
                 }
                 self.get_token()
+            }
+            ':' => {
+                self.advance();
+                match self.c() {
+                    ':' => {
+                        self.advance();
+                        Ok(Token {
+                            tt: TokenType::DoubleColon,
+                            value: "::".to_string(),
+                        })
+                    }
+                    _ => Err(self.error(format!("Unexpected char: {}", self.c()))),
+                }
             }
             '\\' => {
                 self.advance();

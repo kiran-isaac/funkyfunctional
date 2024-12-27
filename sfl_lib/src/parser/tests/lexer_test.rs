@@ -129,3 +129,20 @@ fn lex_abstraction() {
         ]
     );
 }
+
+#[test]
+fn lex_type_stuff() {
+    lexer_tokentype_test!(
+        "add :: Int -> Int -> Int",
+        vec![
+            TokenType::Id,
+            TokenType::DoubleColon,
+            TokenType::TypeId,
+            TokenType::RArrow,
+            TokenType::TypeId,
+            TokenType::RArrow,
+            TokenType::TypeId,
+            TokenType::EOF
+        ]
+    );
+}
