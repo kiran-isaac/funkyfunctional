@@ -26,20 +26,21 @@ fn test_basic_arith() {
         let a = ast.add_lit(a, 0, 0);
         let b = ast.add_lit(b, 0, 0);
 
-        let c_add = add.call(vec![ast.get(a), ast.get(b)]);
-        let c_sub = sub.call(vec![ast.get(a), ast.get(b)]);
-        let c_mul = mul.call(vec![ast.get(a), ast.get(b)]);
-        let c_div = div.call(vec![ast.get(a), ast.get(b)]);
+        let call = ASTNode::new_id(Token {tt : parser::TokenType::Id, value : "_".to_string()}, 0, 0);
 
-        assert!(c_add.0 == Primitive::Int64);
-        assert!(c_sub.0 == Primitive::Int64);
-        assert!(c_mul.0 == Primitive::Int64);
-        assert!(c_div.0 == Primitive::Int64);
+        let c_add = add.call(&call,vec![ast.get(a), ast.get(b)]);
+        let c_sub = sub.call(&call,vec![ast.get(a), ast.get(b)]);
+        let c_mul = mul.call(&call,vec![ast.get(a), ast.get(b)]);
+        let c_div = div.call(&call,vec![ast.get(a), ast.get(b)]);
+
+        matches!(c_add.get_lit_type(), Type::Primitive(Primitive::Int64));
+        matches!(c_sub.get_lit_type(), Type::Primitive(Primitive::Int64));
+        matches!(c_mul.get_lit_type(), Type::Primitive(Primitive::Int64));
+        matches!(c_div.get_lit_type(), Type::Primitive(Primitive::Int64));
         
-        assert_eq!(c_add.1.parse::<i64>().unwrap(), a_int + b_int);
-        assert_eq!(c_sub.1.parse::<i64>().unwrap(), a_int - b_int);
-        assert_eq!(c_mul.1.parse::<i64>().unwrap(), a_int * b_int);
-        assert_eq!(c_div.1.parse::<i64>().unwrap(), a_int / b_int);
-
+        assert_eq!(c_add.get_value().parse::<i64>().unwrap(), a_int + b_int);
+        assert_eq!(c_sub.get_value().parse::<i64>().unwrap(), a_int - b_int);
+        assert_eq!(c_mul.get_value().parse::<i64>().unwrap(), a_int * b_int);
+        assert_eq!(c_div.get_value().parse::<i64>().unwrap(), a_int / b_int);
     }
 }

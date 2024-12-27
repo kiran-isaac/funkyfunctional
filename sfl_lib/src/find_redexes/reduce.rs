@@ -16,20 +16,41 @@ struct InbuiltReduction {
 /// App[[App add 2], 3]
 /// This function checks that the rhs is a literal, and the lhs is
 /// either an ID or an App of an ID in the set of inbuilts and a literal
-fn check_for_correct_call_to_inbuilts(ast : &AST, module : usize, exp : usize, inbuilts : &InbuiltsLookupTable) -> Option<InbuiltReduction> {
+fn check_for_correct_call_to_inbuilts(ast : &AST, module : usize, exp : usize, inbuilts : &InbuiltsLookupTable) -> Option<ASTNode> {
+    let app = ast.get(exp);
+    let f = ast.get_func(exp);
+    let x = ast.get_arg(exp);
+
+
+
     None
 }
 
-fn find_redex_contraction_pairs(ast : &AST, module : usize, exp : usize) -> Vec<(usize, AST)> {
+pub fn find_redex_contraction_pairs(ast : &AST, module : usize, exp : usize) -> Vec<(usize, AST)> {
     let mut pairs : Vec<(usize, AST)> = vec![];
     let previous_assignments = ast.get_assigns_map(module);
     let inbuilts = InbuiltsLookupTable::new();
 
     match ast.get(exp).t {
+        ASTNodeType::Identifier => {
+            let value = ast.get(exp).get_value();
+
+            // It should not be non zero_ary func as otherwise it would be caught by the app case
+            if inbuilts.get_n_ary_inbuilts(0).contains_key(&value) {
+                let inbuilt = inbuilts.get_n_ary_inbuilts(0).get(&value).unwrap();
+                let result = inbuilt.call(&ast.get(exp), vec![]);
+
+                let mut res_ast = AST::new();
+                let res_i = res_ast.add(result);
+                res_ast.root = res_i;
+
+                pairs.push((exp, res_ast));
+            }
+        }
         ASTNodeType::Application => {
             let inbuilt_check_result = check_for_correct_call_to_inbuilts(ast, module, exp, &inbuilts);
         }
-        _ => unimplemented!()
+        _ => unimplemented!("Unimplemented: {:?}", ast.get(exp).t)
     }
 
     pairs

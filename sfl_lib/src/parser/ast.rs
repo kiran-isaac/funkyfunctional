@@ -31,8 +31,8 @@ pub struct ASTNode {
     pub t: ASTNodeType,
     info: Option<Token>,
     children: Vec<usize>,
-    line : usize,
-    col : usize
+    pub line : usize,
+    pub col : usize
 }
 
 impl ASTNode {
@@ -61,6 +61,66 @@ impl ASTNode {
             None => unreachable!(),
         }
     }
+
+    pub fn new_lit(tk: Token, line : usize, col : usize) -> Self {
+        ASTNode {
+            t: ASTNodeType::Literal,
+            info: Some(tk),
+            children: vec![],
+            line,
+            col
+        }
+    }
+
+    pub fn new_id(tk: Token, line : usize, col : usize) -> Self {
+        ASTNode {
+            t: ASTNodeType::Identifier,
+            info: Some(tk),
+            children: vec![],
+            line,
+            col
+        }
+    }
+
+    pub fn new_app(f: usize, x: usize, line : usize, col : usize) -> Self {
+        ASTNode {
+            t: ASTNodeType::Application,
+            info: None,
+            children: vec![f, x],
+            line,
+            col
+        }
+    }
+
+    pub fn new_abstraction(id: usize, exp: usize, line : usize, col : usize) -> Self {
+        ASTNode {
+            t: ASTNodeType::Abstraction,
+            info: None,
+            children: vec![id, exp],
+            line,
+            col
+        }
+    }
+
+    pub fn new_assignment(id: usize, exp: usize, line : usize, col : usize) -> Self {
+        ASTNode {
+            t: ASTNodeType::Assignment,
+            info: None,
+            children: vec![id, exp],
+            line,
+            col
+        }
+    }
+
+    pub fn new_module(assigns: Vec<usize>, line : usize, col : usize) -> Self {
+        ASTNode {
+            t: ASTNodeType::Module,
+            info: None,
+            children: assigns,
+            line,
+            col
+        }
+    }
 }
 
 impl AST {
@@ -71,7 +131,7 @@ impl AST {
         }
     }
 
-    fn add(&mut self, n: ASTNode) -> usize {
+    pub fn add(&mut self, n: ASTNode) -> usize {
         self.vec.push(n);
         self.vec.len() - 1
     }
@@ -149,43 +209,19 @@ impl AST {
     }
 
     pub fn add_id(&mut self, tk: Token, line : usize, col : usize) -> usize {
-        self.add(ASTNode {
-            t: ASTNodeType::Identifier,
-            info: Some(tk),
-            children: vec![],
-            line,
-            col
-        })
+        self.add(ASTNode::new_id(tk, line, col))
     }
 
     pub fn add_lit(&mut self, tk: Token, line : usize, col : usize) -> usize {
-        self.add(ASTNode {
-            t: ASTNodeType::Literal,
-            info: Some(tk),
-            children: vec![],
-            line,
-            col
-        })
+        self.add(ASTNode::new_lit(tk, line, col))
     }
 
     pub fn add_app(&mut self, f: usize, x: usize, line : usize, col : usize) -> usize {
-        self.add(ASTNode {
-            t: ASTNodeType::Application,
-            info: None,
-            children: vec![f, x],
-            line,
-            col
-        })
+        self.add(ASTNode::new_app(f, x, line, col))
     }
 
     pub fn add_abstraction(&mut self, id: usize, exp: usize, line : usize, col : usize) -> usize {
-        self.add(ASTNode {
-            t: ASTNodeType::Abstraction,
-            info: None,
-            children: vec![id, exp],
-            line,
-            col
-        })
+        self.add(ASTNode::new_abstraction(id, exp, line, col))
     }
 
     pub fn new_assignment(&mut self, id: usize, exp: usize, line : usize, col : usize) -> usize {
@@ -199,13 +235,7 @@ impl AST {
     }
 
     pub fn add_module(&mut self, assigns: Vec<usize>, line : usize, col : usize) -> usize {
-        self.add(ASTNode {
-            t: ASTNodeType::Module,
-            info: None,
-            children: assigns,
-            line,
-            col
-        })
+        self.add(ASTNode::new_module(assigns, line, col))
     }
 
     pub fn add_to_module(&mut self, module: usize, assign: usize) {
@@ -393,6 +423,6 @@ impl AST {
 
 impl Debug for AST {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.display_string(0))
+        write!(f, "{}", self.to_string(self.root))
     }
 }

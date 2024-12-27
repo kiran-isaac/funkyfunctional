@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
-use arith::{inbuilt_int_add, inbuilt_int_sub, inbuilt_int_mul, inbuilt_int_div};
+use arith::{inbuilt_int_add, inbuilt_int_div, inbuilt_int_mul, inbuilt_int_sub, inbuilt_int_zero};
 
 use crate::*;
 mod arith;
+use std::ops;
 
 #[cfg(test)]
 mod test;
@@ -19,8 +20,7 @@ fn assert_prim_type(x : &Type, p : Primitive) {
     }
 }
 
-type InbuiltFuncPointer = fn(Vec<&ASTNode>) -> InbuiltFuncCallResult;
-type InbuiltFuncCallResult = (Primitive, String);
+type InbuiltFuncPointer = fn(&ASTNode, Vec<&ASTNode>) -> ASTNode;
 
 /// Will be used to store inbuilt functions and their arities. will eventually 
 /// have some sort of function pointer or something to the actual function
@@ -31,9 +31,9 @@ pub struct InbuiltFunc {
 }
 
 impl InbuiltFunc {
-    fn call(&self, args : Vec<&ASTNode>) -> InbuiltFuncCallResult {
+    pub fn call(&self, call : &ASTNode, args : Vec<&ASTNode>) -> ASTNode {
         assert!(self.arity == args.len());
-        (self.func)(args)
+        (self.func)(call, args)
     }
 }
 
@@ -73,6 +73,7 @@ impl InbuiltsLookupTable {
         self.add_inbuilt("sub".to_string(), 2, inbuilt_int_sub);
         self.add_inbuilt("mul".to_string(), 2, inbuilt_int_mul);
         self.add_inbuilt("div".to_string(), 2, inbuilt_int_div);
+        self.add_inbuilt("zero".to_string(), 0, inbuilt_int_zero);
     }
 
     /// Get all strings that are inbuilts so that they can be added to the bound checker
