@@ -76,15 +76,36 @@ impl AST {
         self.vec.len() - 1
     }
 
-    pub fn replace(&mut self, other: &AST, old: usize, new: usize) {
-        // slightly inefficient memory-wise, as it doesnt delete the old node
-        // but it's fine
-
-        // Add the new node
-        let new_node = self.append(other, new);
-
+    pub fn replace(&mut self, old: usize, new: usize) {
         // Replace references to the old node with the new node
-        self.replace_references_to_node(old, new_node);
+        self.replace_references_to_node(old, new);
+    }
+
+    fn get_all_children_recurse(&self, node : usize) -> Vec<usize> {
+        let mut children = vec![];
+        for c in &self.get(node).children {
+            children.push(*c);
+            children.append(&mut self.get_all_children_recurse(*c));
+        }
+        children
+    }
+
+    fn remove(&mut self, node: usize) {
+        let children = self.get(node).children.clone();
+        for c in children {
+            self.remove(c);
+        }
+
+        self.assert_no_references(node);
+        self.vec.remove(node);
+    }
+
+    fn assert_no_references(&self, node: usize) {
+        for n in &self.vec {
+            for c in &n.children {
+                assert!(*c != node);
+            }
+        }
     }
 
     fn replace_references_to_node(&mut self, old: usize, new: usize) {
@@ -125,18 +146,6 @@ impl AST {
             }
             _ => unimplemented!("append for {:?}", n.t),
         }
-    }
-
-    pub fn get_assign_map(&self, module: usize) -> HashMap<String, usize> {
-        assert!(self.get(module).t == ASTNodeType::Module);
-        let mut map = HashMap::new();
-
-        for &a in &self.get(module).children {
-            assert!(self.get(a).t == ASTNodeType::Assignment);
-            map.insert(self.get_assignee(a), self.get_exp(a));
-        }
-
-        map
     }
 
     pub fn add_id(&mut self, tk: Token, line : usize, col : usize) -> usize {
@@ -208,22 +217,6 @@ impl AST {
         &self.vec[i]
     }
 
-    // Get assignment within module
-    pub fn get_assign_to(&self, module: usize, name: String) -> Option<usize> {
-        assert!(self.vec[module].t == ASTNodeType::Module);
-
-        let assigns = &self.vec[module].children;
-        for a in assigns {
-            let assign = self.get(*a);
-            let id = self.get(assign.children[0]);
-            if id.get_value() == name {
-                return Some(*a);
-            }
-        }
-
-        None
-    }
-
     pub fn get_func(&self, app: usize) -> usize {
         assert!(self.vec[app].t == ASTNodeType::Application);
         self.vec[app].children[0]
@@ -242,6 +235,52 @@ impl AST {
     pub fn get_assignee(&self, assign: usize) -> String {
         assert!(self.vec[assign].t == ASTNodeType::Assignment);
         self.get(self.vec[assign].children[0]).get_value().clone()
+    }
+
+    pub fn get_assignee_names(&self, module: usize) -> Vec<String> {
+        let mut names = Vec::new();
+        let assigns = &self.vec[module].children;
+        names.reserve_exact(assigns.len());
+        for a in assigns {
+            let assign = self.get(*a);
+            let id = self.get(assign.children[0]);
+            names.push(id.get_value());
+        }
+
+        names
+    }
+
+    pub fn get_main(&self, module: usize) -> Option<usize> {
+        self.get_assign_to(module, "main".to_string())
+    }
+
+        // Get assignment within module
+    pub fn get_assign_to(&self, module: usize, name: String) -> Option<usize> {
+        assert!(self.vec[module].t == ASTNodeType::Module);
+
+        let assigns = &self.vec[module].children;
+        for a in assigns {
+            let assign = self.get(*a);
+            let id = self.get(assign.children[0]);
+            if id.get_value() == name {
+                return Some(*a);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_assigns_map(&self, module: usize) -> HashMap<String, usize> {
+        assert!(self.vec[module].t == ASTNodeType::Module);
+        let mut assigns  = HashMap::new();
+
+        for a in &self.vec[module].children {
+            let assign = self.get(*a);
+            let id = self.get(assign.children[0]);
+            assigns.insert(id.get_value(), *a);
+        }
+
+        assigns
     }
 
     fn to_string_indent(&self, node: usize, indent: usize) -> String {
