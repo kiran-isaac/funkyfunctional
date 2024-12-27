@@ -86,7 +86,7 @@ pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec
                 let f = ast.get_func(exp);
                 let x = ast.get_arg(exp);
                 match ast.get(f).t {
-                    ASTNodeType::Application => {
+                    ASTNodeType::Application | ASTNodeType::Identifier => {
                         pairs.extend(find_redex_contraction_pairs(ast, module, f));
                     }
                     ASTNodeType::Abstraction => {
@@ -103,7 +103,8 @@ pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec
 
                         pairs.push((exp, cloned_abst_expr))
                     }
-                    _ => unimplemented!()
+                    ASTNodeType::Literal => {}
+                    _ => unreachable!("Expected expression")
                 }
 
                 pairs.extend(find_redex_contraction_pairs(ast, module, ast.get_arg(exp)));
