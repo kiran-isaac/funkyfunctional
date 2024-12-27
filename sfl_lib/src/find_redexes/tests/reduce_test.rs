@@ -18,8 +18,8 @@ fn rc_pair_to_string(ast: &AST, rc: &(usize, AST)) -> String {
 }
 
 #[test]
-fn zero_test() {
-    let program = "main = zero";
+fn zero_ary_test() {
+    let program = "main = zero_ary_test";
     let ast = Parser::from_string(program.to_string())
         .parse_module()
         .unwrap();
@@ -35,9 +35,43 @@ fn zero_test() {
     let result = rc.1.get(rc.1.root);
 
     assert!(redex.t == ASTNodeType::Identifier);
-    assert!(redex.get_value() == "zero");
+    assert!(redex.get_value() == "zero_ary_test");
     assert!(result.t == ASTNodeType::Literal);
     assert!(result.get_value() == "0");
+}
+
+#[test]
+fn unary_neg_test() {
+    for _ in 0..1000 {
+        let rnd_i = rand::random::<i64>();
+        let rnd_f = rand::random::<f64>();
+
+        let program = format!("main = neg {}", rnd_i);
+        let programf = format!("main = negf {}", rnd_f);
+
+        let ast = Parser::from_string(program).parse_module().unwrap();
+        let astf = Parser::from_string(programf).parse_module().unwrap();
+
+        let module = ast.root;
+        let exp = ast.get_exp(ast.get_main(module));
+
+        let modulef = astf.root;
+        let expf = astf.get_exp(astf.get_main(modulef));
+
+        let rcs = find_redex_contraction_pairs(&ast, module, exp);
+        let rcsf = find_redex_contraction_pairs(&astf, modulef, expf);
+        assert!(rcs.len() == 1);
+        assert!(rcsf.len() == 1);
+
+        assert_eq!(
+            rc_pair_to_string(&ast, &rcs[0]),
+            format!("neg {} => {}", rnd_i, -rnd_i)
+        );
+        assert_eq!(
+            rc_pair_to_string(&astf, &rcsf[0]),
+            format!("negf {} => {}", rnd_f, -rnd_f)
+        );
+    }
 }
 
 #[test]
@@ -79,7 +113,8 @@ fn multi_op_test() {
         format!("mul {} {} => {}", c_int, d_int, c_int * d_int),
     ];
 
-    let proposed: Vec<String> = rcs.clone()
+    let proposed: Vec<String> = rcs
+        .clone()
         .into_iter()
         .map(|rc| rc_pair_to_string(&ast, &rc))
         .collect();
@@ -96,8 +131,10 @@ fn multi_op_test() {
         ast.replace_from_other_root(&new, old);
     }
 
-    assert_eq!(format!("main = {}", (a_int + b_int) - (c_int * d_int)), format!{"{:?}", ast})
-
+    assert_eq!(
+        format!("main = {}", (a_int + b_int) - (c_int * d_int)),
+        format! {"{:?}", ast}
+    )
 }
 
 #[test]
@@ -112,5 +149,8 @@ fn basic_abst_test() {
     let rcs = find_redex_contraction_pairs(&ast, module, exp);
     assert_eq!(rcs.len(), 1);
 
-    assert_eq!("(\\x . add 1 x) 2 => add 1 2", rc_pair_to_string(&ast, &rcs[0]));
+    assert_eq!(
+        "(\\x . add 1 x) 2 => add 1 2",
+        rc_pair_to_string(&ast, &rcs[0])
+    );
 }

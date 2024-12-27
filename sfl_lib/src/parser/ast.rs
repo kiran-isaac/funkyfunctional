@@ -32,8 +32,8 @@ pub struct ASTNode {
     pub t: ASTNodeType,
     info: Option<Token>,
     children: Vec<usize>,
-    pub line : usize,
-    pub col : usize
+    pub line: usize,
+    pub col: usize,
 }
 
 impl ASTNode {
@@ -63,63 +63,63 @@ impl ASTNode {
         }
     }
 
-    pub fn new_lit(tk: Token, line : usize, col : usize) -> Self {
+    pub fn new_lit(tk: Token, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Literal,
             info: Some(tk),
             children: vec![],
             line,
-            col
+            col,
         }
     }
 
-    pub fn new_id(tk: Token, line : usize, col : usize) -> Self {
+    pub fn new_id(tk: Token, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Identifier,
             info: Some(tk),
             children: vec![],
             line,
-            col
+            col,
         }
     }
 
-    pub fn new_app(f: usize, x: usize, line : usize, col : usize) -> Self {
+    pub fn new_app(f: usize, x: usize, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Application,
             info: None,
             children: vec![f, x],
             line,
-            col
+            col,
         }
     }
 
-    pub fn new_abstraction(id: usize, exp: usize, line : usize, col : usize) -> Self {
+    pub fn new_abstraction(id: usize, exp: usize, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Abstraction,
             info: None,
             children: vec![id, exp],
             line,
-            col
+            col,
         }
     }
 
-    pub fn new_assignment(id: usize, exp: usize, line : usize, col : usize) -> Self {
+    pub fn new_assignment(id: usize, exp: usize, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Assignment,
             info: None,
             children: vec![id, exp],
             line,
-            col
+            col,
         }
     }
 
-    pub fn new_module(assigns: Vec<usize>, line : usize, col : usize) -> Self {
+    pub fn new_module(assigns: Vec<usize>, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Module,
             info: None,
             children: assigns,
             line,
-            col
+            col,
         }
     }
 }
@@ -137,7 +137,7 @@ impl AST {
         self.vec.len() - 1
     }
 
-    pub fn single_node(n : ASTNode) -> Self {
+    pub fn single_node(n: ASTNode) -> Self {
         let mut ast = Self::new();
         let id = ast.add(n);
         ast.root = id;
@@ -145,7 +145,7 @@ impl AST {
         ast
     }
 
-    pub fn clone_node(&self, n : usize) -> AST {
+    pub fn clone_node(&self, n: usize) -> AST {
         let node = self.get(n);
         let mut ast = AST::single_node(node.clone());
         for i in 0..node.children.len() {
@@ -166,7 +166,7 @@ impl AST {
         self.replace_references_to_node(old, new);
     }
 
-    fn get_all_children_recurse(&self, node : usize) -> Vec<usize> {
+    fn get_all_children_recurse(&self, node: usize) -> Vec<usize> {
         let mut children = vec![];
         for c in &self.get(node).children {
             children.push(*c);
@@ -237,37 +237,37 @@ impl AST {
         }
     }
 
-    pub fn append_root(&mut self, other : &AST) -> usize {
+    pub fn append_root(&mut self, other: &AST) -> usize {
         self.append(other, other.root)
     }
 
-    pub fn add_id(&mut self, tk: Token, line : usize, col : usize) -> usize {
+    pub fn add_id(&mut self, tk: Token, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_id(tk, line, col))
     }
 
-    pub fn add_lit(&mut self, tk: Token, line : usize, col : usize) -> usize {
+    pub fn add_lit(&mut self, tk: Token, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_lit(tk, line, col))
     }
 
-    pub fn add_app(&mut self, f: usize, x: usize, line : usize, col : usize) -> usize {
+    pub fn add_app(&mut self, f: usize, x: usize, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_app(f, x, line, col))
     }
 
-    pub fn add_abstraction(&mut self, id: usize, exp: usize, line : usize, col : usize) -> usize {
+    pub fn add_abstraction(&mut self, id: usize, exp: usize, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_abstraction(id, exp, line, col))
     }
 
-    pub fn add_assignment(&mut self, id: usize, exp: usize, line : usize, col : usize) -> usize {
+    pub fn add_assignment(&mut self, id: usize, exp: usize, line: usize, col: usize) -> usize {
         self.add(ASTNode {
             t: ASTNodeType::Assignment,
             info: None,
             children: vec![id, exp],
             line,
-            col
+            col,
         })
     }
 
-    pub fn add_module(&mut self, assigns: Vec<usize>, line : usize, col : usize) -> usize {
+    pub fn add_module(&mut self, assigns: Vec<usize>, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_module(assigns, line, col))
     }
 
@@ -290,9 +290,11 @@ impl AST {
         self.vec[abst].children[1]
     }
 
-    pub fn get_all_instances_of_var_in_exp(&self, exp: usize, var : &String) -> Vec<usize> {
+    pub fn get_all_instances_of_var_in_exp(&self, exp: usize, var: &String) -> Vec<usize> {
         match self.get(exp).t {
-            ASTNodeType::Literal => {vec![]}
+            ASTNodeType::Literal => {
+                vec![]
+            }
             ASTNodeType::Identifier => {
                 if var == &self.get(exp).get_value() {
                     vec![exp]
@@ -312,11 +314,11 @@ impl AST {
 
                 self.get_all_instances_of_var_in_exp(self.get_abstr_exp(exp), var)
             }
-            _ => unreachable!("Cannot find var instances in non exp")
+            _ => unreachable!("Cannot find var instances in non exp"),
         }
     }
 
-    pub fn get_abst_var_usages(&self, abst : usize) -> Vec<usize> {
+    pub fn get_abst_var_usages(&self, abst: usize) -> Vec<usize> {
         let var_name = self.get(self.get_abstr_var(abst)).get_value();
         self.get_all_instances_of_var_in_exp(self.get_abstr_exp(abst), &var_name)
     }
@@ -358,7 +360,7 @@ impl AST {
         self.get_assign_to(module, "main".to_string()).unwrap()
     }
 
-        // Get assignment within module
+    // Get assignment within module
     pub fn get_assign_to(&self, module: usize, name: String) -> Option<usize> {
         assert!(self.vec[module].t == ASTNodeType::Module);
 
@@ -376,7 +378,7 @@ impl AST {
 
     pub fn get_assigns_map(&self, module: usize) -> HashMap<String, usize> {
         assert!(self.vec[module].t == ASTNodeType::Module);
-        let mut assigns  = HashMap::new();
+        let mut assigns = HashMap::new();
 
         for a in &self.vec[module].children {
             let assign = self.get(*a);
@@ -442,7 +444,7 @@ impl AST {
                     ASTNodeType::Abstraction => format!("({})", func_str),
                     _ => func_str,
                 };
-                
+
                 let arg_str = self.to_string(arg);
                 // If the argument is an application, wrap it in parens
                 let arg_str = match self.get(arg).t {
@@ -490,7 +492,7 @@ impl AST {
     pub fn get_type(&self, node: usize) -> Result<Type, TypeError> {
         match self.get(node).t {
             ASTNodeType::Literal => Ok(self.get(node).get_lit_type()),
-            _ => Err(self.type_error("Smoingus".to_string(), node))
+            _ => Err(self.type_error("Smoingus".to_string(), node)),
         }
     }
 }

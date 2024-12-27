@@ -52,8 +52,8 @@ fn check_for_ready_call_to_inbuilts(
 
 pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec<(usize, AST)> {
     let mut pairs: Vec<(usize, AST)> = vec![];
-    
-    // Dont need to worry about this as main must be at the end, so everything defined in 
+
+    // Dont need to worry about this as main must be at the end, so everything defined in
     // the module is defined here
     let previous_assignments = ast.get_assigns_map(module);
     let inbuilts = InbuiltsLookupTable::new();
@@ -86,7 +86,7 @@ pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec
                 let f = ast.get_func(exp);
                 let x = ast.get_arg(exp);
                 match ast.get(f).t {
-                    ASTNodeType::Application => {
+                    ASTNodeType::Application | ASTNodeType::Identifier => {
                         pairs.extend(find_redex_contraction_pairs(ast, module, f));
                     }
                     ASTNodeType::Abstraction => {
@@ -94,7 +94,8 @@ pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec
                         let var_name = ast.get(ast.get_abstr_var(f)).get_value();
                         let mut cloned_abst_expr = ast.clone_node(ast.get_abstr_exp(f));
 
-                        let usages = cloned_abst_expr.get_all_instances_of_var_in_exp(cloned_abst_expr.root, &var_name);
+                        let usages = cloned_abst_expr
+                            .get_all_instances_of_var_in_exp(cloned_abst_expr.root, &var_name);
                         let arg_id = cloned_abst_expr.append(&ast, x);
 
                         for usage in usages {
@@ -103,7 +104,8 @@ pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec
 
                         pairs.push((exp, cloned_abst_expr))
                     }
-                    _ => unimplemented!()
+                    ASTNodeType::Literal => {}
+                    _ => unreachable!("Expected expression"),
                 }
 
                 pairs.extend(find_redex_contraction_pairs(ast, module, ast.get_arg(exp)));
