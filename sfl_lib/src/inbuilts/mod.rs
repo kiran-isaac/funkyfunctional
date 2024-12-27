@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
-use arith::{inbuilt_int_add, inbuilt_int_div, inbuilt_int_mul, inbuilt_int_sub, inbuilt_int_zero};
+use arith::*;
 
 use crate::*;
 mod arith;
-use std::ops;
 
 #[cfg(test)]
 mod test;
@@ -68,6 +67,7 @@ impl InbuiltsLookupTable {
         &self.inbuilts[arity]
     }
 
+    #[cfg(test)]
     pub fn get(&self, arity : usize, name : String) -> Option<&InbuiltFunc> {
         self.get_n_ary_inbuilts(arity).get(&name)
     }
@@ -77,7 +77,12 @@ impl InbuiltsLookupTable {
         self.add_inbuilt("sub".to_string(), 2, inbuilt_int_sub);
         self.add_inbuilt("mul".to_string(), 2, inbuilt_int_mul);
         self.add_inbuilt("div".to_string(), 2, inbuilt_int_div);
-        self.add_inbuilt("zero".to_string(), 0, inbuilt_int_zero);
+
+        self.add_inbuilt("addf".to_string(), 2, inbuilt_float_add);
+        self.add_inbuilt("subf".to_string(), 2, inbuilt_float_sub);
+        self.add_inbuilt("mulf".to_string(), 2, inbuilt_float_mul);
+        self.add_inbuilt("divf".to_string(), 2, inbuilt_float_div);
+
     }
 
     /// Get all strings that are inbuilts so that they can be added to the bound checker
