@@ -1,5 +1,4 @@
 use crate::{ASTNode, ASTNodeType, AST};
-mod replace;
 mod reduce;
 
 
@@ -20,7 +19,7 @@ pub struct Progress {
     pub progress_type : ProgressType
 }
 
-// Get the things in the expression tree that can be replaced by definitions in the module
-pub fn get_replacements(expr_ast : &AST, mod_ast : &AST) -> Vec<(usize, usize)> {
-    replace::get_replacement_targets(mod_ast, expr_ast, expr_ast.root)
-}
+// // Get the things in the expression tree that can be replaced by definitions in the module
+// pub fn get_replacements(ast : &AST, mod_ref : usize, expr_ref : usize) -> Vec<(usize, usize)> {
+//     replace::get_replacement_targets(ast, mod_ref, expr_ref)
+// }

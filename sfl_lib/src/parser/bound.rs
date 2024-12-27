@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use crate::inbuilts::get_starting_bindings;
+use crate::inbuilts::InbuiltsLookupTable;
 
 pub struct BoundChecker {
     bound: HashSet<String>,
@@ -9,7 +9,7 @@ impl BoundChecker {
     pub fn new() -> Self {
         let mut bound = HashSet::new();
         
-        for binding in get_starting_bindings() {
+        for binding in InbuiltsLookupTable::get_starting_bindings_map() {
             bound.insert(binding);
         }
 
