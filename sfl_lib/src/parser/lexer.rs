@@ -108,7 +108,7 @@ impl Lexer {
 
         while !(self.c().is_whitespace() || self.c() == '\0' || self.c() == ')') {
             match self.c() {
-                '0'..'9' => {
+                '0'..='9' => {
                     str.push(self.c());
                 }
                 '.' => {

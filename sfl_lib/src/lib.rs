@@ -5,5 +5,5 @@ mod types;
 
 pub use parser::Parser;
 pub use parser::ast::{ASTNode, ASTNodeType, AST};
-pub use find_redexes::get_replacements;
 pub use types::{Type, Primitive, TypeError};
+pub use find_redexes::find_redex_contraction_pairs;

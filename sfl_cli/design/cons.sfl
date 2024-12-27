@@ -1,3 +1,0 @@
-type List a = Cons a | Empty
-
-type Pair a b = Left a | Right b

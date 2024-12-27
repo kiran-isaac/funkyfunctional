@@ -1,0 +1,3 @@
+x = 5
+y=2
+main = sub (add 5 x) (mul 5 y)
