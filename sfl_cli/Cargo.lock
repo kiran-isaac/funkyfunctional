@@ -3,6 +3,7 @@
 version = 4
 
 [[package]]
+<<<<<<< HEAD
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -194,6 +195,8 @@ dependencies = [
 ]
 
 [[package]]
+=======
+>>>>>>> dev
 name = "sfl_cli"
 version = "0.1.0"
 dependencies = [
@@ -203,6 +206,7 @@ dependencies = [
 [[package]]
 name = "sfl_lib"
 version = "0.1.0"
+<<<<<<< HEAD
 dependencies = [
  "pest",
  "pest_derive",
@@ -301,3 +305,5 @@ dependencies = [
  "quote",
  "syn",
 ]
+=======
+>>>>>>> dev
