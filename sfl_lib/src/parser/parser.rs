@@ -105,6 +105,7 @@ impl Parser {
     }
 
     // Add tk to queue
+    #[inline(always)]
     fn queue_tk(&mut self) -> Result<(), ParserError> {
         let t = self.lexer.get_token()?;
         self.t_queue.push_back(t);
@@ -113,6 +114,7 @@ impl Parser {
     }
 
     // Roll queue forwards
+    #[inline(always)]
     fn advance(&mut self) {
         self.t_queue.pop_front();
     }
@@ -174,15 +176,17 @@ impl Parser {
                     _ => Err(self.parse_error("Expected dot after lambda id".to_string())),
                 }
             }
-            _ => Err(self.parse_error("Expected identifier (or ignore directive '_') after lambda".to_string())),
+            _ => Err(self.parse_error(
+                "Expected identifier (or ignore directive '_') after lambda".to_string(),
+            )),
         }
     }
 
     fn parse_expression(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
-        let line = self.lexer.line;
-        let col = self.lexer.col;
         let mut left = self.parse_primary(ast)?;
         loop {
+            let line = self.lexer.line;
+            let col = self.lexer.col;
             match &self.peek(0)?.tt {
                 // If paren, apply to paren
                 TokenType::LParen => {
@@ -191,13 +195,23 @@ impl Parser {
                     self.advance();
                     left = ast.add_app(left, right, line, col);
                 }
-                TokenType::RParen | TokenType::EOF | TokenType::Newline => {
+                TokenType::RParen
+                | TokenType::EOF
+                | TokenType::Newline
+                | TokenType::Then
+                | TokenType::Else => {
                     return Ok(left);
                 }
 
                 TokenType::Lambda => {
                     self.advance();
                     self.parse_abstraction(ast)?;
+                }
+
+                TokenType::If => {
+                    self.advance();
+                    let ite = self.parse_ite(ast)?;
+                    left = ast.add_app(left, ite, line, col);
                 }
 
                 // If Primary
@@ -234,6 +248,7 @@ impl Parser {
             TokenType::IntLit | TokenType::FloatLit | TokenType::BoolLit | TokenType::CharLit => {
                 Ok(ast.add_lit(t, line, col))
             }
+            TokenType::If => Ok(self.parse_ite(ast)?),
             // Removed support for lambda except at the top level
             // for now, untill i figure out type inference
             // TokenType::Lambda => {
@@ -249,18 +264,45 @@ impl Parser {
         }
     }
 
+    fn parse_ite(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
+        let if_id_node = ast.add_id(
+            Token {
+                tt: TokenType::If,
+                value: "if".to_string(),
+            },
+            self.lexer.line,
+            self.lexer.col - 2,
+        );
+
+        let condition = self.parse_expression(ast)?;
+
+        let app1 = ast.add_app(if_id_node, condition, self.lexer.line, self.lexer.col);
+
+        let then_tk = self.consume()?;
+        assert!(then_tk.tt == TokenType::Then);
+
+        let then_exp = self.parse_expression(ast)?;
+        let app2 = ast.add_app(app1, then_exp, self.lexer.line, self.lexer.col);
+
+        let else_tk = self.consume()?;
+        assert!(else_tk.tt == TokenType::Else);
+
+        let else_exp = self.parse_expression(ast)?;
+        let app3 = ast.add_app(app2, else_exp, self.lexer.line, self.lexer.col);
+
+        Ok(app3)
+    }
+
     fn parse_type_expression(&mut self, ast: &mut AST) -> Result<Type, ParserError> {
         let mut left = self.parse_type_expression_primary(ast)?;
 
         loop {
             let next = self.peek(0)?;
-            let left_string = left.to_string();
 
             match next.tt {
                 TokenType::RArrow => {
                     self.advance();
                     let right = self.parse_type_expression(ast)?;
-                    let right_string = right.to_string();
                     left = Type::Function(Box::new(left), Box::new(right));
                 }
                 TokenType::RParen | TokenType::Newline | TokenType::EOF => return Ok(left),
@@ -401,7 +443,13 @@ impl Parser {
 
     pub fn parse_tl_expression(&mut self) -> Result<AST, ParserError> {
         let mut ast = AST::new();
-        ast.root = self.parse_expression(&mut ast)?;
+        ast.root = match self.peek(0)?.tt {
+            TokenType::Lambda => {
+                self.advance();
+                self.parse_abstraction(&mut ast)?
+            }
+            _ => self.parse_expression(&mut ast)?,
+        };
         Ok(ast)
     }
 }

@@ -14,7 +14,7 @@ fn check_for_ready_call_to_inbuilts(
     ast: &AST,
     exp: usize,
     inbuilts: &InbuiltsLookupTable,
-) -> Option<ASTNode> {
+) -> Option<AST> {
     let mut f = ast.get_func(exp);
     let mut x = ast.get_arg(exp);
     let mut argv = vec![];
@@ -67,11 +67,7 @@ pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec
             // It should not be non zero_ary func as otherwise it would be caught by the app case
             if inbuilts.get_n_ary_inbuilts(0).contains_key(&value) {
                 let inbuilt = inbuilts.get_n_ary_inbuilts(0).get(&value).unwrap();
-                let result = inbuilt.call(&ast.get(exp), vec![]);
-
-                let mut res_ast = AST::new();
-                let res_i = res_ast.add(result);
-                res_ast.root = res_i;
+                let res_ast = inbuilt.call(&ast.get(exp), vec![]);
 
                 pairs.push((exp, res_ast));
             } else if previous_assignments.contains_key(&value) {
@@ -82,7 +78,7 @@ pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec
         }
         ASTNodeType::Application => {
             if let Some(inbuilt_reduction) = check_for_ready_call_to_inbuilts(ast, exp, &inbuilts) {
-                pairs.push((exp, AST::single_node(inbuilt_reduction)));
+                pairs.push((exp, inbuilt_reduction));
             } else {
                 let f = ast.get_func(exp);
                 let x = ast.get_arg(exp);
