@@ -15,15 +15,19 @@ impl TypeChecker {
         }
     }
 
-    fn type_error(&self, msg: String, node: &ASTNode) -> TypeError {
+    fn type_error(&self, msg: String, ast: &AST, node: usize) -> TypeError {
+        let n = ast.get(node);
         return TypeError {
-            e: msg,
-            col: node.col,
-            line: node.line,
+            e: format!("{}\n{}", msg, ast.to_string(node)),
+            col: n.col,
+            line: n.line,
         };
     }
 
     fn derive_expr_type(&mut self, ast: &AST, exp: usize) -> Result<Type, TypeError> {
+        #[cfg(debug_assertions)]
+        let _exp_str = ast.to_string(exp);
+        
         match ast.get(exp).t {
             ASTNodeType::Literal => Ok(ast.get(exp).get_lit_type()),
             ASTNodeType::Identifier => {
@@ -35,13 +39,16 @@ impl TypeChecker {
             }
             ASTNodeType::Application => {
                 let f = ast.get_func(exp);
-                let x = ast.get_func(exp);
+                let x = ast.get_arg(exp);
 
                 let x_type = self.derive_expr_type(ast, x)?;
 
+                #[cfg(debug_assertions)]
+                let _x_type_str = x_type.to_string();
+
                 match ast.get(f).t {
                     ASTNodeType::Identifier => {
-                        let id_name = ast.get(exp).get_value();
+                        let id_name = ast.get(f).get_value();
 
                         let mut id_type: Option<Type> = None;
                         if let Some(t) = self.type_map.get(&id_name) {
@@ -55,7 +62,7 @@ impl TypeChecker {
                                     "Expected function type {} -> A, got a primitive type",
                                     x_type.to_string(),
                                 ),
-                                ast.get(exp),
+                                ast, exp,
                             )),
                             Type::Function(f_input_type, f_output_type) => {
                                 if f_input_type.as_ref() != &x_type {
@@ -64,7 +71,7 @@ impl TypeChecker {
                                             "Expected function type {} -> A, got a primitive type",
                                             x_type.to_string(),
                                         ),
-                                        ast.get(exp),
+                                        ast, exp,
                                     ))
                                 } else {
                                     Ok(f_output_type.as_ref().clone())
@@ -81,7 +88,7 @@ impl TypeChecker {
                                     "Expected function type {} -> A, got a primitive type",
                                     x_type.to_string(),
                                 ),
-                                ast.get(exp),
+                                ast, exp,
                             )),
                             Type::Function(f_input_type, f_output_type) => {
                                 if f_input_type.as_ref() != &x_type {
@@ -90,7 +97,7 @@ impl TypeChecker {
                                             "Expected function type {} -> A, got a primitive type",
                                             x_type.to_string(),
                                         ),
-                                        ast.get(exp),
+                                        ast, exp,
                                     ))
                                 } else {
                                     Ok(f_output_type.as_ref().clone())
@@ -100,7 +107,7 @@ impl TypeChecker {
                     }
                     _ => Err(self.type_error(
                         format!("Expected function type, got {:?}", ast.get(f).t),
-                        ast.get(f),
+                        ast,f,
                     )),
                 }
             }
@@ -139,7 +146,7 @@ impl TypeChecker {
                                 "Expected function type {}, got a primitive type",
                                 expected.to_string(),
                             ),
-                            ast.get(exp),
+                            ast, exp,
                         ));
                     }
                     Type::Function(expected_f, expected_x) => {
@@ -178,7 +185,7 @@ impl TypeChecker {
                                 "Expected function type {}, got a primitive type",
                                 expected.to_string(),
                             ),
-                            ast.get(f),
+                            ast,f,
                         ));
                     }
                     Type::Function(f_input_type, f_output_type) => {
@@ -188,7 +195,7 @@ impl TypeChecker {
                                     "Expected function type {} -> A, got a primitive type",
                                     x_type.to_string(),
                                 ),
-                                ast.get(f),
+                                ast, f,
                             ));
                         } else {
                             f_output_type.as_ref().clone()
@@ -206,7 +213,7 @@ impl TypeChecker {
                     expected.to_string(),
                     found_type.to_string(),
                 ),
-                ast.get(exp),
+                ast, exp,
             ));
         }
         Ok(())
@@ -222,7 +229,7 @@ impl TypeChecker {
             None => {
                 return Err(self.type_error(
                     format!("Assignment without associated type assignment {}", name),
-                    ast.get(assign),
+                    ast, assign,
                 ))
             }
             Some(t) => t.clone(),
@@ -243,7 +250,7 @@ impl TypeChecker {
                 None => {
                     return Err(self.type_error(
                         format!("Assignment without associated type assignment {}", name),
-                        ast.get(assign),
+                        ast, assign,
                     ))
                 }
                 Some(t) => t.clone(),
