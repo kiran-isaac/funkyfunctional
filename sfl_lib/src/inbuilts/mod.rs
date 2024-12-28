@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use arith::*;
-use control_flow::inbuilt_int_if;
+use control_flow::*;
 
 use crate::*;
 mod arith;
@@ -85,7 +85,11 @@ impl InbuiltsLookupTable {
         self.add_inbuilt("mulf".to_string(), 2, inbuilt_float_mul);
         self.add_inbuilt("divf".to_string(), 2, inbuilt_float_div);
 
-        self.add_inbuilt("if".to_string(), 1, inbuilt_int_if);
+        self.add_inbuilt("const".to_string(), 2, inbuilt_const);
+        self.add_inbuilt("unconst".to_string(), 2, inbuilt_unconst);
+
+        self.add_inbuilt("if".to_string(), 1, inbuilt_if);
+        self.add_inbuilt("iff".to_string(), 1, inbuilt_if);
 
         self.add_inbuilt("neg".to_string(), 1, inbuilt_int_neg);
         self.add_inbuilt("negf".to_string(), 1, inbuilt_float_neg);
@@ -153,6 +157,28 @@ pub fn get_default_inbuilt_type_map() -> HashMap<String, Type> {
                 Box::new(Type::Primitive(Primitive::Int64)),
             )),
         )),
+    );
+
+    inbuilt_type_map.insert(
+        "const".to_string(),
+        Type::Function(
+            Box::new(Type::Primitive(Primitive::Int64)),
+            Box::new(Type::Function(
+                Box::new(Type::Primitive(Primitive::Int64)),
+                Box::new(Type::Primitive(Primitive::Int64)),
+            )),
+        ),
+    );
+
+    inbuilt_type_map.insert(
+        "unconst".to_string(),
+        Type::Function(
+            Box::new(Type::Primitive(Primitive::Int64)),
+            Box::new(Type::Function(
+                Box::new(Type::Primitive(Primitive::Int64)),
+                Box::new(Type::Primitive(Primitive::Int64)),
+            )),
+        ),
     );
 
     inbuilt_type_map.insert("if".to_string(), if_int_type);
