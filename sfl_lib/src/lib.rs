@@ -6,4 +6,7 @@ mod types;
 pub use find_redexes::find_redex_contraction_pairs;
 pub use parser::ast::{ASTNode, ASTNodeType, AST};
 pub use parser::Parser;
-pub use types::{Primitive, Type, TypeError};
+pub use types::{Primitive, Type, TypeError, TypeChecker};
+
+#[cfg(test)]
+mod lib_test;

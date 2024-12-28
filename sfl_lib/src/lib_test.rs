@@ -1,0 +1,37 @@
+use super::*;
+
+fn full_run_test(program: String) -> String {
+    let mut ast = Parser::from_string(program).parse_module().unwrap();
+    TypeChecker::new().check_module(&ast, ast.root).unwrap();
+    let mut exp = ast.get_assign_exp(ast.get_main(ast.root));
+
+    let mut rcs = find_redex_contraction_pairs(&ast, ast.root, exp);
+    while rcs.len() != 0 {
+        let rc = &rcs[0];
+        ast.replace_from_other_root(&rc.1, rc.0);
+        
+        exp = ast.get_assign_exp(ast.get_main(ast.root));
+        rcs = find_redex_contraction_pairs(&ast, ast.root, exp);
+    }
+    ast.to_string(exp)
+}
+
+#[test]
+fn full_run_1() {
+    let program = r#"
+    x :: Int 
+    x = 5
+
+    y :: Int
+    y=2
+
+    inc :: Int -> Int
+    inc = \i . add i 1
+
+    main :: Int
+    main = sub (add 5 (inc x)) (mul 5 y)
+    "#
+    .to_string();
+
+    assert_eq!(full_run_test(program), "1");
+}

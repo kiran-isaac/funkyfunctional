@@ -33,6 +33,12 @@ fn main() {
     }
     let mut ast = ast.unwrap();
 
+    // Typecheck
+    if let Err(e) = lib::TypeChecker::new().check_module(&ast, ast.root) {
+        eprintln!("{:?}", e);
+        std::process::exit(1)
+    }
+
     let exp = ast.get_assign_exp(ast.get_main(ast.root));
 
     let mut rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp);

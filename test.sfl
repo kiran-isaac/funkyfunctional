@@ -7,5 +7,5 @@ y=2
 inc :: Int -> Int
 inc = \i . add i 1
 
-add :: Int
+main :: Int
 main = sub (add 5 (inc x)) (mul 5 y)
