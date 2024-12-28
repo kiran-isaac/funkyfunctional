@@ -1,3 +1,11 @@
+x :: Int 
 x = 5
+
+y :: Int
 y=2
-main = sub (add 5 x) (mul 5 y)
+
+inc :: Int -> Int
+inc = \i . add i 1
+
+main :: Int
+main = sub (add 5 (inc x)) (mul 5 y)
