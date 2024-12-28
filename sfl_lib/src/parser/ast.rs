@@ -1,6 +1,6 @@
 use std::{
-    collections::{HashMap, HashSet},
-    fmt::{write, Debug},
+    collections::HashMap,
+    fmt::Debug,
     vec,
 };
 
@@ -164,33 +164,6 @@ impl AST {
     pub fn replace(&mut self, old: usize, new: usize) {
         // Replace references to the old node with the new node
         self.replace_references_to_node(old, new);
-    }
-
-    fn get_all_children_recurse(&self, node: usize) -> Vec<usize> {
-        let mut children = vec![];
-        for c in &self.get(node).children {
-            children.push(*c);
-            children.append(&mut self.get_all_children_recurse(*c));
-        }
-        children
-    }
-
-    fn remove(&mut self, node: usize) {
-        let children = self.get(node).children.clone();
-        for c in children {
-            self.remove(c);
-        }
-
-        self.assert_no_references(node);
-        self.vec.remove(node);
-    }
-
-    fn assert_no_references(&self, node: usize) {
-        for n in &self.vec {
-            for c in &n.children {
-                assert!(*c != node);
-            }
-        }
     }
 
     fn replace_references_to_node(&mut self, old: usize, new: usize) {

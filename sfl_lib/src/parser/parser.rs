@@ -1,6 +1,4 @@
-use crate::types::TypeError;
-
-use super::ast::{ASTNode, AST};
+use super::ast::AST;
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
@@ -10,11 +8,9 @@ use std::fs::File;
 use std::io::{self, prelude::*};
 
 pub struct Parser {
-    i: usize,
     t_queue: VecDeque<Token>,
     lexer: Lexer,
     bound: BoundChecker,
-    ast: AST,
 }
 
 pub struct ParserError {
@@ -25,7 +21,7 @@ pub struct ParserError {
 
 impl Debug for ParserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{}", self.e)
+        write!(f, "Parser Error at [{}:{}]: {}", self.line, self.col, self.e)
     }
 }
 
@@ -45,21 +41,17 @@ impl Parser {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
         Ok(Self {
-            i: 0,
             t_queue: VecDeque::new(),
             lexer: Lexer::new(contents, Some(filename)),
             bound: BoundChecker::new(),
-            ast: AST::new(),
         })
     }
 
     pub fn from_string(str: String) -> Self {
         Self {
-            i: 0,
             t_queue: VecDeque::new(),
             lexer: Lexer::new(str, None),
             bound: BoundChecker::new(),
-            ast: AST::new(),
         }
     }
 
@@ -98,7 +90,7 @@ impl Parser {
 
     fn parse_error(&self, msg: String) -> ParserError {
         ParserError {
-            e: format!("parse error: [{}]: {}", self.lexer.pos_string(), msg),
+            e: msg,
             line: self.lexer.line,
             col: self.lexer.col,
         }

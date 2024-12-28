@@ -97,6 +97,7 @@ pub fn inbuilt_float_neg(call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
     )
 }
 
+#[cfg(test)]
 pub fn inbuilt_int_zero(call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
     assert!(args.len() == 0);
 

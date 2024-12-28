@@ -12,7 +12,6 @@ use super::*;
 /// either an ID or an App of an ID in the set of inbuilts and a literal
 fn check_for_ready_call_to_inbuilts(
     ast: &AST,
-    module: usize,
     exp: usize,
     inbuilts: &InbuiltsLookupTable,
 ) -> Option<ASTNode> {
@@ -53,7 +52,8 @@ fn check_for_ready_call_to_inbuilts(
 pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec<(usize, AST)> {
     let mut pairs: Vec<(usize, AST)> = vec![];
 
-    let exp_str = ast.to_string(exp);
+    #[cfg(debug_assertions)]
+    let _exp_str = ast.to_string(exp);
 
     // Dont need to worry about this as main must be at the end, so everything defined in
     // the module is defined here
@@ -82,14 +82,17 @@ pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec
         }
         ASTNodeType::Application => {
             if let Some(inbuilt_reduction) =
-                check_for_ready_call_to_inbuilts(ast, module, exp, &inbuilts)
+                check_for_ready_call_to_inbuilts(ast, exp, &inbuilts)
             {
                 pairs.push((exp, AST::single_node(inbuilt_reduction)));
             } else {
                 let f = ast.get_func(exp);
                 let x = ast.get_arg(exp);
-                let f_str = ast.to_string(f);
-                let x_str = ast.to_string(x);
+                
+                #[cfg(debug_assertions)]
+                let _f_str = ast.to_string(f);
+                #[cfg(debug_assertions)]
+                let _x_str = ast.to_string(x);
                 match ast.get(f).t {
                     ASTNodeType::Application | ASTNodeType::Identifier => {
                         pairs.extend(find_redex_contraction_pairs(ast, module, f));

@@ -1,4 +1,4 @@
 x = 5
 y=2
-inc = \i . add i 1
+inc = \x . add i 1
 main = sub (add 5 (inc x)) (mul 5 y)

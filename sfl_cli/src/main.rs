@@ -1,8 +1,7 @@
 use sfl_lib as lib;
 use std::{
     env, fs,
-    io::{self, Read, Write},
-    rc,
+    io::{self, Write},
 };
 
 fn main() {
