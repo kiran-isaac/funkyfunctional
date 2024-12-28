@@ -122,13 +122,13 @@ fn multi_op_test() {
     assert_eq_in_any_order(&correct, &proposed);
 
     for (old, new) in rcs {
-        ast.replace_from_other_root(&new, old);
+        ast.do_rc_subst(&(old, new));
     }
 
     let rcs = find_redex_contraction_pairs(&ast, module, exp);
     assert!(rcs.len() == 1);
     for (old, new) in rcs {
-        ast.replace_from_other_root(&new, old);
+        ast.do_rc_subst(&(old, new));
     }
 
     assert_eq!(
@@ -149,7 +149,7 @@ fn basic_abst_test() {
     let rcs = find_redex_contraction_pairs(&ast, module, exp);
     assert_eq!(rcs.len(), 1);
 
-    ast.replace_from_other_root(&rcs[0].1, rcs[0].0);
+    ast.do_rc_subst(&rcs[0]);
 
     let rcs = find_redex_contraction_pairs(&ast, module, exp);
     assert_eq!(rcs.len(), 1);

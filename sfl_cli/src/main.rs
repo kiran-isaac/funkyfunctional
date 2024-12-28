@@ -64,10 +64,7 @@ fn main() {
             eprintln!("Invalid choice\n");
             continue;
         }
-
-        let choice = &rcs[choice - 1];
-
-        ast.replace_from_other_root(&choice.1, choice.0);
+        ast.do_rc_subst(&rcs[choice - 1]);
 
         let exp = ast.get_assign_exp(ast.get_main(ast.root));
 

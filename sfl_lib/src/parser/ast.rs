@@ -60,7 +60,7 @@ impl ASTNode {
         }
     }
 
-    pub fn new_lit(tk: Token, line: usize, col: usize) -> Self {
+    fn new_lit(tk: Token, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Literal,
             info: Some(tk),
@@ -71,7 +71,7 @@ impl ASTNode {
         }
     }
 
-    pub fn new_id(tk: Token, line: usize, col: usize) -> Self {
+    fn new_id(tk: Token, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Identifier,
             info: Some(tk),
@@ -82,7 +82,7 @@ impl ASTNode {
         }
     }
 
-    pub fn new_app(f: usize, x: usize, line: usize, col: usize) -> Self {
+    fn new_app(f: usize, x: usize, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Application,
             info: None,
@@ -93,7 +93,7 @@ impl ASTNode {
         }
     }
 
-    pub fn new_abstraction(id: usize, exp: usize, line: usize, col: usize) -> Self {
+    fn new_abstraction(id: usize, exp: usize, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Abstraction,
             info: None,
@@ -104,7 +104,7 @@ impl ASTNode {
         }
     }
 
-    pub fn new_assignment(id: usize, exp: usize, line: usize, col: usize, t: Option<Type>) -> Self {
+    fn new_assignment(id: usize, exp: usize, line: usize, col: usize, t: Option<Type>) -> Self {
         ASTNode {
             t: ASTNodeType::Assignment,
             info: None,
@@ -115,7 +115,7 @@ impl ASTNode {
         }
     }
 
-    pub fn new_module(assigns: Vec<usize>, line: usize, col: usize) -> Self {
+    fn new_module(assigns: Vec<usize>, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Module,
             info: None,
@@ -159,7 +159,9 @@ impl AST {
         ast
     }
 
-    pub fn replace_from_other_root(&mut self, other: &AST, old: usize) {
+    pub fn do_rc_subst(&mut self, rc : &(usize, AST)) {
+        let other = &rc.1;
+        let old = rc.0;
         let new = self.append(other, other.root);
         self.replace_references_to_node(old, new);
     }

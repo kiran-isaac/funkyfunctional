@@ -31,8 +31,9 @@ fn test_basic_int_arith() {
 
         let a = ast.add_lit(a, 0, 0);
         let b = ast.add_lit(b, 0, 0);
-
-        let call = ASTNode::new_id(
+        
+        let mut call_ast = AST::new();
+        call_ast.add_id(
             Token {
                 tt: parser::TokenType::Id,
                 value: "_".to_string(),
@@ -40,6 +41,7 @@ fn test_basic_int_arith() {
             0,
             0,
         );
+        let call = call_ast.get(0);
 
         let c_add = add.call(&call, vec![ast.get(b), ast.get(a)]);
         let c_sub = sub.call(&call, vec![ast.get(b), ast.get(a)]);
@@ -108,7 +110,8 @@ fn test_basic_float_arith() {
         let a = ast.add_lit(a, 0, 0);
         let b = ast.add_lit(b, 0, 0);
 
-        let call = ASTNode::new_id(
+        let mut call_ast = AST::new();
+        call_ast.add_id(
             Token {
                 tt: parser::TokenType::Id,
                 value: "_".to_string(),
@@ -116,6 +119,7 @@ fn test_basic_float_arith() {
             0,
             0,
         );
+        let call = call_ast.get(0);
 
         let c_add = add.call(&call, vec![ast.get(b), ast.get(a)]);
         let c_sub = sub.call(&call, vec![ast.get(b), ast.get(a)]);

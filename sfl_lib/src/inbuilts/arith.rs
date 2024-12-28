@@ -23,15 +23,16 @@ where
     let b_int: T = b.get_value().parse().unwrap();
 
     let c_int = op(b_int, a_int);
-
-    AST::single_node(ASTNode::new_lit(
+    let mut ast = AST::new();
+    ast.add_lit(
         Token {
             tt: TokenType::IntLit,
             value: format!("{}", c_int),
         },
         call.line,
         call.col,
-    ))
+    );
+    ast
 }
 
 pub fn inbuilt_int_add(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
@@ -53,14 +54,16 @@ pub fn inbuilt_int_div(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
 pub fn inbuilt_int_neg(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
     assert_eq!(args.len(), 1);
     let x: i64 = args[0].get_value().parse().unwrap();
-    AST::single_node(ASTNode::new_lit(
+    let mut ast = AST::new();
+    ast.add_lit(
         Token {
             tt: TokenType::IntLit,
             value: format!("{}", -x),
         },
         call.line,
         call.col,
-    ))
+    );
+    ast
 }
 
 pub fn inbuilt_float_add(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
@@ -82,31 +85,40 @@ pub fn inbuilt_float_div(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
 pub fn inbuilt_float_neg(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
     assert_eq!(args.len(), 1);
     let x: f64 = args[0].get_value().parse().unwrap();
-    AST::single_node(ASTNode::new_lit(
+    let mut ast = AST::new();
+    ast.add_lit(
         Token {
-            tt: TokenType::IntLit,
+            tt: TokenType::FloatLit,
             value: format!("{}", -x),
         },
         call.line,
         call.col,
-    ))
+    );
+    ast
 }
 
 #[cfg(test)]
 pub fn inbuilt_int_zero(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
     assert!(args.len() == 0);
 
-    AST::single_node(ASTNode::new_lit(
+    let mut ast = AST::new();
+    ast.add_lit(
         Token {
             tt: TokenType::IntLit,
             value: format!("{}", 0),
         },
         call.line,
         call.col,
-    ))
+    );
+    ast
 }
 
-fn inbuilt_binary_boolean<T>(call: &ASTNode, args: Vec<&ASTNode>, op: fn(T, T) -> bool, p: Primitive) -> AST
+fn inbuilt_binary_boolean<T>(
+    call: &ASTNode,
+    args: Vec<&ASTNode>,
+    op: fn(T, T) -> bool,
+    p: Primitive,
+) -> AST
 where
     T: FromStr + Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Display,
     <T as FromStr>::Err: std::fmt::Debug,
@@ -122,52 +134,54 @@ where
 
     let c_int = op(b_int, a_int);
 
-    AST::single_node(ASTNode::new_lit(
+    let mut ast = AST::new();
+    ast.add_lit(
         Token {
             tt: TokenType::BoolLit,
-            value: format!("{}", if c_int {"true"} else {"false"}),
+            value: format!("{}", if c_int { "true" } else { "false" }),
         },
         call.line,
         call.col,
-    ))
+    );
+    ast
 }
 
 pub fn inbuilt_int_eq(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-    inbuilt_binary_boolean(call, args, |x : i64, y: i64| x == y, Primitive::Int64)
+    inbuilt_binary_boolean(call, args, |x: i64, y: i64| x == y, Primitive::Int64)
 }
 
 pub fn inbuilt_int_lt(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-    inbuilt_binary_boolean(call, args, |x : i64, y: i64| x < y, Primitive::Int64)
+    inbuilt_binary_boolean(call, args, |x: i64, y: i64| x < y, Primitive::Int64)
 }
 
 pub fn inbuilt_int_gt(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-    inbuilt_binary_boolean(call, args, |x : i64, y: i64| x > y, Primitive::Int64)
+    inbuilt_binary_boolean(call, args, |x: i64, y: i64| x > y, Primitive::Int64)
 }
 
 pub fn inbuilt_int_lte(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-    inbuilt_binary_boolean(call, args, |x : i64, y: i64| x <= y, Primitive::Int64)
+    inbuilt_binary_boolean(call, args, |x: i64, y: i64| x <= y, Primitive::Int64)
 }
 
 pub fn inbuilt_int_gte(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-    inbuilt_binary_boolean(call, args, |x : i64, y: i64| x >= y, Primitive::Int64)
+    inbuilt_binary_boolean(call, args, |x: i64, y: i64| x >= y, Primitive::Int64)
 }
 
 pub fn inbuilt_float_eq(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-    inbuilt_binary_boolean(call, args, |x : f64, y: f64| x == y, Primitive::Float64)
+    inbuilt_binary_boolean(call, args, |x: f64, y: f64| x == y, Primitive::Float64)
 }
 
 pub fn inbuilt_float_lt(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-    inbuilt_binary_boolean(call, args, |x : f64, y: f64| x < y, Primitive::Float64)
+    inbuilt_binary_boolean(call, args, |x: f64, y: f64| x < y, Primitive::Float64)
 }
 
 pub fn inbuilt_float_gt(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-    inbuilt_binary_boolean(call, args, |x : f64, y: f64| x > y, Primitive::Float64)
+    inbuilt_binary_boolean(call, args, |x: f64, y: f64| x > y, Primitive::Float64)
 }
 
 pub fn inbuilt_float_lte(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-    inbuilt_binary_boolean(call, args, |x : f64, y: f64| x <= y, Primitive::Float64)
+    inbuilt_binary_boolean(call, args, |x: f64, y: f64| x <= y, Primitive::Float64)
 }
 
 pub fn inbuilt_float_gte(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-    inbuilt_binary_boolean(call, args, |x : f64, y: f64| x >= y, Primitive::Float64)
+    inbuilt_binary_boolean(call, args, |x: f64, y: f64| x >= y, Primitive::Float64)
 }
