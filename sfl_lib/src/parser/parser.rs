@@ -137,14 +137,17 @@ impl Parser {
         match self.peek(0)?.tt {
             TokenType::Id => {
                 let id = self.consume()?;
+
                 let varname = id.value.clone();
-                if self.bound.is_bound(&varname) {
-                    return Err(self.parse_error(format!(
-                        "Identifier already bound, so cannot be bound for lambda: {}",
-                        varname
-                    )));
+                if varname != "_" {
+                    if self.bound.is_bound(&varname) {
+                        return Err(self.parse_error(format!(
+                            "Identifier already bound, so cannot be bound for lambda: {}",
+                            varname
+                        )));
+                    }
+                    self.bind(varname.clone());
                 }
-                self.bind(varname.clone());
                 let line = self.lexer.line;
                 let col = self.lexer.col;
                 let id = ast.add_id(id, line, col);
@@ -158,7 +161,9 @@ impl Parser {
                             }
                             _ => self.parse_expression(ast)?,
                         };
-                        self.unbind(varname);
+                        if varname != "_" {
+                            self.unbind(varname);
+                        }
                         Ok(ast.add_abstraction(id, expr, line, col))
                     }
                     TokenType::Id => {
@@ -169,27 +174,7 @@ impl Parser {
                     _ => Err(self.parse_error("Expected dot after lambda id".to_string())),
                 }
             }
-            // if no arg we can just create a fake id that nothing can match
-            TokenType::Dot => {
-                let line = self.lexer.line;
-                let col = self.lexer.col;
-                let body = match self.peek(0)?.tt {
-                    TokenType::Lambda => {
-                        self.advance();
-                        self.parse_abstraction(ast)?
-                    }
-                    _ => self.parse_expression(ast)?,
-                };
-                // Its impossible to define a variable with a null name
-                // so this is a safe fake id and wont be matched
-                let fake_id = Token {
-                    tt: TokenType::Id,
-                    value: "".to_string(),
-                };
-                let id = ast.add_id(fake_id, line, col);
-                Ok(ast.add_abstraction(id, body, line, col))
-            }
-            _ => Err(self.parse_error("Expected identifier after lambda".to_string())),
+            _ => Err(self.parse_error("Expected identifier (or ignore directive '_') after lambda".to_string())),
         }
     }
 

@@ -23,7 +23,7 @@ fn full_run_1() {
     x = 5
 
     y :: Int
-    y=2
+    y = 2
 
     inc :: Int -> Int
     inc = \i . add i 1
@@ -34,4 +34,27 @@ fn full_run_1() {
     .to_string();
 
     assert_eq!(full_run_test(program), "1");
+}
+
+#[test]
+fn full_run_2() {
+    let program = r#"
+    x :: Int
+    x = 100
+
+    const_float::Int -> Float
+    const_float = \_. 1.5
+
+    y :: Float
+    y = const_float x
+
+    inc :: Float -> Float
+    inc = \i . addf i 1.0
+
+    main :: Float
+    main = inc y
+    "#
+    .to_string();
+
+    assert_eq!(full_run_test(program), "2.5");
 }

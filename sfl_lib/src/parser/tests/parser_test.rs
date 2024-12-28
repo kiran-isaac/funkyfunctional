@@ -100,8 +100,8 @@ fn abstraction() -> Result<(), ParserError> {
     let module = 0;
     assert!(ast.to_string(module) == "x = \\y . add y 5".to_string());
 
-    // Should error because y is unbound
-    let unbound_str = "x = (\\y . add y 5) y";
+    // Should error because abstractions only allowed at top level of assignment expr
+    let unbound_str = "x = (\\y . add y 5) 1";
     let mut parser = Parser::from_string(unbound_str.to_string());
     assert!(parser.parse_module().is_err());
 
@@ -111,6 +111,10 @@ fn abstraction() -> Result<(), ParserError> {
     let ast = Parser::from_string(multi_abstr.to_string()).parse_module()?;
     let ast2 = Parser::from_string(multi_abstr2.to_string()).parse_module()?;
     assert_eq!(ast.to_string(ast.root), ast2.to_string(ast2.root));
+
+    let ignore_directive = "x = \\_ . 1.5";
+    Parser::from_string(ignore_directive.to_string()).parse_module()?;
+    
 
     Ok(())
 }
