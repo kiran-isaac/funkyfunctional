@@ -64,11 +64,22 @@ impl TypeChecker {
                         let f_name = ast.get(ast.get_abstr_var(exp)).get_value();
                         self.type_map.insert(f_name, expected_f.as_ref().clone());
 
-                        self.check_expression_expecting_type(ast, module, ast.get_abstr_exp(exp), expected_x.as_ref())?;
+                        self.check_expression_expecting_type(
+                            ast,
+                            module,
+                            ast.get_abstr_exp(exp),
+                            expected_x.as_ref(),
+                        )?;
 
-                        return Ok(())
+                        self.type_map.remove(&f_name);
+
+                        return Ok(());
                     }
                 }
+            }
+            ASTNodeType::Application => {
+                let f = ast.get_func(exp);
+                let x = ast.get_func(exp);
             }
             _ => unimplemented!(),
         };
