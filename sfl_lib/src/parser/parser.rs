@@ -71,6 +71,27 @@ impl Parser {
         self.bound.add_binding(name);
     }
 
+    /// Used when it doesnt matter that something is already 
+    /// bound, like when we are binding a local variable in 
+    /// a lambda
+    /// This will create an alias for the bound variable
+    /// and return the alias
+    pub fn bind_local(&mut self, name: String) -> String {
+        let mut alias_id = 0; 
+        while self.bound.is_bound(name.as_str()) {
+            alias_id += 1;
+        }
+
+        if alias_id == 0 {
+            self.bound.add_binding(name.clone());
+            return name;
+        } else {
+            let alias = format!("{}{}", alias_id, name);
+            self.bound.add_binding(alias.clone());
+            return alias;
+        }
+    }
+
     pub fn unbind(&mut self, name: String) {
         self.bound.remove_binding(name);
     }
@@ -117,6 +138,9 @@ impl Parser {
             TokenType::Id => {
                 let id = self.consume()?;
                 let varname = id.value.clone();
+                if self.bound.is_bound(&varname) {
+                    return Err(self.parse_error(format!("Identifier already bound, so cannot be bound for lambda: {}", varname)));
+                }
                 self.bind(varname.clone());
                 let line = self.lexer.line;
                 let col = self.lexer.col;
