@@ -14,21 +14,13 @@ pub fn inbuilt_unconst(_: &ASTNode, args: Vec<&ASTNode>) -> AST {
 pub fn inbuilt_if(_: &ASTNode, args: Vec<&ASTNode>) -> AST {
     assert!(args.len() == 1);
     assert!(args[0].get_lit_type() == Type::Primitive(Primitive::Bool));
-    let mut ast = AST::new();
-
-    ast.add_id(
-        Token {
-            tt: TokenType::Id,
-            value: (if args[0].get_value() == "true" {
-                "const"
-            } else {
-                "unconst"
-            })
-            .to_string(),
-        },
-        0,
-        0,
-    );
-
-    ast
+    if args[0].get_value() == "true" {
+        Parser::from_string("\\x _.x".to_string())
+            .parse_tl_expression()
+            .unwrap()
+    } else {
+        Parser::from_string("\\_ x.x".to_string())
+            .parse_tl_expression()
+            .unwrap()
+    }
 }
