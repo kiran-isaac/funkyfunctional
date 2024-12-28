@@ -92,6 +92,24 @@ impl Lexer {
                     value: str,
                 });
             }
+            "if" => {
+                return Ok(Token {
+                    tt: TokenType::If,
+                    value: str,
+                })
+            }
+            "then" => {
+                return Ok(Token {
+                    tt: TokenType::Then,
+                    value: str,
+                })
+            }
+            "else" => {
+                return Ok(Token {
+                    tt: TokenType::Else,
+                    value: str,
+                })
+            }
             _ => {}
         }
 

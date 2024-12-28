@@ -8,6 +8,10 @@ pub enum TokenType {
     Id,
     TypeId,
 
+    If,
+    Then,
+    Else,
+
     IntLit,
     FloatLit,
     StringLit,

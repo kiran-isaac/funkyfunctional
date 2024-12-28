@@ -38,6 +38,7 @@ impl Type {
             Type::Primitive(p) => match p {
                 Primitive::Int64 => "Int".to_string(),
                 Primitive::Float64 => "Float".to_string(),
+                Primitive::Bool => "Bool".to_string(),
                 _ => unimplemented!(),
             },
             Type::Function(t1, t2) => {

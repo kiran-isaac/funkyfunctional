@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
 use arith::*;
+use control_flow::inbuilt_int_if;
 
 use crate::*;
 mod arith;
+mod control_flow;
 
 #[cfg(test)]
 mod test;
@@ -19,7 +21,7 @@ fn assert_prim_type(x: &Type, p: Primitive) {
     }
 }
 
-type InbuiltFuncPointer = fn(&ASTNode, Vec<&ASTNode>) -> ASTNode;
+type InbuiltFuncPointer = fn(&ASTNode, Vec<&ASTNode>) -> AST;
 
 /// Will be used to store inbuilt functions and their arities. will eventually
 /// have some sort of function pointer or something to the actual function
@@ -30,7 +32,7 @@ pub struct InbuiltFunc {
 }
 
 impl InbuiltFunc {
-    pub fn call(&self, call: &ASTNode, args: Vec<&ASTNode>) -> ASTNode {
+    pub fn call(&self, call: &ASTNode, args: Vec<&ASTNode>) -> AST {
         assert!(self.arity == args.len());
         (self.func)(call, args)
     }
@@ -83,6 +85,8 @@ impl InbuiltsLookupTable {
         self.add_inbuilt("mulf".to_string(), 2, inbuilt_float_mul);
         self.add_inbuilt("divf".to_string(), 2, inbuilt_float_div);
 
+        self.add_inbuilt("if".to_string(), 1, inbuilt_int_if);
+
         self.add_inbuilt("neg".to_string(), 1, inbuilt_int_neg);
         self.add_inbuilt("negf".to_string(), 1, inbuilt_float_neg);
 
@@ -128,6 +132,31 @@ pub fn get_default_inbuilt_type_map() -> HashMap<String, Type> {
         Box::new(Type::Primitive(Primitive::Float64)),
         Box::new(Type::Primitive(Primitive::Float64)),
     );
+
+    let if_int_type = Type::Function(
+        Box::new(Type::Primitive(Primitive::Bool)),
+        Box::new(Type::Function(
+            Box::new(Type::Primitive(Primitive::Int64)),
+            Box::new(Type::Function(
+                Box::new(Type::Primitive(Primitive::Int64)),
+                Box::new(Type::Primitive(Primitive::Int64)),
+            )),
+        )),
+    );
+
+    let if_float_type = Type::Function(
+        Box::new(Type::Primitive(Primitive::Bool)),
+        Box::new(Type::Function(
+            Box::new(Type::Primitive(Primitive::Int64)),
+            Box::new(Type::Function(
+                Box::new(Type::Primitive(Primitive::Int64)),
+                Box::new(Type::Primitive(Primitive::Int64)),
+            )),
+        )),
+    );
+
+    inbuilt_type_map.insert("if".to_string(), if_int_type);
+    inbuilt_type_map.insert("iff".to_string(), if_float_type);
 
     inbuilt_type_map.insert("add".to_string(), binary_int_type.clone());
     inbuilt_type_map.insert("sub".to_string(), binary_int_type.clone());

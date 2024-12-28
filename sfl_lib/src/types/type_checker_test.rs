@@ -29,7 +29,8 @@ fn type_check_const_int_abst() -> Result<(), TypeError> {
 
 #[test]
 fn type_check_extra_arg_should_fail() {
-    let program = "const_10 :: Float -> Int\nconst_10 = \\x. 10\nmain :: Int\nmain = const_10 2.0 10";
+    let program =
+        "const_10 :: Float -> Int\nconst_10 = \\x. 10\nmain :: Int\nmain = const_10 2.0 10";
 
     let ast = Parser::from_string(program.to_string())
         .parse_module()

@@ -46,15 +46,39 @@ fn test_basic_int_arith() {
         let c_mul = mul.call(&call, vec![ast.get(b), ast.get(a)]);
         let c_div = div.call(&call, vec![ast.get(b), ast.get(a)]);
 
-        matches!(c_add.get_lit_type(), Type::Primitive(Primitive::Int64));
-        matches!(c_sub.get_lit_type(), Type::Primitive(Primitive::Int64));
-        matches!(c_mul.get_lit_type(), Type::Primitive(Primitive::Int64));
-        matches!(c_div.get_lit_type(), Type::Primitive(Primitive::Int64));
+        matches!(
+            c_add.get(0).get_lit_type(),
+            Type::Primitive(Primitive::Int64)
+        );
+        matches!(
+            c_sub.get(0).get_lit_type(),
+            Type::Primitive(Primitive::Int64)
+        );
+        matches!(
+            c_mul.get(0).get_lit_type(),
+            Type::Primitive(Primitive::Int64)
+        );
+        matches!(
+            c_div.get(0).get_lit_type(),
+            Type::Primitive(Primitive::Int64)
+        );
 
-        assert_eq!(c_add.get_value().parse::<i64>().unwrap(), a_int + b_int);
-        assert_eq!(c_sub.get_value().parse::<i64>().unwrap(), a_int - b_int);
-        assert_eq!(c_mul.get_value().parse::<i64>().unwrap(), a_int * b_int);
-        assert_eq!(c_div.get_value().parse::<i64>().unwrap(), a_int / b_int);
+        assert_eq!(
+            c_add.get(0).get_value().parse::<i64>().unwrap(),
+            a_int + b_int
+        );
+        assert_eq!(
+            c_sub.get(0).get_value().parse::<i64>().unwrap(),
+            a_int - b_int
+        );
+        assert_eq!(
+            c_mul.get(0).get_value().parse::<i64>().unwrap(),
+            a_int * b_int
+        );
+        assert_eq!(
+            c_div.get(0).get_value().parse::<i64>().unwrap(),
+            a_int / b_int
+        );
     }
 }
 
@@ -98,14 +122,38 @@ fn test_basic_float_arith() {
         let c_mul = mul.call(&call, vec![ast.get(b), ast.get(a)]);
         let c_div = div.call(&call, vec![ast.get(b), ast.get(a)]);
 
-        matches!(c_add.get_lit_type(), Type::Primitive(Primitive::Float64));
-        matches!(c_sub.get_lit_type(), Type::Primitive(Primitive::Float64));
-        matches!(c_mul.get_lit_type(), Type::Primitive(Primitive::Float64));
-        matches!(c_div.get_lit_type(), Type::Primitive(Primitive::Float64));
+        matches!(
+            c_add.get(0).get_lit_type(),
+            Type::Primitive(Primitive::Float64)
+        );
+        matches!(
+            c_sub.get(0).get_lit_type(),
+            Type::Primitive(Primitive::Float64)
+        );
+        matches!(
+            c_mul.get(0).get_lit_type(),
+            Type::Primitive(Primitive::Float64)
+        );
+        matches!(
+            c_div.get(0).get_lit_type(),
+            Type::Primitive(Primitive::Float64)
+        );
 
-        assert_eq!(c_add.get_value().parse::<f64>().unwrap(), a_float + b_float);
-        assert_eq!(c_sub.get_value().parse::<f64>().unwrap(), a_float - b_float);
-        assert_eq!(c_mul.get_value().parse::<f64>().unwrap(), a_float * b_float);
-        assert_eq!(c_div.get_value().parse::<f64>().unwrap(), a_float / b_float);
+        assert_eq!(
+            c_add.get(0).get_value().parse::<f64>().unwrap(),
+            a_float + b_float
+        );
+        assert_eq!(
+            c_sub.get(0).get_value().parse::<f64>().unwrap(),
+            a_float - b_float
+        );
+        assert_eq!(
+            c_mul.get(0).get_value().parse::<f64>().unwrap(),
+            a_float * b_float
+        );
+        assert_eq!(
+            c_div.get(0).get_value().parse::<f64>().unwrap(),
+            a_float / b_float
+        );
     }
 }

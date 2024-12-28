@@ -9,7 +9,7 @@ fn full_run_test(program: String) -> String {
     while rcs.len() != 0 {
         let rc = &rcs[0];
         ast.replace_from_other_root(&rc.1, rc.0);
-        
+
         exp = ast.get_assign_exp(ast.get_main(ast.root));
         rcs = find_redex_contraction_pairs(&ast, ast.root, exp);
     }

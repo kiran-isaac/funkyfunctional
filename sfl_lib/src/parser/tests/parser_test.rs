@@ -114,7 +114,6 @@ fn abstraction() -> Result<(), ParserError> {
 
     let ignore_directive = "x = \\_ . 1.5";
     Parser::from_string(ignore_directive.to_string()).parse_module()?;
-    
 
     Ok(())
 }
@@ -150,6 +149,26 @@ fn type_assignment_right_assoc() -> Result<(), ParserError> {
         format!("{:?}", type_assignment.unwrap()),
         "(Int -> Int) -> ((Int -> Float) -> Int)"
     );
+
+    Ok(())
+}
+
+#[test]
+fn ite_1() -> Result<(), ParserError> {
+    let str = "x = if true then 1 else 2";
+    let mut parser = Parser::from_string(str.to_string());
+
+    let ast = parser.parse_module()?;
+    let module = 0;
+
+    assert_eq!(ast.to_string(module), str);
+
+    let str = "x = \\_ . add (if true then 1 else 2) (if true then 2 else 3)";
+    let mut parser = Parser::from_string(str.to_string());
+
+    let ast = parser.parse_module()?;
+    let module = 0;
+    assert_eq!(ast.to_string(module), str);
 
     Ok(())
 }

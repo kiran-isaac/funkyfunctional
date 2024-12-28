@@ -8,4 +8,4 @@ inc :: Int -> Int
 inc = \i . add i 1
 
 main :: Int
-main = sub (add 5 (inc x)) (mul 5 y)
+main = if true then 2 else 1
