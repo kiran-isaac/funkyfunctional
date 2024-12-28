@@ -102,3 +102,45 @@ impl InbuiltsLookupTable {
         bindings
     }
 }
+
+/// Will be included in the InbuiltsLookupTable eventually
+pub fn get_default_inbuilt_type_map() -> HashMap<String, Type> {
+    let mut inbuilt_type_map = HashMap::new();
+    let binary_int_type = Type::Function(
+        Box::new(Type::Primitive(Primitive::Int64)),
+        Box::new(Type::Function(
+            Box::new(Type::Primitive(Primitive::Int64)),
+            Box::new(Type::Primitive(Primitive::Int64)),
+        )),
+    );
+    let binary_float_type = Type::Function(
+        Box::new(Type::Primitive(Primitive::Float64)),
+        Box::new(Type::Function(
+            Box::new(Type::Primitive(Primitive::Float64)),
+            Box::new(Type::Primitive(Primitive::Float64)),
+        )),
+    );
+    let unary_int_type = Type::Function(
+        Box::new(Type::Primitive(Primitive::Int64)),
+        Box::new(Type::Primitive(Primitive::Int64)),
+    );
+    let unary_float_type = Type::Function(
+        Box::new(Type::Primitive(Primitive::Float64)),
+        Box::new(Type::Primitive(Primitive::Float64)),
+    );
+
+    inbuilt_type_map.insert("add".to_string(), binary_int_type.clone());
+    inbuilt_type_map.insert("sub".to_string(), binary_int_type.clone());
+    inbuilt_type_map.insert("mul".to_string(), binary_int_type.clone());
+    inbuilt_type_map.insert("div".to_string(), binary_int_type);
+
+    inbuilt_type_map.insert("addf".to_string(), binary_float_type.clone());
+    inbuilt_type_map.insert("subf".to_string(), binary_float_type.clone());
+    inbuilt_type_map.insert("mulf".to_string(), binary_float_type.clone());
+    inbuilt_type_map.insert("divf".to_string(), binary_float_type);
+
+    inbuilt_type_map.insert("neg".to_string(), unary_int_type.clone());
+    inbuilt_type_map.insert("negf".to_string(), unary_float_type.clone());
+
+    inbuilt_type_map
+}

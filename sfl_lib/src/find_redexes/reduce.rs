@@ -76,7 +76,7 @@ pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec
                 pairs.push((exp, res_ast));
             } else if previous_assignments.contains_key(&value) {
                 let assign = *previous_assignments.get(&value).unwrap();
-                let assign_exp = ast.get_exp(assign);
+                let assign_exp = ast.get_assign_exp(assign);
                 pairs.push((exp, ast.clone_node(assign_exp)));
             }
         }

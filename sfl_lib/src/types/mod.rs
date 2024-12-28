@@ -1,4 +1,4 @@
-use std::future;
+mod type_checker;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Primitive {

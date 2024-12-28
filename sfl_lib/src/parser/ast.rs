@@ -71,7 +71,7 @@ impl ASTNode {
             children: vec![],
             line,
             col,
-            type_assignment: None
+            type_assignment: None,
         }
     }
 
@@ -82,7 +82,7 @@ impl ASTNode {
             children: vec![],
             line,
             col,
-            type_assignment: None
+            type_assignment: None,
         }
     }
 
@@ -93,7 +93,7 @@ impl ASTNode {
             children: vec![f, x],
             line,
             col,
-            type_assignment: None
+            type_assignment: None,
         }
     }
 
@@ -104,7 +104,7 @@ impl ASTNode {
             children: vec![id, exp],
             line,
             col,
-            type_assignment: None
+            type_assignment: None,
         }
     }
 
@@ -115,7 +115,7 @@ impl ASTNode {
             children: vec![id, exp],
             line,
             col,
-            type_assignment: t
+            type_assignment: t,
         }
     }
 
@@ -126,7 +126,7 @@ impl ASTNode {
             children: assigns,
             line,
             col,
-            type_assignment: None
+            type_assignment: None,
         }
     }
 }
@@ -199,7 +199,7 @@ impl AST {
             }
             ASTNodeType::Assignment => {
                 let id = self.append(other, n.children[0]);
-                let exp = self.append(other, other.get_exp(node));
+                let exp = self.append(other, other.get_assign_exp(node));
                 self.add_assignment(id, exp, n.line, n.col, n.type_assignment.clone())
             }
             ASTNodeType::Abstraction => {
@@ -237,7 +237,14 @@ impl AST {
         self.add(ASTNode::new_abstraction(id, exp, line, col))
     }
 
-    pub fn add_assignment(&mut self, id: usize, exp: usize, line: usize, col: usize, t: Option<Type>) -> usize {
+    pub fn add_assignment(
+        &mut self,
+        id: usize,
+        exp: usize,
+        line: usize,
+        col: usize,
+        t: Option<Type>,
+    ) -> usize {
         self.add(ASTNode::new_assignment(id, exp, line, col, t))
     }
 
@@ -307,7 +314,7 @@ impl AST {
         self.vec[app].children[1]
     }
 
-    pub fn get_exp(&self, assign: usize) -> usize {
+    pub fn get_assign_exp(&self, assign: usize) -> usize {
         assert!(self.vec[assign].t == ASTNodeType::Assignment);
         self.vec[assign].children[1]
     }
@@ -380,7 +387,7 @@ impl AST {
             }
             ASTNodeType::Assignment => {
                 let id = self.get(self.get(node).children[0]);
-                let exp = self.to_string_indent(self.get_exp(node), indent + 2);
+                let exp = self.to_string_indent(self.get_assign_exp(node), indent + 2);
                 format!("{}Assignment: {}\n{}", ind, id.get_value(), exp)
             }
             ASTNodeType::Module => {
@@ -430,7 +437,7 @@ impl AST {
             }
             ASTNodeType::Assignment => {
                 let id = self.get(self.get(node).children[0]);
-                let exp = self.to_string(self.get_exp(node));
+                let exp = self.to_string(self.get_assign_exp(node));
                 format!("{} = {}", id.get_value(), exp)
             }
             ASTNodeType::Module => {

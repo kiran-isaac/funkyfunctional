@@ -106,7 +106,7 @@ impl Lexer {
     fn parse_type_id(&mut self) -> Result<Token, LexerError> {
         Ok(Token {
             tt: TokenType::TypeId,
-            value: self.parse_id()?.value
+            value: self.parse_id()?.value,
         })
     }
 
@@ -243,20 +243,18 @@ impl Lexer {
             'a'..='z' => self.parse_id(),
             'A'..='Z' => self.parse_type_id(),
             '0'..='9' => self.parse_num_lit(),
-            '-' => {
-                match self.file[self.i + 1] {
-                    '>' => {
-                        self.advance();
-                        self.advance();
-                        Ok(Token {
-                            tt: TokenType::RArrow,
-                            value: "->".to_string(),
-                        })
-                    }
-                    '0'..='9' | '.' => self.parse_num_lit(),
-                    _ => Err(self.error(format!("Unexpected char: {}", self.c()))),
+            '-' => match self.file[self.i + 1] {
+                '>' => {
+                    self.advance();
+                    self.advance();
+                    Ok(Token {
+                        tt: TokenType::RArrow,
+                        value: "->".to_string(),
+                    })
                 }
-            }
+                '0'..='9' | '.' => self.parse_num_lit(),
+                _ => Err(self.error(format!("Unexpected char: {}", self.c()))),
+            },
             '.' => match self.file[self.i + 1] {
                 '0'..='9' => self.parse_num_lit(),
                 _ => {

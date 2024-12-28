@@ -33,7 +33,7 @@ fn main() {
     }
     let mut ast = ast.unwrap();
 
-    let exp = ast.get_exp(ast.get_main(ast.root));
+    let exp = ast.get_assign_exp(ast.get_main(ast.root));
 
     let mut rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp);
 
@@ -63,7 +63,7 @@ fn main() {
 
         ast.replace_from_other_root(&choice.1, choice.0);
 
-        let exp = ast.get_exp(ast.get_main(ast.root));
+        let exp = ast.get_assign_exp(ast.get_main(ast.root));
 
         rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp);
         println!("\n{}", ast.to_string(exp));
