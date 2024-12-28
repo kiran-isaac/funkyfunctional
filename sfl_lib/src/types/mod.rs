@@ -1,4 +1,8 @@
 mod type_checker;
+pub use type_checker::TypeChecker;
+
+#[cfg(test)]
+mod test;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Primitive {
