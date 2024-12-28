@@ -81,14 +81,12 @@ pub fn find_redex_contraction_pairs(ast: &AST, module: usize, exp: usize) -> Vec
             }
         }
         ASTNodeType::Application => {
-            if let Some(inbuilt_reduction) =
-                check_for_ready_call_to_inbuilts(ast, exp, &inbuilts)
-            {
+            if let Some(inbuilt_reduction) = check_for_ready_call_to_inbuilts(ast, exp, &inbuilts) {
                 pairs.push((exp, AST::single_node(inbuilt_reduction)));
             } else {
                 let f = ast.get_func(exp);
                 let x = ast.get_arg(exp);
-                
+
                 #[cfg(debug_assertions)]
                 let _f_str = ast.to_string(f);
                 #[cfg(debug_assertions)]

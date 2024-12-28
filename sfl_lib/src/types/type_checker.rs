@@ -23,10 +23,94 @@ impl TypeChecker {
         };
     }
 
+    fn derive_expr_type(&mut self, ast: &AST, exp: usize) -> Result<Type, TypeError> {
+        match ast.get(exp).t {
+            ASTNodeType::Literal => Ok(ast.get(exp).get_lit_type()),
+            ASTNodeType::Identifier => {
+                let name = ast.get(exp).get_value().clone();
+                match self.type_map.get(&name) {
+                    Some(t) => Ok(t.clone()),
+                    None => unreachable!("derive_expr_type failiure: cannot get id type"),
+                }
+            }
+            ASTNodeType::Application => {
+                let f = ast.get_func(exp);
+                let x = ast.get_func(exp);
+
+                let x_type = self.derive_expr_type(ast, x)?;
+
+                match ast.get(f).t {
+                    ASTNodeType::Identifier => {
+                        let id_name = ast.get(exp).get_value();
+
+                        let mut id_type: Option<Type> = None;
+                        if let Some(t) = self.type_map.get(&id_name) {
+                            id_type = Some(t.clone());
+                        }
+                        let id_type = id_type.unwrap();
+
+                        match id_type {
+                            Type::Primitive(_) => Err(self.type_error(
+                                format!(
+                                    "Expected function type {} -> A, got a primitive type",
+                                    x_type.to_string(),
+                                ),
+                                ast.get(exp),
+                            )),
+                            Type::Function(f_input_type, f_output_type) => {
+                                if f_input_type.as_ref() != &x_type {
+                                    Err(self.type_error(
+                                        format!(
+                                            "Expected function type {} -> A, got a primitive type",
+                                            x_type.to_string(),
+                                        ),
+                                        ast.get(exp),
+                                    ))
+                                } else {
+                                    Ok(f_output_type.as_ref().clone())
+                                }
+                            }
+                        }
+                    }
+                    ASTNodeType::Application => {
+                        let f_type = self.derive_expr_type(ast, ast.get_func(exp))?;
+
+                        match f_type {
+                            Type::Primitive(_) => Err(self.type_error(
+                                format!(
+                                    "Expected function type {} -> A, got a primitive type",
+                                    x_type.to_string(),
+                                ),
+                                ast.get(exp),
+                            )),
+                            Type::Function(f_input_type, f_output_type) => {
+                                if f_input_type.as_ref() != &x_type {
+                                    Err(self.type_error(
+                                        format!(
+                                            "Expected function type {} -> A, got a primitive type",
+                                            x_type.to_string(),
+                                        ),
+                                        ast.get(exp),
+                                    ))
+                                } else {
+                                    Ok(f_output_type.as_ref().clone())
+                                }
+                            }
+                        }
+                    }
+                    _ => Err(self.type_error(
+                        format!("Expected function type, got {:?}", ast.get(f).t),
+                        ast.get(f),
+                    )),
+                }
+            }
+            _ => unreachable!("Got non expr node"),
+        }
+    }
+
     fn check_expression_expecting_type(
         &mut self,
         ast: &AST,
-        module: usize,
         exp: usize,
         expected: &Type,
     ) -> Result<(), TypeError> {
@@ -48,13 +132,11 @@ impl TypeChecker {
             ASTNodeType::Literal => ast.get(exp).get_lit_type(),
             ASTNodeType::Abstraction => {
                 // Check function type is expected
-                if let Type::Primitive(_) = expected {}
-
                 match expected {
                     Type::Primitive(_) => {
                         return Err(self.type_error(
                             format!(
-                                "Expected primitive type {}, got a function type",
+                                "Expected function type {}, got a primitive type",
                                 expected.to_string(),
                             ),
                             ast.get(exp),
@@ -62,11 +144,11 @@ impl TypeChecker {
                     }
                     Type::Function(expected_f, expected_x) => {
                         let f_name = ast.get(ast.get_abstr_var(exp)).get_value();
-                        self.type_map.insert(f_name, expected_f.as_ref().clone());
+                        self.type_map
+                            .insert(f_name.clone(), expected_f.as_ref().clone());
 
                         self.check_expression_expecting_type(
                             ast,
-                            module,
                             ast.get_abstr_exp(exp),
                             expected_x.as_ref(),
                         )?;
@@ -79,7 +161,40 @@ impl TypeChecker {
             }
             ASTNodeType::Application => {
                 let f = ast.get_func(exp);
-                let x = ast.get_func(exp);
+                let x = ast.get_arg(exp);
+
+                let f_type = self.derive_expr_type(ast, f)?;
+                let x_type = self.derive_expr_type(ast, x)?;
+
+                #[cfg(debug_assertions)]
+                let _f_type_str = f_type.to_string();
+                #[cfg(debug_assertions)]
+                let _x_type_str = x_type.to_string();
+
+                match f_type {
+                    Type::Primitive(_) => {
+                        return Err(self.type_error(
+                            format!(
+                                "Expected function type {}, got a primitive type",
+                                expected.to_string(),
+                            ),
+                            ast.get(f),
+                        ));
+                    }
+                    Type::Function(f_input_type, f_output_type) => {
+                        if f_input_type.as_ref() != &x_type {
+                            return Err(self.type_error(
+                                format!(
+                                    "Expected function type {} -> A, got a primitive type",
+                                    x_type.to_string(),
+                                ),
+                                ast.get(f),
+                            ));
+                        } else {
+                            f_output_type.as_ref().clone()
+                        }
+                    }
+                }
             }
             _ => unimplemented!(),
         };
@@ -101,7 +216,6 @@ impl TypeChecker {
         &mut self,
         ast: &AST,
         assign: usize,
-        module: usize,
         name: String,
     ) -> Result<(), TypeError> {
         let proclaimed_type = match &ast.get(assign).type_assignment {
@@ -114,17 +228,34 @@ impl TypeChecker {
             Some(t) => t.clone(),
         };
 
-        let expr = ast.get_assign_exp(assign);
-        self.check_expression_expecting_type(ast, module, expr, &proclaimed_type)?;
+        #[cfg(debug_assertions)]
+        let _proclaimed_type_str = proclaimed_type.to_string();
 
-        self.type_map.insert(name.clone(), proclaimed_type.clone());
+        let expr = ast.get_assign_exp(assign);
+        self.check_expression_expecting_type(ast, expr, &proclaimed_type)?;
+
         Ok(())
     }
 
     pub fn check_module(&mut self, ast: &AST, module: usize) -> Result<(), TypeError> {
         for (name, assign) in ast.get_assigns_map(module) {
-            self.check_assign(ast, assign, module, name)?;
+            let proclaimed_type = match &ast.get(assign).type_assignment {
+                None => {
+                    return Err(self.type_error(
+                        format!("Assignment without associated type assignment {}", name),
+                        ast.get(assign),
+                    ))
+                }
+                Some(t) => t.clone(),
+            };
+
+            self.type_map.insert(name.clone(), proclaimed_type);
         }
+
+        for (name, assign) in ast.get_assigns_map(module) {
+            self.check_assign(ast, assign, name)?;
+        }
+
         Ok(())
     }
 }

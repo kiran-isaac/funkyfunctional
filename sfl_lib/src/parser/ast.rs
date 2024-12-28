@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    fmt::Debug,
-    vec,
-};
+use std::{collections::HashMap, fmt::Debug, vec};
 
 use crate::{types::TypeError, Primitive, Type};
 
