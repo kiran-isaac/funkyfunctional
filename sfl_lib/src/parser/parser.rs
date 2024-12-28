@@ -1,8 +1,8 @@
-use crate::{Primitive, Type};
 use super::ast::AST;
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
+use crate::{Primitive, Type};
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
 use std::fs::File;
@@ -23,7 +23,11 @@ pub struct ParserError {
 
 impl Debug for ParserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Parser Error at [{}:{}]: {}", self.line, self.col, self.e)
+        write!(
+            f,
+            "Parser Error at [{}:{}]: {}",
+            self.line, self.col, self.e
+        )
     }
 }
 
@@ -67,13 +71,13 @@ impl Parser {
         self.bound.add_binding(name);
     }
 
-    /// Used when it doesnt matter that something is already 
-    /// bound, like when we are binding a local variable in 
+    /// Used when it doesnt matter that something is already
+    /// bound, like when we are binding a local variable in
     /// a lambda
     /// This will create an alias for the bound variable
     /// and return the alias
     pub fn bind_local(&mut self, name: String) -> String {
-        let mut alias_id = 0; 
+        let mut alias_id = 0;
         while self.bound.is_bound(name.as_str()) {
             alias_id += 1;
         }
@@ -135,7 +139,10 @@ impl Parser {
                 let id = self.consume()?;
                 let varname = id.value.clone();
                 if self.bound.is_bound(&varname) {
-                    return Err(self.parse_error(format!("Identifier already bound, so cannot be bound for lambda: {}", varname)));
+                    return Err(self.parse_error(format!(
+                        "Identifier already bound, so cannot be bound for lambda: {}",
+                        varname
+                    )));
                 }
                 self.bind(varname.clone());
                 let line = self.lexer.line;
@@ -144,7 +151,13 @@ impl Parser {
                 match self.peek(0)?.tt {
                     TokenType::Dot => {
                         self.advance();
-                        let expr = self.parse_expression(ast)?;
+                        let expr = match self.peek(0)?.tt {
+                            TokenType::Lambda => {
+                                self.advance();
+                                self.parse_abstraction(ast)?
+                            }
+                            _ => self.parse_expression(ast)?,
+                        };
                         self.unbind(varname);
                         Ok(ast.add_abstraction(id, expr, line, col))
                     }
@@ -160,7 +173,13 @@ impl Parser {
             TokenType::Dot => {
                 let line = self.lexer.line;
                 let col = self.lexer.col;
-                let body = self.parse_expression(ast)?;
+                let body = match self.peek(0)?.tt {
+                    TokenType::Lambda => {
+                        self.advance();
+                        self.parse_abstraction(ast)?
+                    }
+                    _ => self.parse_expression(ast)?,
+                };
                 // Its impossible to define a variable with a null name
                 // so this is a safe fake id and wont be matched
                 let fake_id = Token {
@@ -230,10 +249,12 @@ impl Parser {
             TokenType::IntLit | TokenType::FloatLit | TokenType::BoolLit | TokenType::CharLit => {
                 Ok(ast.add_lit(t, line, col))
             }
-            TokenType::Lambda => {
-                self.advance();
-                self.parse_abstraction(ast)
-            }
+            // Removed support for lambda except at the top level
+            // for now, untill i figure out type inference
+            // TokenType::Lambda => {
+            //     self.advance();
+            //     self.parse_abstraction(ast)
+            // }
             TokenType::LParen => {
                 let exp = self.parse_expression(ast)?;
                 self.advance();
@@ -326,7 +347,14 @@ impl Parser {
         let col = self.lexer.col;
 
         self.bind(assid.value.clone());
-        let exp = self.parse_expression(ast)?;
+        let exp = match self.peek(0)?.tt {
+            TokenType::Lambda => {
+                self.advance();
+                self.parse_abstraction(ast)?
+            }
+            _ => self.parse_expression(ast)?,
+        };
+
         let id = ast.add_id(assid, line, col);
 
         // Ignore if type assignment is not found

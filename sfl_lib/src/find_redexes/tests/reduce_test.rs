@@ -25,7 +25,7 @@ fn zero_ary_test() {
         .unwrap();
 
     let module = ast.root;
-    let exp = ast.get_exp(ast.get_main(module));
+    let exp = ast.get_assign_exp(ast.get_main(module));
 
     let rcs = find_redex_contraction_pairs(&ast, module, exp);
     assert!(rcs.len() == 1);
@@ -53,10 +53,10 @@ fn unary_neg_test() {
         let astf = Parser::from_string(programf).parse_module().unwrap();
 
         let module = ast.root;
-        let exp = ast.get_exp(ast.get_main(module));
+        let exp = ast.get_assign_exp(ast.get_main(module));
 
         let modulef = astf.root;
-        let expf = astf.get_exp(astf.get_main(modulef));
+        let expf = astf.get_assign_exp(astf.get_main(modulef));
 
         let rcs = find_redex_contraction_pairs(&ast, module, exp);
         let rcsf = find_redex_contraction_pairs(&astf, modulef, expf);
@@ -82,7 +82,7 @@ fn basic_add_test() {
         .unwrap();
 
     let module = ast.root;
-    let exp = ast.get_exp(ast.get_main(module));
+    let exp = ast.get_assign_exp(ast.get_main(module));
 
     let rcs = find_redex_contraction_pairs(&ast, module, exp);
     assert!(rcs.len() == 1);
@@ -104,7 +104,7 @@ fn multi_op_test() {
     let mut ast = Parser::from_string(program).parse_module().unwrap();
 
     let module = ast.root;
-    let exp = ast.get_exp(ast.get_main(module));
+    let exp = ast.get_assign_exp(ast.get_main(module));
 
     let rcs = find_redex_contraction_pairs(&ast, module, exp);
 
@@ -139,12 +139,17 @@ fn multi_op_test() {
 
 #[test]
 fn basic_abst_test() {
-    let program = "main = (\\x.add 1 x) 2".to_string();
+    let program = "inc = \\x.add 1 x\nmain = inc 2".to_string();
 
     let mut ast = Parser::from_string(program).parse_module().unwrap();
 
     let module = ast.root;
-    let exp = ast.get_exp(ast.get_main(module));
+    let exp = ast.get_assign_exp(ast.get_main(module));
+
+    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    assert_eq!(rcs.len(), 1);
+
+    ast.replace_from_other_root(&rcs[0].1, rcs[0].0);
 
     let rcs = find_redex_contraction_pairs(&ast, module, exp);
     assert_eq!(rcs.len(), 1);
