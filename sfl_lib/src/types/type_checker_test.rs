@@ -11,3 +11,14 @@ fn type_check_int_assign() -> Result<(), TypeError> {
 
     Ok(())
 }
+
+#[test]
+fn type_check_const_int_abst() -> Result<(), TypeError> {
+    let program = "main :: Float -> Int\nmain = \\x. 10";
+
+    let ast = Parser::from_string(program.to_string()).parse_module().unwrap() ;
+    let mut tc = TypeChecker::new();
+    tc.check_module(&ast, ast.root)?;
+
+    Ok(())
+}

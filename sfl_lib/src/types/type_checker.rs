@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{inbuilts::get_default_inbuilt_type_map, ASTNode, ASTNodeType, AST};
 
-use super::{Type, TypeError};
+use super::{Primitive, Type, TypeError};
 
 pub struct TypeChecker {
     type_map: HashMap<String, Type>,
@@ -24,7 +24,7 @@ impl TypeChecker {
     }
 
     fn check_expression_expecting_type(
-        &self,
+        &mut self,
         ast: &AST,
         module: usize,
         exp: usize,
@@ -45,22 +45,43 @@ impl TypeChecker {
 
                 id_type.unwrap()
             }
-            ASTNodeType::Literal => {
-                ast.get(exp).get_lit_type()
+            ASTNodeType::Literal => ast.get(exp).get_lit_type(),
+            ASTNodeType::Abstraction => {
+                // Check function type is expected
+                if let Type::Primitive(_) = expected {}
 
+                match expected {
+                    Type::Primitive(_) => {
+                        return Err(self.type_error(
+                            format!(
+                                "Expected primitive type {}, got a function type",
+                                expected.to_string(),
+                            ),
+                            ast.get(exp),
+                        ));
+                    }
+                    Type::Function(expected_f, expected_x) => {
+                        let f_name = ast.get(ast.get_abstr_var(exp)).get_value();
+                        self.type_map.insert(f_name, expected_f.as_ref().clone());
+
+                        self.check_expression_expecting_type(ast, module, ast.get_abstr_exp(exp), expected_x.as_ref())?;
+
+                        return Ok(())
+                    }
+                }
             }
-            _ => unimplemented!()
+            _ => unimplemented!(),
         };
 
         if &found_type != expected {
             return Err(self.type_error(
                 format!(
                     "Expected type {}, got type {}",
+                    expected.to_string(),
                     found_type.to_string(),
-                    expected.to_string()
                 ),
                 ast.get(exp),
-            ))
+            ));
         }
         Ok(())
     }
@@ -81,7 +102,6 @@ impl TypeChecker {
             }
             Some(t) => t.clone(),
         };
-
 
         let expr = ast.get_assign_exp(assign);
         self.check_expression_expecting_type(ast, module, expr, &proclaimed_type)?;
