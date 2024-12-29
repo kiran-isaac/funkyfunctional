@@ -271,10 +271,10 @@ impl Parser {
             TokenType::If => Ok(self.parse_ite(ast)?),
             // Removed support for lambda except at the top level
             // for now, untill i figure out type inference
-            // TokenType::Lambda => {
-            //     self.advance();
-            //     self.parse_abstraction(ast)
-            // }
+            TokenType::Lambda => {
+                self.advance();
+                self.parse_abstraction(ast)
+            }
             TokenType::LParen => {
                 let exp = self.parse_expression(ast)?;
                 self.advance();
@@ -353,7 +353,6 @@ impl Parser {
             }
             TokenType::LParen => {
                 let inner = self.parse_type_expression(ast)?;
-                let inner_string = inner.to_string();
                 self.advance();
                 Ok(inner)
             }
@@ -399,13 +398,7 @@ impl Parser {
         let col = self.lexer.col;
 
         self.bind(assid.value.clone());
-        let exp = match self.peek(0)?.tt {
-            TokenType::Lambda => {
-                self.advance();
-                self.parse_abstraction(ast)?
-            }
-            _ => self.parse_expression(ast)?,
-        };
+        let exp = self.parse_expression(ast)?;
 
         let id = ast.add_id(assid, line, col);
 
@@ -468,13 +461,7 @@ impl Parser {
 
     pub fn parse_tl_expression(&mut self) -> Result<AST, ParserError> {
         let mut ast = AST::new();
-        ast.root = match self.peek(0)?.tt {
-            TokenType::Lambda => {
-                self.advance();
-                self.parse_abstraction(&mut ast)?
-            }
-            _ => self.parse_expression(&mut ast)?,
-        };
+        ast.root = self.parse_expression(&mut ast)?;
         Ok(ast)
     }
 }

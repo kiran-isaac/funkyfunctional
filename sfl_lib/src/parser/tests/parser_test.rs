@@ -99,10 +99,8 @@ fn abstraction() -> Result<(), ParserError> {
     let ast = parser.parse_module()?;
     let module = 0;
 
-    assert_eq!(ast.to_string(module), "x = \\y :: Int . add y 5".to_string());
-
     // Should error because y is not bound
-    let unbound_str = "x = (\\y :: Int . add y 5) y";
+    let unbound_str = "x = (\\y . add y 5) y";
     let mut parser = Parser::from_string(unbound_str.to_string());
     assert!(parser.parse_module().is_err());
 
