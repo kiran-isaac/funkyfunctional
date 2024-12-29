@@ -150,9 +150,29 @@ impl Parser {
                     }
                     self.bind(varname.clone());
                 }
+                self.advance();
+                let var_type = match self.peek(0) {
+                    Ok(t) => match t.tt {
+                        TokenType::DoubleColon => {
+                            self.advance();
+                            self.parse_type_expression(ast)?
+                        }
+                        _ => {
+                            return Err(self.parse_error(
+                                format!("Expected type assignment after lambda id, got {:?}", t)
+                                    .to_string(),
+                            ))
+                        }
+                    },
+                    Err(e) => return Err(e),
+                };
+
                 let line = self.lexer.line;
                 let col = self.lexer.col;
-                let id = ast.add_id(id, line, col);
+                let id = ast.add_typed_id(id, line, col, var_type);
+
+                #[cfg(debug_assertions)]
+                let _type_str = ast.get(id).type_assignment.clone().unwrap().to_string();
                 match self.peek(0)?.tt {
                     TokenType::Dot => {
                         self.advance();
@@ -305,7 +325,11 @@ impl Parser {
                     let right = self.parse_type_expression(ast)?;
                     left = Type::Function(Box::new(left), Box::new(right));
                 }
-                TokenType::RParen | TokenType::Newline | TokenType::EOF => return Ok(left),
+                TokenType::RParen
+                | TokenType::Newline
+                | TokenType::EOF
+                | TokenType::Id
+                | TokenType::Dot => return Ok(left),
                 _ => {
                     return Err(self
                         .parse_error(format!("Unexpected token in type expression: {:?}", next)))

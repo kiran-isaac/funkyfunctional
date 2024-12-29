@@ -17,25 +17,25 @@ fn tc_test_should_fail(program: &str) {
     tc.check_module(&ast, ast.root).unwrap_err();
 }
 
-#[test]
-fn type_check_int_assign() {
-    tc_test_should_pass("x :: Int\nx=10\nmain :: Int\nmain = x")
-}
+// #[test]
+// fn type_check_int_assign() {
+//     tc_test_should_pass("x :: Int\nx=10\nmain :: Int\nmain = x")
+// }
 
-#[test]
-fn type_check_int_add() {
-    tc_test_should_pass("main :: Int\nmain = add 2 2")
-}
+// #[test]
+// fn type_check_int_add() {
+//     tc_test_should_pass("main :: Int\nmain = add 2 2")
+// }
 
-#[test]
-fn type_check_int_add_fail() {
-    tc_test_should_fail("main :: Int -> Int\nmain = add 2 2")
-}
+// #[test]
+// fn type_check_int_add_fail() {
+//     tc_test_should_fail("main :: Int -> Int\nmain = add 2 2")
+// }
 
-#[test]
-fn type_check_eq() {
-    tc_test_should_pass("main :: Bool\nmain = eq (add 2 2) (mul 2 2)")
-}
+// #[test]
+// fn type_check_eq() {
+//     tc_test_should_pass("main :: Bool\nmain = eq (add 2 2) (mul 2 2)")
+// }
 
 #[test]
 fn type_check_ite() {

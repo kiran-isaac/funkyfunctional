@@ -139,7 +139,7 @@ fn multi_op_test() {
 
 #[test]
 fn basic_abst_test() {
-    let program = "inc = \\x.add 1 x\nmain = inc 2".to_string();
+    let program = "inc = \\x :: Int.add 1 x\nmain = inc 2".to_string();
 
     let mut ast = Parser::from_string(program).parse_module().unwrap();
 

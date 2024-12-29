@@ -223,6 +223,12 @@ impl AST {
         self.add(ASTNode::new_id(tk, line, col))
     }
 
+    pub fn add_typed_id(&mut self, tk: Token, line: usize, col: usize, assigned_type: Type) -> usize {
+        let node = self.add(ASTNode::new_id(tk, line, col));
+        self.vec[node].type_assignment = Some(assigned_type);
+        node
+    }
+
     pub fn add_lit(&mut self, tk: Token, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_lit(tk, line, col))
     }
@@ -407,7 +413,10 @@ impl AST {
         let n = self.get(node);
         match n.t {
             ASTNodeType::Identifier => {
-                format!("{}", n.get_value())
+                match &n.type_assignment {
+                    Some(t) => format!("{} :: {}", n.get_value(), t.to_string()),
+                    None => n.get_value(),
+                }
             }
             ASTNodeType::Literal => {
                 format!("{}", n.get_value())
@@ -478,9 +487,7 @@ impl AST {
                 s.trim().to_string()
             }
             ASTNodeType::Abstraction => {
-                let id = self.get(n.children[0]);
-                let exp = self.to_string(n.children[1]);
-                format!("\\{} . {}", id.get_value(), exp)
+                format!("\\{} . {}", self.to_string(n.children[0]), self.to_string(n.children[1]))
             }
         }
     }

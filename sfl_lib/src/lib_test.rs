@@ -26,7 +26,7 @@ fn full_run_1() {
     y = 2
 
     inc :: Int -> Int
-    inc = \i . add i 1
+    inc = \i :: Int . add i 1
 
     main :: Int
     main = sub (add 5 (inc x)) (mul 5 y)
@@ -43,13 +43,13 @@ fn full_run_2() {
     x = 100
 
     const_float::Int -> Float
-    const_float = \_. 1.5
+    const_float = \_ :: Int. 1.5
 
     y :: Float
     y = const_float x
 
     inc :: Float -> Float
-    inc = \i . addf i 1.0
+    inc = \i :: Float. addf i 1.0
 
     main :: Float
     main = inc y
