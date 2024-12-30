@@ -323,6 +323,7 @@ impl Parser {
                 match id.as_str() {
                     "Int" => Ok(Type::Primitive(Primitive::Int64)),
                     "Float" => Ok(Type::Primitive(Primitive::Float64)),
+                    "Bool" => Ok(Type::Primitive(Primitive::Bool)),
                     _ => unimplemented!("Only Int and Float are supported"),
                 }
             }

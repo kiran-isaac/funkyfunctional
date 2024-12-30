@@ -161,24 +161,13 @@ pub fn get_default_inbuilt_type_map() -> HashMap<String, Type> {
         Box::new(Type::Primitive(Primitive::Float64)),
     );
 
-    let if_int_type = Type::Function(
+    let if_type = Type::Function(
         Box::new(Type::Primitive(Primitive::Bool)),
         Box::new(Type::Function(
-            Box::new(Type::Primitive(Primitive::Int64)),
+            Box::new(Type::g(0)),
             Box::new(Type::Function(
-                Box::new(Type::Primitive(Primitive::Int64)),
-                Box::new(Type::Primitive(Primitive::Int64)),
-            )),
-        )),
-    );
-
-    let if_float_type = Type::Function(
-        Box::new(Type::Primitive(Primitive::Bool)),
-        Box::new(Type::Function(
-            Box::new(Type::Primitive(Primitive::Int64)),
-            Box::new(Type::Function(
-                Box::new(Type::Primitive(Primitive::Int64)),
-                Box::new(Type::Primitive(Primitive::Int64)),
+                Box::new(Type::g(0)),
+                Box::new(Type::g(0)),
             )),
         )),
     );
@@ -205,8 +194,7 @@ pub fn get_default_inbuilt_type_map() -> HashMap<String, Type> {
         ),
     );
 
-    inbuilt_type_map.insert("if".to_string(), if_int_type);
-    inbuilt_type_map.insert("iff".to_string(), if_float_type);
+    inbuilt_type_map.insert("if".to_string(), if_type);
 
     inbuilt_type_map.insert("add".to_string(), binary_int_type.clone());
     inbuilt_type_map.insert("sub".to_string(), binary_int_type.clone());
