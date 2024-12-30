@@ -1,17 +1,19 @@
-use std::{borrow::Borrow, collections::HashMap};
-
-use crate::{functions::LabelTable, Type};
+use std::collections::HashMap;
+use crate::functions::LabelTable;
 
 use super::*;
 
-/// This will need to be significantly changed when types introduced
-/// This will check for applications to inbuilts with the right num
-/// of chars. For example, a call to a inbuilt add could be:
-/// add 2 3
+/// This will check for applications to functions:
+/// - lables with func types
+/// - lambda abstractions
+/// - inbuilt functions 
+/// with the right num of args. 
+/// For example, a call to a inbuilt add could be: add 2 3
 /// Which would look like
 /// App[[App add 2], 3]
 /// This function checks that the rhs is a literal, and the lhs is
-/// either an ID or an App of an ID in the set of inbuilts and a literal
+/// either a function or an App of a function in the set of funcs 
+/// with the right num of args
 fn check_for_ready_call(
     ast: &AST,
     exp: usize,
@@ -23,7 +25,7 @@ fn check_for_ready_call(
     let mut argv = vec![];
     let mut argv_ids = vec![];
 
-    // True if only literals encountered
+    // True if only literals encountered. If true, then we can call inbuilt functions
     let mut literals_only = true;
 
     for _ in 1..lt.get_max_arity() {
@@ -128,6 +130,15 @@ pub fn find_redex_contraction_pairs(
             #[cfg(debug_assertions)]
             let _x_str = ast.to_string(x);
             match ast.get(f).t {
+                ASTNodeType::Application | ASTNodeType::Identifier => {
+                    pairs.extend(find_redex_contraction_pairs(ast, module, f, &lt));
+                }
+                // ASTNodeType::Abstraction => pairs.push((exp, ast.do_abst_subst(f, x))),
+                ASTNodeType::Literal | ASTNodeType::Abstraction => {}
+                _ => unreachable!("Expected expression"),
+            }
+
+            match ast.get(x).t {
                 ASTNodeType::Application | ASTNodeType::Identifier => {
                     pairs.extend(find_redex_contraction_pairs(ast, module, f, &lt));
                 }

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{functions::LabelTable, ASTNodeType, AST};
 
 use super::{Type, TypeError};

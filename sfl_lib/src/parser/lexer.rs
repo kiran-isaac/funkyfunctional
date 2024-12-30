@@ -22,6 +22,7 @@ impl Debug for LexerError {
 
 pub struct Lexer {
     file: Vec<char>,
+    #[allow(dead_code)]
     filename: Option<String>,
     i: usize,
     pub line: usize,
@@ -63,6 +64,7 @@ impl Lexer {
     }
 
     #[inline(always)]
+    #[allow(dead_code)]
     pub fn pos_string(&self) -> String {
         format!(
             "{}{}:{}",

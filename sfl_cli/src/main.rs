@@ -7,7 +7,7 @@ use std::{
 fn main() {
     let argv: Vec<String> = env::args().collect();
 
-    let argv = vec!["sfl_cli".to_string(), "../test.sfl".to_string()];
+    // let argv = vec!["sfl_cli".to_string(), "../test.sfl".to_string()];
 
     if argv.len() != 2 {
         eprintln!("Incorrect args");
