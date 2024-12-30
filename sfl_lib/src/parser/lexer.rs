@@ -13,7 +13,9 @@ impl Debug for LexerError {
         write!(
             f,
             "Lexer Error at [{}:{}]: {}",
-            self.line + 1, self.col + 1, self.e
+            self.line + 1,
+            self.col + 1,
+            self.e
         )
     }
 }

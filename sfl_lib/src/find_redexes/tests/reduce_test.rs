@@ -1,4 +1,8 @@
-use crate::{find_redexes::reduce::*, functions::LabelTable, parser::ParserError, ASTNodeType, Parser, AST};
+use crate::{
+    find_redexes::{reduce::*, RCPair},
+    functions::LabelTable,
+    ASTNodeType, Parser, AST,
+};
 
 /// O(n^2) so only use for small things
 fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
@@ -13,7 +17,7 @@ fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
     }
 }
 
-fn rc_pair_to_string(ast: &AST, rc: &(usize, AST)) -> String {
+fn rc_pair_to_string(ast: &AST, rc: &RCPair) -> String {
     format!("{} => {:?}", ast.to_string(rc.0), rc.1)
 }
 

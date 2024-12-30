@@ -31,7 +31,13 @@ pub struct TypeError {
 
 impl std::fmt::Debug for TypeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Type Error at [{}:{}]: {}", self.line + 1, self.col + 1, self.e)
+        write!(
+            f,
+            "Type Error at [{}:{}]: {}",
+            self.line + 1,
+            self.col + 1,
+            self.e
+        )
     }
 }
 
@@ -113,7 +119,11 @@ impl Type {
             }
             (Type::Primitive(p1), Type::Primitive(p2)) => {
                 if *p1 != *p2 {
-                    Err(format!("Failed to match types {} and {}", self.to_string(), self.to_string()))
+                    Err(format!(
+                        "Failed to match types {} and {}",
+                        self.to_string(),
+                        self.to_string()
+                    ))
                 } else {
                     Ok(self.clone())
                 }
@@ -176,7 +186,11 @@ impl Type {
                     }
                 }
             }
-            _ => Err(format!("Failed to match types {} and {}", self.to_string(), other.to_string())),
+            _ => Err(format!(
+                "Failed to match types {} and {}",
+                self.to_string(),
+                other.to_string()
+            )),
         }
     }
 
@@ -190,7 +204,7 @@ impl Type {
         Ok(t)
     }
 
-    pub fn get_arity(&self) -> usize{
+    pub fn get_arity(&self) -> usize {
         match self {
             Type::Primitive(_) => 0,
             Type::Function(_, t) => 1 + t.get_arity(),

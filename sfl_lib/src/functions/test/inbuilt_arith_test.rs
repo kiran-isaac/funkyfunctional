@@ -31,7 +31,7 @@ fn test_basic_int_arith() {
 
         let a = ast.add_lit(a, 0, 0);
         let b = ast.add_lit(b, 0, 0);
-        
+
         let mut call_ast = AST::new();
         call_ast.add_id(
             Token {

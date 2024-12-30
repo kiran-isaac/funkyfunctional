@@ -26,7 +26,9 @@ impl Debug for ParserError {
         write!(
             f,
             "Parser Error at [{}:{}]: {}",
-            self.line + 1, self.col + 1, self.e
+            self.line + 1,
+            self.col + 1,
+            self.e
         )
     }
 }
@@ -161,15 +163,12 @@ impl Parser {
                             let var_type = self.parse_type_expression(ast)?;
                             #[cfg(debug_assertions)]
                             let _type_str = var_type.to_string();
-                            ast.add_typed_id(id_tk, line, col, var_type)            
+                            ast.add_typed_id(id_tk, line, col, var_type)
                         }
-                        _ => {
-                            ast.add_id(id_tk, line, col)
-                        }
+                        _ => ast.add_id(id_tk, line, col),
                     },
                     Err(e) => return Err(e),
                 };
-
 
                 match self.peek(0)?.tt {
                     TokenType::Dot => {

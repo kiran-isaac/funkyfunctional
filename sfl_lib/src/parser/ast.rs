@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Debug, vec};
 
-use crate::{types::TypeError, Primitive, Type};
+use crate::{find_redexes::RCPair, types::TypeError, Primitive, Type};
 
 use super::token::*;
 
@@ -53,6 +53,7 @@ impl ASTNode {
     }
 
     /// Get the string value of the identifier or literal
+    #[inline(always)]
     pub fn get_value(&self) -> String {
         assert!(self.t == ASTNodeType::Identifier || self.t == ASTNodeType::Literal);
         match &self.info {
@@ -174,7 +175,7 @@ impl AST {
         ast
     }
 
-    pub fn do_rc_subst(&mut self, rc : &(usize, AST)) {
+    pub fn do_rc_subst(&mut self, rc: &RCPair) {
         let other = &rc.1;
         let old = rc.0;
         let new = self.append(other, other.root);
@@ -238,7 +239,13 @@ impl AST {
         self.add(ASTNode::new_id(tk, line, col))
     }
 
-    pub fn add_typed_id(&mut self, tk: Token, line: usize, col: usize, assigned_type: Type) -> usize {
+    pub fn add_typed_id(
+        &mut self,
+        tk: Token,
+        line: usize,
+        col: usize,
+        assigned_type: Type,
+    ) -> usize {
         let node = self.add(ASTNode::new_id(tk, line, col));
         self.vec[node].type_assignment = Some(assigned_type);
         node
@@ -276,6 +283,7 @@ impl AST {
         self.vec[module].children.push(assign);
     }
 
+    #[inline(always)]
     pub fn get(&self, i: usize) -> &ASTNode {
         &self.vec[i]
     }
@@ -427,12 +435,10 @@ impl AST {
     pub fn to_string(&self, node: usize) -> String {
         let n = self.get(node);
         match n.t {
-            ASTNodeType::Identifier => {
-                match &n.type_assignment {
-                    Some(t) => format!("{} :: {}", n.get_value(), t.to_string()),
-                    None => n.get_value(),
-                }
-            }
+            ASTNodeType::Identifier => match &n.type_assignment {
+                Some(t) => format!("{} :: {}", n.get_value(), t.to_string()),
+                None => n.get_value(),
+            },
             ASTNodeType::Literal => {
                 format!("{}", n.get_value())
             }
@@ -502,7 +508,11 @@ impl AST {
                 s.trim().to_string()
             }
             ASTNodeType::Abstraction => {
-                format!("\\{} . {}", self.to_string(n.children[0]), self.to_string(n.children[1]))
+                format!(
+                    "\\{} . {}",
+                    self.to_string(n.children[0]),
+                    self.to_string(n.children[1])
+                )
             }
         }
     }

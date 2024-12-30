@@ -245,7 +245,7 @@ impl TypeChecker {
     }
 
     pub fn check_module(&mut self, ast: &AST, module: usize) -> Result<&LabelTable, TypeError> {
-        self.lt.consume_from_module(ast, module);
+        self.lt.consume_from_module(ast, module)?;
 
         for (name, assign) in ast.get_assigns_map(module) {
             self.check_assign(ast, assign, name)?;

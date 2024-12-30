@@ -23,20 +23,28 @@ fn assert_prim_type(x: &Type, p: Primitive) {
 
 type InbuiltFuncPointer = fn(&ASTNode, Vec<&ASTNode>) -> AST;
 
-/// Will be used to store inbuilt functions and their arities. will eventually
-/// have some sort of function pointer or something to the actual function
 #[derive(Clone, Debug)]
 pub struct Label {
-    arity: usize,
+    /// Arity needed to reduce the function.
+    pub reduction_arity: usize,
+
     inbuilt: Option<InbuiltFuncPointer>,
-    label_type: Type,
+    pub label_type: Type,
 }
 
 impl Label {
     pub fn call_inbuilt(&self, call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-        assert!(self.arity == args.len());
+        assert!(self.reduction_arity == args.len());
         assert!(self.inbuilt.is_some());
         (self.inbuilt.unwrap())(call, args)
+    }
+
+    pub fn is_inbuilt(&self) -> bool {
+        self.inbuilt.is_some()
+    }
+
+    pub fn get_type(&self) -> &Type {
+        &self.label_type
     }
 }
 
@@ -63,7 +71,7 @@ impl LabelTable {
     pub fn get_type(&self, name: &str) -> Option<&Type> {
         for inbuilt_map in &self.map {
             if inbuilt_map.contains_key(name) {
-                return Some(&inbuilt_map.get(name).unwrap().label_type)
+                return Some(&inbuilt_map.get(name).unwrap().label_type);
             }
         }
 
@@ -72,14 +80,27 @@ impl LabelTable {
 
     /// Arity here is the number of arguments the inbuilt function needs to reduce
     /// It is not necessarily the same as the number of arguments the function takes
-    /// as the function may be curried, for example 'if' takes one bool argument to 
+    /// as the function may be curried, for example 'if' takes one bool argument to
     /// reduce but it has a type of Bool -> A -> A -> A
-    fn add_inbuilt(&mut self, name: String, arity: usize, func: InbuiltFuncPointer, func_type: Type) {
+    fn add_inbuilt(
+        &mut self,
+        name: String,
+        arity: usize,
+        func: InbuiltFuncPointer,
+        func_type: Type,
+    ) {
         if arity >= self.map.len() {
             self.map.resize(arity + 1, HashMap::new());
         }
 
-        self.map[arity].insert(name, Label { arity, inbuilt: Some(func), label_type: func_type });
+        self.map[arity].insert(
+            name,
+            Label {
+                reduction_arity: arity,
+                inbuilt: Some(func),
+                label_type: func_type,
+            },
+        );
     }
 
     pub fn add(&mut self, name: String, type_: Type) {
@@ -89,7 +110,14 @@ impl LabelTable {
             self.map.resize(arity + 1, HashMap::new());
         }
 
-        self.map[arity].insert(name, Label { arity, inbuilt: None, label_type: type_ });
+        self.map[arity].insert(
+            name,
+            Label {
+                reduction_arity: arity,
+                inbuilt: None,
+                label_type: type_,
+            },
+        );
     }
 
     pub fn remove(&mut self, name: &String) -> bool {
@@ -102,7 +130,7 @@ impl LabelTable {
         false
     }
 
-    pub fn consume_from_module(&mut self, ast : &AST, module: usize) -> Result<(), TypeError> {
+    pub fn consume_from_module(&mut self, ast: &AST, module: usize) -> Result<(), TypeError> {
         for (name, assign) in ast.get_assigns_map(module) {
             let proclaimed_type = match &ast.get(assign).type_assignment {
                 None => {
@@ -125,7 +153,6 @@ impl LabelTable {
         &self.map[arity]
     }
 
-    #[cfg(test)]
     pub fn get(&self, arity: usize, name: String) -> Option<&Label> {
         self.get_n_ary_inbuilts(arity).get(&name)
     }
@@ -172,10 +199,7 @@ impl LabelTable {
             Box::new(Type::Primitive(Primitive::Bool)),
             Box::new(Type::Function(
                 Box::new(Type::g(0)),
-                Box::new(Type::Function(
-                    Box::new(Type::g(0)),
-                    Box::new(Type::g(0)),
-                )),
+                Box::new(Type::Function(Box::new(Type::g(0)), Box::new(Type::g(0)))),
             )),
         );
 
@@ -183,25 +207,100 @@ impl LabelTable {
         let const1_type = Type::f(Type::Generic(0), Type::f(Type::g(1), Type::g(0)));
         let const2_type = Type::f(Type::Generic(0), Type::f(Type::g(1), Type::g(1)));
 
-        self.add_inbuilt("add".to_string(), 2, inbuilt_int_add, binary_int_type.clone());
-        self.add_inbuilt("sub".to_string(), 2, inbuilt_int_sub, binary_int_type.clone());
-        self.add_inbuilt("mul".to_string(), 2, inbuilt_int_mul, binary_int_type.clone());
+        self.add_inbuilt(
+            "add".to_string(),
+            2,
+            inbuilt_int_add,
+            binary_int_type.clone(),
+        );
+        self.add_inbuilt(
+            "sub".to_string(),
+            2,
+            inbuilt_int_sub,
+            binary_int_type.clone(),
+        );
+        self.add_inbuilt(
+            "mul".to_string(),
+            2,
+            inbuilt_int_mul,
+            binary_int_type.clone(),
+        );
         self.add_inbuilt("div".to_string(), 2, inbuilt_int_div, binary_int_type);
-        self.add_inbuilt("eq".to_string(), 2, inbuilt_int_eq, binary_int_bool_type.clone());
-        self.add_inbuilt("lte".to_string(), 2, inbuilt_int_lte, binary_int_bool_type.clone());
-        self.add_inbuilt("lt".to_string(), 2, inbuilt_int_lt, binary_int_bool_type.clone());
-        self.add_inbuilt("gte".to_string(), 2, inbuilt_int_gte, binary_int_bool_type.clone());
+        self.add_inbuilt(
+            "eq".to_string(),
+            2,
+            inbuilt_int_eq,
+            binary_int_bool_type.clone(),
+        );
+        self.add_inbuilt(
+            "lte".to_string(),
+            2,
+            inbuilt_int_lte,
+            binary_int_bool_type.clone(),
+        );
+        self.add_inbuilt(
+            "lt".to_string(),
+            2,
+            inbuilt_int_lt,
+            binary_int_bool_type.clone(),
+        );
+        self.add_inbuilt(
+            "gte".to_string(),
+            2,
+            inbuilt_int_gte,
+            binary_int_bool_type.clone(),
+        );
         self.add_inbuilt("gt".to_string(), 2, inbuilt_int_gt, binary_int_bool_type);
 
-        self.add_inbuilt("addf".to_string(), 2, inbuilt_float_add, binary_float_type.clone());
-        self.add_inbuilt("subf".to_string(), 2, inbuilt_float_sub, binary_float_type.clone());
-        self.add_inbuilt("mulf".to_string(), 2, inbuilt_float_mul, binary_float_type.clone());
+        self.add_inbuilt(
+            "addf".to_string(),
+            2,
+            inbuilt_float_add,
+            binary_float_type.clone(),
+        );
+        self.add_inbuilt(
+            "subf".to_string(),
+            2,
+            inbuilt_float_sub,
+            binary_float_type.clone(),
+        );
+        self.add_inbuilt(
+            "mulf".to_string(),
+            2,
+            inbuilt_float_mul,
+            binary_float_type.clone(),
+        );
         self.add_inbuilt("divf".to_string(), 2, inbuilt_float_div, binary_float_type);
-        self.add_inbuilt("eqf".to_string(), 2, inbuilt_float_eq, binary_float_bool_type.clone());
-        self.add_inbuilt("ltef".to_string(), 2, inbuilt_float_lte, binary_float_bool_type.clone());
-        self.add_inbuilt("ltf".to_string(), 2, inbuilt_float_lt, binary_float_bool_type.clone());
-        self.add_inbuilt("gtef".to_string(), 2, inbuilt_float_gte, binary_float_bool_type.clone());
-        self.add_inbuilt("gtf".to_string(), 2, inbuilt_float_gt, binary_float_bool_type);
+        self.add_inbuilt(
+            "eqf".to_string(),
+            2,
+            inbuilt_float_eq,
+            binary_float_bool_type.clone(),
+        );
+        self.add_inbuilt(
+            "ltef".to_string(),
+            2,
+            inbuilt_float_lte,
+            binary_float_bool_type.clone(),
+        );
+        self.add_inbuilt(
+            "ltf".to_string(),
+            2,
+            inbuilt_float_lt,
+            binary_float_bool_type.clone(),
+        );
+        self.add_inbuilt(
+            "gtef".to_string(),
+            2,
+            inbuilt_float_gte,
+            binary_float_bool_type.clone(),
+        );
+        self.add_inbuilt(
+            "gtf".to_string(),
+            2,
+            inbuilt_float_gt,
+            binary_float_bool_type,
+        );
 
         self.add_inbuilt("id".to_string(), 1, inbuilt_id, id_type);
         self.add_inbuilt("const1".to_string(), 2, inbuilt_const1, const1_type);
@@ -213,7 +312,12 @@ impl LabelTable {
         self.add_inbuilt("negf".to_string(), 1, inbuilt_float_neg, unary_float_type);
 
         #[cfg(test)]
-        self.add_inbuilt("zero_ary_test".to_string(), 0, inbuilt_int_zero, Type::int64());
+        self.add_inbuilt(
+            "zero_ary_test".to_string(),
+            0,
+            inbuilt_int_zero,
+            Type::int64(),
+        );
     }
 
     /// Get all strings that are inbuilts so that they can be added to the bound checker
