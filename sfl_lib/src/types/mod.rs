@@ -31,7 +31,7 @@ pub struct TypeError {
 
 impl std::fmt::Debug for TypeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Type Error at [{}:{}]: {}", self.line, self.col, self.e)
+        write!(f, "Type Error at [{}:{}]: {}", self.line + 1, self.col + 1, self.e)
     }
 }
 

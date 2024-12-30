@@ -26,7 +26,7 @@ impl Debug for ParserError {
         write!(
             f,
             "Parser Error at [{}:{}]: {}",
-            self.line, self.col, self.e
+            self.line + 1, self.col + 1, self.e
         )
     }
 }

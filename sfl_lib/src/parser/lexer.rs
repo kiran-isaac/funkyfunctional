@@ -10,9 +10,14 @@ pub struct LexerError {
 
 impl Debug for LexerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{}", self.e)
+        write!(
+            f,
+            "Lexer Error at [{}:{}]: {}",
+            self.line + 1, self.col + 1, self.e
+        )
     }
 }
+
 pub struct Lexer {
     file: Vec<char>,
     filename: Option<String>,
@@ -239,12 +244,10 @@ impl Lexer {
         // If we hit other whitespace, skip it
         while self.i < self.file.len() && self.c().is_whitespace() {
             if self.c() == '\n' {
-                self.line += 1;
-                self.col = 0;
-                self.i += 1;
-
                 while self.c().is_whitespace() {
-                    self.advance();
+                    self.line += 1;
+                    self.col = 0;
+                    self.i += 1;
                 }
 
                 return Ok(Token {
