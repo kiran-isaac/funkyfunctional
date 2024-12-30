@@ -29,6 +29,7 @@ type InbuiltFuncPointer = fn(&ASTNode, Vec<&ASTNode>) -> AST;
 pub struct InbuiltFunc {
     arity: usize,
     func: InbuiltFuncPointer,
+    func_type: Type,
 }
 
 impl InbuiltFunc {
@@ -57,12 +58,16 @@ impl InbuiltsLookupTable {
         self.inbuilts.len()
     }
 
-    fn add_inbuilt(&mut self, name: String, arity: usize, func: InbuiltFuncPointer) {
+    /// Arity here is the number of arguments the inbuilt function needs to reduce
+    /// It is not necessarily the same as the number of arguments the function takes
+    /// as the function may be curried, for example 'if' takes one bool argument to 
+    /// reduce but it has a type of Bool -> A -> A -> A
+    fn add_inbuilt(&mut self, name: String, arity: usize, func: InbuiltFuncPointer, func_type: Type) {
         if arity >= self.inbuilts.len() {
             self.inbuilts.resize(arity + 1, HashMap::new());
         }
 
-        self.inbuilts[arity].insert(name, InbuiltFunc { arity, func });
+        self.inbuilts[arity].insert(name, InbuiltFunc { arity, func, func_type });
     }
 
     pub fn get_n_ary_inbuilts(&self, arity: usize) -> &HashMap<String, InbuiltFunc> {
@@ -75,37 +80,89 @@ impl InbuiltsLookupTable {
     }
 
     fn populate(&mut self) {
-        self.add_inbuilt("add".to_string(), 2, inbuilt_int_add);
-        self.add_inbuilt("sub".to_string(), 2, inbuilt_int_sub);
-        self.add_inbuilt("mul".to_string(), 2, inbuilt_int_mul);
-        self.add_inbuilt("div".to_string(), 2, inbuilt_int_div);
-        self.add_inbuilt("eq".to_string(), 2, inbuilt_int_eq);
-        self.add_inbuilt("lte".to_string(), 2, inbuilt_int_lte);
-        self.add_inbuilt("lt".to_string(), 2, inbuilt_int_lt);
-        self.add_inbuilt("gte".to_string(), 2, inbuilt_int_gte);
-        self.add_inbuilt("gt".to_string(), 2, inbuilt_int_gt);
+        let binary_int_type = Type::Function(
+            Box::new(Type::Primitive(Primitive::Int64)),
+            Box::new(Type::Function(
+                Box::new(Type::Primitive(Primitive::Int64)),
+                Box::new(Type::Primitive(Primitive::Int64)),
+            )),
+        );
+        let binary_int_bool_type = Type::Function(
+            Box::new(Type::Primitive(Primitive::Int64)),
+            Box::new(Type::Function(
+                Box::new(Type::Primitive(Primitive::Int64)),
+                Box::new(Type::Primitive(Primitive::Bool)),
+            )),
+        );
+        let binary_float_type = Type::Function(
+            Box::new(Type::Primitive(Primitive::Float64)),
+            Box::new(Type::Function(
+                Box::new(Type::Primitive(Primitive::Float64)),
+                Box::new(Type::Primitive(Primitive::Float64)),
+            )),
+        );
+        let binary_float_bool_type = Type::Function(
+            Box::new(Type::Primitive(Primitive::Float64)),
+            Box::new(Type::Function(
+                Box::new(Type::Primitive(Primitive::Float64)),
+                Box::new(Type::Primitive(Primitive::Bool)),
+            )),
+        );
+        let unary_int_type = Type::Function(
+            Box::new(Type::Primitive(Primitive::Int64)),
+            Box::new(Type::Primitive(Primitive::Int64)),
+        );
+        let unary_float_type = Type::Function(
+            Box::new(Type::Primitive(Primitive::Float64)),
+            Box::new(Type::Primitive(Primitive::Float64)),
+        );
 
-        self.add_inbuilt("addf".to_string(), 2, inbuilt_float_add);
-        self.add_inbuilt("subf".to_string(), 2, inbuilt_float_sub);
-        self.add_inbuilt("mulf".to_string(), 2, inbuilt_float_mul);
-        self.add_inbuilt("divf".to_string(), 2, inbuilt_float_div);
-        self.add_inbuilt("eqf".to_string(), 2, inbuilt_float_eq);
-        self.add_inbuilt("ltef".to_string(), 2, inbuilt_float_lte);
-        self.add_inbuilt("ltf".to_string(), 2, inbuilt_float_lt);
-        self.add_inbuilt("gtef".to_string(), 2, inbuilt_float_gte);
-        self.add_inbuilt("gtf".to_string(), 2, inbuilt_float_gt);
+        let if_type = Type::Function(
+            Box::new(Type::Primitive(Primitive::Bool)),
+            Box::new(Type::Function(
+                Box::new(Type::g(0)),
+                Box::new(Type::Function(
+                    Box::new(Type::g(0)),
+                    Box::new(Type::g(0)),
+                )),
+            )),
+        );
 
-        self.add_inbuilt("const".to_string(), 2, inbuilt_const);
-        self.add_inbuilt("unconst".to_string(), 2, inbuilt_unconst);
+        let id_type = Type::f(Type::g(0), Type::g(0));
+        let const1_type = Type::f(Type::Generic(0), Type::f(Type::g(1), Type::g(0)));
+        let const2_type = Type::f(Type::Generic(0), Type::f(Type::g(1), Type::g(1)));
 
-        self.add_inbuilt("if".to_string(), 1, inbuilt_if);
-        self.add_inbuilt("iff".to_string(), 1, inbuilt_if);
+        self.add_inbuilt("add".to_string(), 2, inbuilt_int_add, binary_int_type.clone());
+        self.add_inbuilt("sub".to_string(), 2, inbuilt_int_sub, binary_int_type.clone());
+        self.add_inbuilt("mul".to_string(), 2, inbuilt_int_mul, binary_int_type.clone());
+        self.add_inbuilt("div".to_string(), 2, inbuilt_int_div, binary_int_type);
+        self.add_inbuilt("eq".to_string(), 2, inbuilt_int_eq, binary_int_bool_type.clone());
+        self.add_inbuilt("lte".to_string(), 2, inbuilt_int_lte, binary_int_bool_type.clone());
+        self.add_inbuilt("lt".to_string(), 2, inbuilt_int_lt, binary_int_bool_type.clone());
+        self.add_inbuilt("gte".to_string(), 2, inbuilt_int_gte, binary_int_bool_type.clone());
+        self.add_inbuilt("gt".to_string(), 2, inbuilt_int_gt, binary_int_bool_type);
 
-        self.add_inbuilt("neg".to_string(), 1, inbuilt_int_neg);
-        self.add_inbuilt("negf".to_string(), 1, inbuilt_float_neg);
+        self.add_inbuilt("addf".to_string(), 2, inbuilt_float_add, binary_float_type.clone());
+        self.add_inbuilt("subf".to_string(), 2, inbuilt_float_sub, binary_float_type.clone());
+        self.add_inbuilt("mulf".to_string(), 2, inbuilt_float_mul, binary_float_type.clone());
+        self.add_inbuilt("divf".to_string(), 2, inbuilt_float_div, binary_float_type);
+        self.add_inbuilt("eqf".to_string(), 2, inbuilt_float_eq, binary_float_bool_type.clone());
+        self.add_inbuilt("ltef".to_string(), 2, inbuilt_float_lte, binary_float_bool_type.clone());
+        self.add_inbuilt("ltf".to_string(), 2, inbuilt_float_lt, binary_float_bool_type.clone());
+        self.add_inbuilt("gtef".to_string(), 2, inbuilt_float_gte, binary_float_bool_type.clone());
+        self.add_inbuilt("gtf".to_string(), 2, inbuilt_float_gt, binary_float_bool_type);
+
+        self.add_inbuilt("id".to_string(), 1, inbuilt_id, id_type);
+        self.add_inbuilt("const1".to_string(), 2, inbuilt_const1, const1_type);
+        self.add_inbuilt("const2".to_string(), 2, inbuilt_const2, const2_type);
+
+        self.add_inbuilt("if".to_string(), 1, inbuilt_if, if_type);
+
+        self.add_inbuilt("neg".to_string(), 1, inbuilt_int_neg, unary_int_type);
+        self.add_inbuilt("negf".to_string(), 1, inbuilt_float_neg, unary_float_type);
 
         #[cfg(test)]
-        self.add_inbuilt("zero_ary_test".to_string(), 0, inbuilt_int_zero);
+        self.add_inbuilt("zero_ary_test".to_string(), 0, inbuilt_int_zero, Type::int64());
     }
 
     /// Get all strings that are inbuilts so that they can be added to the bound checker
@@ -119,105 +176,15 @@ impl InbuiltsLookupTable {
 
         bindings
     }
-}
 
-/// Will be included in the InbuiltsLookupTable eventually
-pub fn get_default_inbuilt_type_map() -> HashMap<String, Type> {
-    let mut inbuilt_type_map = HashMap::new();
-    let binary_int_type = Type::Function(
-        Box::new(Type::Primitive(Primitive::Int64)),
-        Box::new(Type::Function(
-            Box::new(Type::Primitive(Primitive::Int64)),
-            Box::new(Type::Primitive(Primitive::Int64)),
-        )),
-    );
-    let binary_int_bool_type = Type::Function(
-        Box::new(Type::Primitive(Primitive::Int64)),
-        Box::new(Type::Function(
-            Box::new(Type::Primitive(Primitive::Int64)),
-            Box::new(Type::Primitive(Primitive::Bool)),
-        )),
-    );
-    let binary_float_type = Type::Function(
-        Box::new(Type::Primitive(Primitive::Float64)),
-        Box::new(Type::Function(
-            Box::new(Type::Primitive(Primitive::Float64)),
-            Box::new(Type::Primitive(Primitive::Float64)),
-        )),
-    );
-    let binary_float_bool_type = Type::Function(
-        Box::new(Type::Primitive(Primitive::Float64)),
-        Box::new(Type::Function(
-            Box::new(Type::Primitive(Primitive::Float64)),
-            Box::new(Type::Primitive(Primitive::Bool)),
-        )),
-    );
-    let unary_int_type = Type::Function(
-        Box::new(Type::Primitive(Primitive::Int64)),
-        Box::new(Type::Primitive(Primitive::Int64)),
-    );
-    let unary_float_type = Type::Function(
-        Box::new(Type::Primitive(Primitive::Float64)),
-        Box::new(Type::Primitive(Primitive::Float64)),
-    );
+    pub fn get_type_map(&self) -> HashMap<String, Type> {
+        let mut type_map = HashMap::new();
+        for inbuilt_map in &self.inbuilts {
+            for (name, inbuilt) in inbuilt_map {
+                type_map.insert(name.clone(), inbuilt.func_type.clone());
+            }
+        }
 
-    let if_type = Type::Function(
-        Box::new(Type::Primitive(Primitive::Bool)),
-        Box::new(Type::Function(
-            Box::new(Type::g(0)),
-            Box::new(Type::Function(
-                Box::new(Type::g(0)),
-                Box::new(Type::g(0)),
-            )),
-        )),
-    );
-
-    inbuilt_type_map.insert(
-        "const".to_string(),
-        Type::Function(
-            Box::new(Type::Primitive(Primitive::Int64)),
-            Box::new(Type::Function(
-                Box::new(Type::Primitive(Primitive::Int64)),
-                Box::new(Type::Primitive(Primitive::Int64)),
-            )),
-        ),
-    );
-
-    inbuilt_type_map.insert(
-        "unconst".to_string(),
-        Type::Function(
-            Box::new(Type::Primitive(Primitive::Int64)),
-            Box::new(Type::Function(
-                Box::new(Type::Primitive(Primitive::Int64)),
-                Box::new(Type::Primitive(Primitive::Int64)),
-            )),
-        ),
-    );
-
-    inbuilt_type_map.insert("if".to_string(), if_type);
-
-    inbuilt_type_map.insert("add".to_string(), binary_int_type.clone());
-    inbuilt_type_map.insert("sub".to_string(), binary_int_type.clone());
-    inbuilt_type_map.insert("mul".to_string(), binary_int_type.clone());
-    inbuilt_type_map.insert("div".to_string(), binary_int_type);
-    inbuilt_type_map.insert("eq".to_string(), binary_int_bool_type.clone());
-    inbuilt_type_map.insert("lte".to_string(), binary_int_bool_type.clone());
-    inbuilt_type_map.insert("lt".to_string(), binary_int_bool_type.clone());
-    inbuilt_type_map.insert("gte".to_string(), binary_int_bool_type.clone());
-    inbuilt_type_map.insert("gt".to_string(), binary_int_bool_type);
-
-    inbuilt_type_map.insert("addf".to_string(), binary_float_type.clone());
-    inbuilt_type_map.insert("subf".to_string(), binary_float_type.clone());
-    inbuilt_type_map.insert("mulf".to_string(), binary_float_type.clone());
-    inbuilt_type_map.insert("divf".to_string(), binary_float_type);
-    inbuilt_type_map.insert("eqf".to_string(), binary_float_bool_type.clone());
-    inbuilt_type_map.insert("ltef".to_string(), binary_float_bool_type.clone());
-    inbuilt_type_map.insert("ltf".to_string(), binary_float_bool_type.clone());
-    inbuilt_type_map.insert("gtef".to_string(), binary_float_bool_type.clone());
-    inbuilt_type_map.insert("gtf".to_string(), binary_float_bool_type);
-
-    inbuilt_type_map.insert("neg".to_string(), unary_int_type.clone());
-    inbuilt_type_map.insert("negf".to_string(), unary_float_type.clone());
-
-    inbuilt_type_map
+        type_map
+    }
 }

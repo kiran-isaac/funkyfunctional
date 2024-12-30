@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{inbuilts::get_default_inbuilt_type_map, ASTNode, ASTNodeType, AST};
+use crate::{inbuilts::InbuiltsLookupTable, ASTNodeType, AST};
 
-use super::{Primitive, Type, TypeError};
+use super::{Type, TypeError};
 
 pub struct TypeChecker {
     type_map: HashMap<String, Type>,
@@ -11,7 +11,7 @@ pub struct TypeChecker {
 impl TypeChecker {
     pub fn new() -> Self {
         TypeChecker {
-            type_map: get_default_inbuilt_type_map(),
+            type_map: InbuiltsLookupTable::new().get_type_map(),
         }
     }
 

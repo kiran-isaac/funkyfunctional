@@ -74,11 +74,23 @@ fn type_check_extra_arg_should_fail() {
 
 #[test]
 fn type_check_const_abst() {
-    tc_test_should_pass("main :: Float\nmain = (\\x :: Float y :: Int . x) 2.0 20");
-    // tc_test_should_pass("main :: Int\nmain = (\\_ :: Float . 10) 2.0");
-    // tc_test_should_fail("main :: Int\nmain = (\\x :: Float y :: Int . x) 2.0");
-    // tc_test_should_pass("main :: Int\nmain = (\\x :: Float y :: Int . y) 2.0 20");
-    // tc_test_should_pass("main :: Int\nmain = (\\x :: Int -> Int. x) (\\x :: Int.x) 20");
+    tc_test_should_pass("main :: Float\nmain = (\\x y. x) 2.0 20");
+    tc_test_should_pass("main :: Int\nmain = (\\_ . 10) 2.0");
+    tc_test_should_fail("main :: Int\nmain = (\\x y . x) 2.0");
+    tc_test_should_pass("main :: Int\nmain = (\\x y. y) 2.0 20");
+    tc_test_should_pass("main :: Int\nmain = (\\x y. y) 2.0 20");
+    tc_test_should_pass("main :: Int\nmain = (\\x :: Int -> Int. x) (\\x :: Int.x) 20");
+}
+
+#[test]
+fn type_check_control_flow_kws() {
+    tc_test_should_pass("main :: Float\nmain = const1 2.0 20");
+    tc_test_should_fail("main :: Int\nmain = const1 2.0");
+    tc_test_should_pass("main :: Int\nmain = const2 2.0 20");
+    tc_test_should_pass("main :: Int\nmain = const2 2.0 20");
+
+    // TODO: id id should typecheck
+    tc_test_should_pass("main :: Int\nmain = id (id 20)");
 }
 
 // #[test]
