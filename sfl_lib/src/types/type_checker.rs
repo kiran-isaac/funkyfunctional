@@ -141,7 +141,7 @@ impl TypeChecker {
                                     Err(_) => {
                                         return Err(self.type_error(
                                             format!(
-                                                "Failed to type check abstraction {}\nAbstraction variable is labled as having type {}, but it is used as if it has type {}\n",
+                                                "Failed to type check abstraction:\n{}\nAbstraction variable is labled as having type {}, but it is used as if it has type {}\n",
                                                 ast.to_string(exp),
                                                 t.to_string(),
                                                 var_type.to_string(),
@@ -164,7 +164,7 @@ impl TypeChecker {
                             Ok(t) => t,
                             Err(e) => {
                                 return Err(self.type_error(
-                                    format!("Failed to type check abstraction {}.\nThe abstraction's expression was expected to have type {}, but got this error while verifying the expression type:\n{}", ast.to_string(exp), x.to_string(), e.e),
+                                    format!("Failed to type check abstraction:\n{}.\nThe abstraction's expression was expected to have type {}, but got this error while verifying the expression type:\n{}", ast.to_string(exp), x.to_string(), e.e),
                                     ast,
                                     exp,
                                 ))
@@ -186,7 +186,7 @@ impl TypeChecker {
                         if var_type.is_none() {
                             return Err(self.type_error(
                                 format!(
-                                    "Abstraction {} needs type information for its variable {}",
+                                    "Failed to type check abstraction:\n{}\nType information needed for its variable {}, as it not applied to anything that can be typed",
                                     ast.to_string(exp),
                                     var_name,
                                 ),

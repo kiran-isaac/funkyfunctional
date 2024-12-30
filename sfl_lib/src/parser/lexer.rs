@@ -54,7 +54,7 @@ impl Lexer {
 
     fn error(&self, msg: String) -> LexerError {
         LexerError {
-            e: format!("error: [{}]: {}", self.pos_string(), msg),
+            e: msg,
             line: self.line,
             col: self.col,
         }
@@ -304,7 +304,15 @@ impl Lexer {
                     '*' => {
                         self.advance();
                         while !(self.c() == '*' && self.file[self.i + 1] == '/') {
-                            self.advance();
+                            if self.c() == '\n' {
+                                self.line += 1;
+                                self.col = 0;
+                                self.i += 1;
+                            } else if self.c() == '\0' {
+                                return Err(self.error(format!("Unterminated block comment")));
+                            } else {
+                                self.advance();
+                            }
                         }
                         self.advance();
                         self.advance();
