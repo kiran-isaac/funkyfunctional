@@ -149,12 +149,12 @@ impl LabelTable {
         Ok(())
     }
 
-    pub fn get_n_ary_inbuilts(&self, arity: usize) -> &HashMap<String, Label> {
+    pub fn get_n_ary_labels(&self, arity: usize) -> &HashMap<String, Label> {
         &self.map[arity]
     }
 
     pub fn get(&self, arity: usize, name: String) -> Option<&Label> {
-        self.get_n_ary_inbuilts(arity).get(&name)
+        self.get_n_ary_labels(arity).get(&name)
     }
 
     fn populate_inbuilts(&mut self) {
@@ -303,8 +303,8 @@ impl LabelTable {
         );
 
         self.add_inbuilt("id".to_string(), 1, inbuilt_id, id_type);
-        self.add_inbuilt("const1".to_string(), 2, inbuilt_const1, const1_type);
-        self.add_inbuilt("const2".to_string(), 2, inbuilt_const2, const2_type);
+        self.add_inbuilt("const1".to_string(), 0, inbuilt_const1, const1_type);
+        self.add_inbuilt("const2".to_string(), 0, inbuilt_const2, const2_type);
 
         self.add_inbuilt("if".to_string(), 1, inbuilt_if, if_type);
 

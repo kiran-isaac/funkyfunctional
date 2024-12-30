@@ -1,7 +1,5 @@
 use crate::{
-    find_redexes::{reduce::*, RCPair},
-    functions::LabelTable,
-    ASTNodeType, Parser, AST,
+    find_redexes::{reduce::*, RCPair}, functions::LabelTable, ASTNodeType, Parser, TypeChecker, AST
 };
 
 /// O(n^2) so only use for small things
@@ -142,24 +140,47 @@ fn multi_op_test() {
 }
 
 #[test]
-fn basic_abst_test() {
-    let program = "inc = \\x :: Int.add 1 x\nmain = inc 2".to_string();
+fn inc_test() {
+    let program = "inc::Int -> Int\ninc = \\x.add 1 x\nmain::Int\nmain = inc 2".to_string();
 
-    let mut ast = Parser::from_string(program).parse_module().unwrap();
+    let ast = Parser::from_string(program).parse_module().unwrap();
+
+    TypeChecker::new().check_module(&ast, ast.root).unwrap();
 
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module));
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
-    assert_eq!(rcs.len(), 1);
+    let mut lt = LabelTable::new();
+    lt.consume_from_module(&ast, module).unwrap();
 
-    ast.do_rc_subst(&rcs[0]);
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &lt);
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
     assert_eq!(rcs.len(), 1);
 
     assert_eq!(
-        "(\\x . add 1 x) 2 => add 1 2",
+        "inc 2 => add 1 2",
+        rc_pair_to_string(&ast, &rcs[0])
+    );
+}
+
+#[test]
+fn myadd_test() {
+    let program = "myadd::Int -> Int -> Int\nmyadd = \\x y.add y x\nmain::Int\nmain = myadd 2 3".to_string();
+
+    let ast = Parser::from_string(program).parse_module().unwrap();
+
+    let module = ast.root;
+    let exp = ast.get_assign_exp(ast.get_main(module));
+
+    let mut lt = LabelTable::new();
+    lt.consume_from_module(&ast, module).unwrap();
+
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &lt);
+
+    assert_eq!(rcs.len(), 1);
+
+    assert_eq!(
+        "myadd 2 3 => add 2 3",
         rc_pair_to_string(&ast, &rcs[0])
     );
 }

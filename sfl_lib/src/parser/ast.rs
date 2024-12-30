@@ -149,6 +149,10 @@ impl AST {
 
     pub fn wait_for_args(&mut self, node: usize) {
         self.vec[node].wait_for_args();
+        let expr = self.get_abstr_exp(node);
+        if self.get(expr).t == ASTNodeType::Abstraction {
+            self.wait_for_args(expr);
+        }
     }
 
     pub fn add(&mut self, n: ASTNode) -> usize {
@@ -329,6 +333,36 @@ impl AST {
     pub fn get_abst_var_usages(&self, abst: usize) -> Vec<usize> {
         let var_name = self.get(self.get_abstr_var(abst)).get_value();
         self.get_all_instances_of_var_in_exp(self.get_abstr_exp(abst), &var_name)
+    }
+
+    pub fn do_multiple_abst_substs(&self, abst: usize, substs: Vec<usize>) -> Self {
+        assert!(substs.len() > 0);
+
+        let mut abst_ast = self.do_abst_subst(abst, substs[0]);
+        let substs = &substs[1..];
+        for subst in substs {
+            let subst = abst_ast.append(self, *subst);
+            abst_ast = abst_ast.do_abst_subst(abst_ast.root, subst);
+        }
+
+        abst_ast
+    }
+
+    pub fn do_abst_subst(&self, abst: usize, subst: usize) -> Self {
+        assert!(self.get(abst).t == ASTNodeType::Abstraction);
+        // All usages of the abstracted variable
+        let var_name = self.get(self.get_abstr_var(abst)).get_value();
+        let mut cloned_abst_expr = self.clone_node(self.get_abstr_exp(abst));
+
+        let usages =
+            cloned_abst_expr.get_all_instances_of_var_in_exp(cloned_abst_expr.root, &var_name);
+        let arg_id = cloned_abst_expr.append(&self, subst);
+
+        for usage in usages {
+            cloned_abst_expr.replace(usage, arg_id);
+        }
+
+        cloned_abst_expr
     }
 
     pub fn get_func(&self, app: usize) -> usize {
