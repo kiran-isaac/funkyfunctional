@@ -56,11 +56,11 @@ impl TypeChecker {
                             Ok(fill) => Ok(fill),
                             Err(e) => Err(self.type_error(
                                 format!(
-                                    "Failed to match pattern {:?} with type {:?}: {}\n{:?}",
+                                    "Failed to typecheck variable {}, could not reconcile type {} with type {}: {}",
+                                    name, 
                                     expected.to_string(),
                                     t.to_string(),
-                                    e,
-                                    ast.to_string(exp)
+                                    e
                                 ),
                                 ast,
                                 exp,
@@ -76,7 +76,9 @@ impl TypeChecker {
                     Ok(fill) => Ok(fill),
                     Err(_) => Err(self.type_error(
                         format!(
-                            "Failed to match pattern {expected:?} with literal {lit_type:?}\n{:?}",
+                            "Failed to match pattern {} with literal {}\n{:?}",
+                            expected.to_string(),
+                            lit_type.to_string(),
                             ast.to_string(exp)
                         ),
                         ast,
@@ -136,14 +138,13 @@ impl TypeChecker {
                                 let filled = var_type.fill_pattern(t);
                                 match filled {
                                     Ok(_) => {}
-                                    Err(e) => {
+                                    Err(_) => {
                                         return Err(self.type_error(
                                             format!(
-                                                "Failed to match pattern {} with type {}: {}\n{}",
-                                                var_type.to_string(),
+                                                "Failed to type check abstraction {}\nAbstraction variable is labled as having type {}, but it is used as if it has type {}\n",
+                                                ast.to_string(exp),
                                                 t.to_string(),
-                                                e,
-                                                ast.to_string(exp)
+                                                var_type.to_string(),
                                             ),
                                             ast,
                                             exp,
@@ -159,13 +160,22 @@ impl TypeChecker {
 
                         self.type_map.insert(var_name.clone(), var_type.clone());
                         let abst_exp = ast.get_abstr_exp(exp);
-                        let abst_exp_type = self.check_expression(ast, abst_exp, x)?;
+                        let abst_exp_type = match self.check_expression(ast, abst_exp, x) {
+                            Ok(t) => t,
+                            Err(e) => {
+                                return Err(self.type_error(
+                                    format!("Failed to type check abstraction {}.\nThe abstraction's expression was expected to have type {}, but got this error while verifying the expression type:\n{}", ast.to_string(exp), x.to_string(), e.e),
+                                    ast,
+                                    exp,
+                                ))
+                            }
+                        };
+
                         self.type_map.remove(&var_name);
 
                         #[cfg(debug_assertions)]
                         let _abst_exp_type_str = abst_exp_type.to_string();
 
-                        // No need to check correctness, will be done by the caller
                         Ok(Type::f(var_type, abst_exp_type))
                     }
                     Type::Generic(_) => {

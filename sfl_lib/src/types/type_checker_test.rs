@@ -56,9 +56,13 @@ fn type_check_const_int_abst() {
 
 #[test]
 fn type_check_abst() {
-    tc_test_should_pass(
-        "main :: Int -> Int\nmain = (\\x y. x) (\\x :: Int.x) (\\x :: Int.x)",
-    )
+    tc_test_should_pass("main :: Int -> Int\nmain = (\\x y. x) (\\x :: Int.x) (\\x :: Int.x)");
+
+    // Should not need type annotation
+    tc_test_should_pass("main :: Int -> Int\nmain = (\\x.x)");
+    tc_test_should_pass("main :: Int -> Int\nmain = (\\x::Int.x)");
+    tc_test_should_fail("main :: Int -> Int\nmain = (\\x::Bool.x)");
+    tc_test_should_fail("main :: Int -> Int\nmain = (\\x::Float.x)");
 }
 
 #[test]

@@ -113,7 +113,7 @@ impl Type {
             }
             (Type::Primitive(p1), Type::Primitive(p2)) => {
                 if *p1 != *p2 {
-                    Err(format!("Failed to match types {:?} and {:?}", p1, p2))
+                    Err(format!("Failed to match types {} and {}", self.to_string(), self.to_string()))
                 } else {
                     Ok(self.clone())
                 }
@@ -125,7 +125,8 @@ impl Type {
                             Ok(t.clone())
                         } else {
                             Err(format!(
-                                "Generic type {self:?} cannot match both {} and {}",
+                                "Generic type {} cannot match both {} and {}",
+                                self.to_string(),
                                 t.to_string(),
                                 other.to_string()
                             ))
@@ -153,7 +154,8 @@ impl Type {
                             Ok(t.clone())
                         } else {
                             Err(format!(
-                                "Generic type {self:?} cannot match both {} and {}",
+                                "Generic type {} cannot match both {} and {}",
+                                other.to_string(),
                                 t.to_string(),
                                 self.to_string()
                             ))
@@ -174,7 +176,7 @@ impl Type {
                     }
                 }
             }
-            _ => Err(format!("Failed to match types {:?} and {:?}", self, other)),
+            _ => Err(format!("Failed to match types {} and {}", self.to_string(), other.to_string())),
         }
     }
 
