@@ -1,5 +1,5 @@
 mod find_redexes;
-mod inbuilts;
+mod functions;
 mod parser;
 mod types;
 

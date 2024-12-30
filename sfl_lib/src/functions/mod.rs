@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use arith::*;
-use control_flow::*;
+use inbuilt_arith::*;
+use inbuilt_control_flow::*;
 
 use crate::*;
-mod arith;
-mod control_flow;
+mod inbuilt_arith;
+mod inbuilt_control_flow;
 
 #[cfg(test)]
 mod test;
@@ -25,37 +25,49 @@ type InbuiltFuncPointer = fn(&ASTNode, Vec<&ASTNode>) -> AST;
 
 /// Will be used to store inbuilt functions and their arities. will eventually
 /// have some sort of function pointer or something to the actual function
-#[derive(Clone)]
-pub struct InbuiltFunc {
+#[derive(Clone, Debug)]
+pub struct Label {
     arity: usize,
-    func: InbuiltFuncPointer,
-    func_type: Type,
+    inbuilt: Option<InbuiltFuncPointer>,
+    label_type: Type,
 }
 
-impl InbuiltFunc {
-    pub fn call(&self, call: &ASTNode, args: Vec<&ASTNode>) -> AST {
+impl Label {
+    pub fn call_inbuilt(&self, call: &ASTNode, args: Vec<&ASTNode>) -> AST {
         assert!(self.arity == args.len());
-        (self.func)(call, args)
+        assert!(self.inbuilt.is_some());
+        (self.inbuilt.unwrap())(call, args)
     }
 }
 
-pub struct InbuiltsLookupTable {
+#[derive(Debug)]
+pub struct LabelTable {
     /// Sorted by arity. So inbuilts[0] will be all inbuilts with arity 0
     /// inbuilts[1] will be all inbuilts with arity 1, etc.
-    inbuilts: Vec<HashMap<String, InbuiltFunc>>,
+    map: Vec<HashMap<String, Label>>,
 }
 
-impl InbuiltsLookupTable {
+impl LabelTable {
     pub fn new() -> Self {
         let mut s = Self {
-            inbuilts: vec![HashMap::new()],
+            map: vec![HashMap::new()],
         };
-        s.populate();
+        s.populate_inbuilts();
         s
     }
 
     pub fn get_max_arity(&self) -> usize {
-        self.inbuilts.len()
+        self.map.len()
+    }
+
+    pub fn get_type(&self, name: &str) -> Option<&Type> {
+        for inbuilt_map in &self.map {
+            if inbuilt_map.contains_key(name) {
+                return Some(&inbuilt_map.get(name).unwrap().label_type)
+            }
+        }
+
+        None
     }
 
     /// Arity here is the number of arguments the inbuilt function needs to reduce
@@ -63,23 +75,62 @@ impl InbuiltsLookupTable {
     /// as the function may be curried, for example 'if' takes one bool argument to 
     /// reduce but it has a type of Bool -> A -> A -> A
     fn add_inbuilt(&mut self, name: String, arity: usize, func: InbuiltFuncPointer, func_type: Type) {
-        if arity >= self.inbuilts.len() {
-            self.inbuilts.resize(arity + 1, HashMap::new());
+        if arity >= self.map.len() {
+            self.map.resize(arity + 1, HashMap::new());
         }
 
-        self.inbuilts[arity].insert(name, InbuiltFunc { arity, func, func_type });
+        self.map[arity].insert(name, Label { arity, inbuilt: Some(func), label_type: func_type });
     }
 
-    pub fn get_n_ary_inbuilts(&self, arity: usize) -> &HashMap<String, InbuiltFunc> {
-        &self.inbuilts[arity]
+    pub fn add(&mut self, name: String, type_: Type) {
+        let arity = type_.get_arity();
+
+        if arity >= self.map.len() {
+            self.map.resize(arity + 1, HashMap::new());
+        }
+
+        self.map[arity].insert(name, Label { arity, inbuilt: None, label_type: type_ });
+    }
+
+    pub fn remove(&mut self, name: &String) -> bool {
+        for inbuilt_map in &mut self.map {
+            if inbuilt_map.contains_key(name) {
+                inbuilt_map.remove(name);
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn consume_from_module(&mut self, ast : &AST, module: usize) -> Result<(), TypeError> {
+        for (name, assign) in ast.get_assigns_map(module) {
+            let proclaimed_type = match &ast.get(assign).type_assignment {
+                None => {
+                    return Err(TypeError {
+                        e: format!("Label {} has no type assignment", name),
+                        line: ast.get(assign).line,
+                        col: ast.get(assign).col,
+                    })
+                }
+                Some(t) => t.clone(),
+            };
+
+            self.add(name.clone(), proclaimed_type);
+        }
+
+        Ok(())
+    }
+
+    pub fn get_n_ary_inbuilts(&self, arity: usize) -> &HashMap<String, Label> {
+        &self.map[arity]
     }
 
     #[cfg(test)]
-    pub fn get(&self, arity: usize, name: String) -> Option<&InbuiltFunc> {
+    pub fn get(&self, arity: usize, name: String) -> Option<&Label> {
         self.get_n_ary_inbuilts(arity).get(&name)
     }
 
-    fn populate(&mut self) {
+    fn populate_inbuilts(&mut self) {
         let binary_int_type = Type::Function(
             Box::new(Type::Primitive(Primitive::Int64)),
             Box::new(Type::Function(
@@ -168,7 +219,7 @@ impl InbuiltsLookupTable {
     /// Get all strings that are inbuilts so that they can be added to the bound checker
     pub fn get_starting_bindings_map() -> Vec<String> {
         let mut bindings = vec![];
-        for inbuilt_map in &InbuiltsLookupTable::new().inbuilts {
+        for inbuilt_map in &LabelTable::new().map {
             for inbuilt in inbuilt_map.keys() {
                 bindings.push(inbuilt.clone());
             }
@@ -179,9 +230,9 @@ impl InbuiltsLookupTable {
 
     pub fn get_type_map(&self) -> HashMap<String, Type> {
         let mut type_map = HashMap::new();
-        for inbuilt_map in &self.inbuilts {
+        for inbuilt_map in &self.map {
             for (name, inbuilt) in inbuilt_map {
-                type_map.insert(name.clone(), inbuilt.func_type.clone());
+                type_map.insert(name.clone(), inbuilt.label_type.clone());
             }
         }
 

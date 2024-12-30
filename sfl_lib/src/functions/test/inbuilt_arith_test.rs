@@ -6,11 +6,11 @@ use crate::{ASTNodeType, AST};
 #[test]
 fn test_basic_int_arith() {
     let mut ast = AST::new();
-    let inbuilts = InbuiltsLookupTable::new();
-    let add = inbuilts.get(2, "add".to_string()).unwrap();
-    let sub = inbuilts.get(2, "sub".to_string()).unwrap();
-    let mul = inbuilts.get(2, "mul".to_string()).unwrap();
-    let div = inbuilts.get(2, "div".to_string()).unwrap();
+    let labels = LabelTable::new();
+    let add = labels.get(2, "add".to_string()).unwrap();
+    let sub = labels.get(2, "sub".to_string()).unwrap();
+    let mul = labels.get(2, "mul".to_string()).unwrap();
+    let div = labels.get(2, "div".to_string()).unwrap();
 
     for _ in 0..1000 {
         // Generate random numbers, (16 bit to avoid overflow)
@@ -43,10 +43,10 @@ fn test_basic_int_arith() {
         );
         let call = call_ast.get(0);
 
-        let c_add = add.call(&call, vec![ast.get(b), ast.get(a)]);
-        let c_sub = sub.call(&call, vec![ast.get(b), ast.get(a)]);
-        let c_mul = mul.call(&call, vec![ast.get(b), ast.get(a)]);
-        let c_div = div.call(&call, vec![ast.get(b), ast.get(a)]);
+        let c_add = add.call_inbuilt(&call, vec![ast.get(b), ast.get(a)]);
+        let c_sub = sub.call_inbuilt(&call, vec![ast.get(b), ast.get(a)]);
+        let c_mul = mul.call_inbuilt(&call, vec![ast.get(b), ast.get(a)]);
+        let c_div = div.call_inbuilt(&call, vec![ast.get(b), ast.get(a)]);
 
         matches!(
             c_add.get(0).get_lit_type(),
@@ -87,11 +87,11 @@ fn test_basic_int_arith() {
 #[test]
 fn test_basic_float_arith() {
     let mut ast = AST::new();
-    let inbuilts = InbuiltsLookupTable::new();
-    let add = inbuilts.get(2, "addf".to_string()).unwrap();
-    let sub = inbuilts.get(2, "subf".to_string()).unwrap();
-    let mul = inbuilts.get(2, "mulf".to_string()).unwrap();
-    let div = inbuilts.get(2, "divf".to_string()).unwrap();
+    let labels = LabelTable::new();
+    let add = labels.get(2, "addf".to_string()).unwrap();
+    let sub = labels.get(2, "subf".to_string()).unwrap();
+    let mul = labels.get(2, "mulf".to_string()).unwrap();
+    let div = labels.get(2, "divf".to_string()).unwrap();
 
     for _ in 0..1000 {
         // Generate random numbers, (16 bit to avoid overflow)
@@ -121,10 +121,10 @@ fn test_basic_float_arith() {
         );
         let call = call_ast.get(0);
 
-        let c_add = add.call(&call, vec![ast.get(b), ast.get(a)]);
-        let c_sub = sub.call(&call, vec![ast.get(b), ast.get(a)]);
-        let c_mul = mul.call(&call, vec![ast.get(b), ast.get(a)]);
-        let c_div = div.call(&call, vec![ast.get(b), ast.get(a)]);
+        let c_add = add.call_inbuilt(&call, vec![ast.get(b), ast.get(a)]);
+        let c_sub = sub.call_inbuilt(&call, vec![ast.get(b), ast.get(a)]);
+        let c_mul = mul.call_inbuilt(&call, vec![ast.get(b), ast.get(a)]);
+        let c_div = div.call_inbuilt(&call, vec![ast.get(b), ast.get(a)]);
 
         matches!(
             c_add.get(0).get_lit_type(),

@@ -31,6 +31,7 @@ pub struct ASTNode {
     pub line: usize,
     pub col: usize,
     pub type_assignment: Option<Type>,
+    pub wait_for_args: bool,
 }
 
 impl ASTNode {
@@ -68,6 +69,7 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
         }
     }
 
@@ -79,6 +81,7 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
         }
     }
 
@@ -90,6 +93,7 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
         }
     }
 
@@ -101,6 +105,7 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
         }
     }
 
@@ -112,6 +117,7 @@ impl ASTNode {
             line,
             col,
             type_assignment: t,
+            wait_for_args: false,
         }
     }
 
@@ -123,7 +129,12 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
         }
+    }
+
+    fn wait_for_args(&mut self) {
+        self.wait_for_args = true;
     }
 }
 
@@ -133,6 +144,10 @@ impl AST {
             vec: vec![],
             root: 0,
         }
+    }
+
+    pub fn wait_for_args(&mut self, node: usize) {
+        self.vec[node].wait_for_args();
     }
 
     pub fn add(&mut self, n: ASTNode) -> usize {

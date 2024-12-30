@@ -15,4 +15,4 @@ type_check_nightmare = (\x.x) (if eq (fac 3) 6 then 10 else 20)
 */
 
 main :: Int
-main = type_check_nightmare
+main = const1 type_check_nightmare 2.0

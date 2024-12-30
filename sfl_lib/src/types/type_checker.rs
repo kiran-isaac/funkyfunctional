@@ -1,17 +1,17 @@
 use std::collections::HashMap;
 
-use crate::{inbuilts::InbuiltsLookupTable, ASTNodeType, AST};
+use crate::{functions::LabelTable, ASTNodeType, AST};
 
 use super::{Type, TypeError};
 
 pub struct TypeChecker {
-    type_map: HashMap<String, Type>,
+    lt: LabelTable,
 }
 
 impl TypeChecker {
     pub fn new() -> Self {
         TypeChecker {
-            type_map: InbuiltsLookupTable::new().get_type_map(),
+            lt: LabelTable::new(),
         }
     }
 
@@ -40,7 +40,7 @@ impl TypeChecker {
             ASTNodeType::Identifier => {
                 let name = node.get_value();
 
-                match self.type_map.get(&name) {
+                match self.lt.get_type(&name) {
                     None => {
                         return Err(self.type_error(
                             format!("Unknown identifier {}", name),
@@ -158,7 +158,7 @@ impl TypeChecker {
                         #[cfg(debug_assertions)]
                         let _var_type_str = var_type.to_string();
 
-                        self.type_map.insert(var_name.clone(), var_type.clone());
+                        self.lt.add(var_name.clone(), var_type.clone());
                         let abst_exp = ast.get_abstr_exp(exp);
                         let abst_exp_type = match self.check_expression(ast, abst_exp, x) {
                             Ok(t) => t,
@@ -171,7 +171,7 @@ impl TypeChecker {
                             }
                         };
 
-                        self.type_map.remove(&var_name);
+                        assert!(self.lt.remove(&var_name));
 
                         #[cfg(debug_assertions)]
                         let _abst_exp_type_str = abst_exp_type.to_string();
@@ -199,11 +199,11 @@ impl TypeChecker {
                         #[cfg(debug_assertions)]
                         let _var_type_str = var_type.to_string();
 
-                        self.type_map.insert(var_name.clone(), var_type.clone());
+                        self.lt.add(var_name.clone(), var_type.clone());
                         let abst_exp = ast.get_abstr_exp(exp);
                         let abst_exp_type =
                             self.check_expression(ast, abst_exp, &Type::Generic(0))?;
-                        self.type_map.remove(&var_name);
+                        self.lt.remove(&var_name);
 
                         #[cfg(debug_assertions)]
                         let _abst_exp_type_str = abst_exp_type.to_string();
@@ -244,26 +244,13 @@ impl TypeChecker {
         Ok(())
     }
 
-    pub fn check_module(&mut self, ast: &AST, module: usize) -> Result<(), TypeError> {
-        for (name, assign) in ast.get_assigns_map(module) {
-            let proclaimed_type = match &ast.get(assign).type_assignment {
-                None => {
-                    return Err(self.type_error(
-                        format!("Assignment without associated type assignment {}", name),
-                        ast,
-                        assign,
-                    ))
-                }
-                Some(t) => t.clone(),
-            };
-
-            self.type_map.insert(name.clone(), proclaimed_type);
-        }
+    pub fn check_module(&mut self, ast: &AST, module: usize) -> Result<&LabelTable, TypeError> {
+        self.lt.consume_from_module(ast, module);
 
         for (name, assign) in ast.get_assigns_map(module) {
             self.check_assign(ast, assign, name)?;
         }
 
-        Ok(())
+        Ok(&self.lt)
     }
 }

@@ -2,7 +2,7 @@ use super::ast::AST;
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
-use crate::{Primitive, Type};
+use crate::{ASTNodeType, Primitive, Type};
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
 use std::fs::File;
@@ -177,7 +177,12 @@ impl Parser {
                         let expr = match self.peek(0)?.tt {
                             TokenType::Lambda => {
                                 self.advance();
-                                self.parse_abstraction(ast)?
+                                let inner_abst = self.parse_abstraction(ast)?;
+
+                                // If we have a lambda inside a lambda, we need to wait for all
+                                // arguments to be applied before we can substitute
+                                ast.wait_for_args(inner_abst);
+                                inner_abst
                             }
                             _ => self.parse_expression(ast)?,
                         };
@@ -397,6 +402,15 @@ impl Parser {
 
         self.bind(assid.value.clone());
         let exp = self.parse_expression(ast)?;
+
+        // If the expression is an abstraction, wait for all args before
+        // substitution
+        match ast.get(exp).t {
+            ASTNodeType::Abstraction => {
+                ast.wait_for_args(exp);
+            }
+            _ => {}
+        }
 
         let id = ast.add_id(assid, line, col);
 

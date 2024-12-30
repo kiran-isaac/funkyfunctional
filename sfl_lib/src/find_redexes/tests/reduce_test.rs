@@ -1,4 +1,4 @@
-use crate::{find_redexes::reduce::*, parser::ParserError, ASTNodeType, Parser, AST};
+use crate::{find_redexes::reduce::*, functions::LabelTable, parser::ParserError, ASTNodeType, Parser, AST};
 
 /// O(n^2) so only use for small things
 fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
@@ -27,7 +27,7 @@ fn zero_ary_test() {
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module));
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
     assert!(rcs.len() == 1);
 
     let rc = &rcs[0];
@@ -58,8 +58,8 @@ fn unary_neg_test() {
         let modulef = astf.root;
         let expf = astf.get_assign_exp(astf.get_main(modulef));
 
-        let rcs = find_redex_contraction_pairs(&ast, module, exp);
-        let rcsf = find_redex_contraction_pairs(&astf, modulef, expf);
+        let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
+        let rcsf = find_redex_contraction_pairs(&astf, modulef, expf, &LabelTable::new());
         assert!(rcs.len() == 1);
         assert!(rcsf.len() == 1);
 
@@ -84,7 +84,7 @@ fn basic_add_test() {
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module));
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
     assert!(rcs.len() == 1);
 
     let rc = &rcs[0];
@@ -106,7 +106,7 @@ fn multi_op_test() {
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module));
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
 
     let correct = vec![
         format!("add {} {} => {}", a_int, b_int, a_int + b_int),
@@ -125,7 +125,7 @@ fn multi_op_test() {
         ast.do_rc_subst(&(old, new));
     }
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
     assert!(rcs.len() == 1);
     for (old, new) in rcs {
         ast.do_rc_subst(&(old, new));
@@ -146,12 +146,12 @@ fn basic_abst_test() {
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module));
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
     assert_eq!(rcs.len(), 1);
 
     ast.do_rc_subst(&rcs[0]);
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
     assert_eq!(rcs.len(), 1);
 
     assert_eq!(

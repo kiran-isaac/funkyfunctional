@@ -2,16 +2,17 @@ use super::*;
 
 fn full_run_test(program: String) -> String {
     let mut ast = Parser::from_string(program).parse_module().unwrap();
-    TypeChecker::new().check_module(&ast, ast.root).unwrap();
+    let mut tc = TypeChecker::new();
+    let lt = tc.check_module(&ast, ast.root).unwrap();
     let mut exp = ast.get_assign_exp(ast.get_main(ast.root));
 
-    let mut rcs = find_redex_contraction_pairs(&ast, ast.root, exp);
+    let mut rcs = find_redex_contraction_pairs(&ast, ast.root, exp, lt);
     while rcs.len() != 0 {
         let rc = &rcs[0];
         ast.do_rc_subst(rc);
 
         exp = ast.get_assign_exp(ast.get_main(ast.root));
-        rcs = find_redex_contraction_pairs(&ast, ast.root, exp);
+        rcs = find_redex_contraction_pairs(&ast, ast.root, exp, lt);
     }
     ast.to_string(exp)
 }

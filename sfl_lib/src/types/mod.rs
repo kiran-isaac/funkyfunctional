@@ -190,6 +190,14 @@ impl Type {
         Ok(t)
     }
 
+    pub fn get_arity(&self) -> usize{
+        match self {
+            Type::Primitive(_) => 0,
+            Type::Function(_, t) => 1 + t.get_arity(),
+            Type::Generic(_) => 0,
+        }
+    }
+
     fn to_string_internal(&self, full_braces: bool) -> String {
         match self {
             Type::Primitive(p) => match p {
