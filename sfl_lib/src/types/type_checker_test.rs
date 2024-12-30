@@ -47,18 +47,29 @@ fn type_check_ite() {
     tc_test_should_pass("main :: Float\nmain = if false then 2.0 else true");
 }
 
-// #[test]
-// fn type_check_const_int_abst() -> Result<(), TypeError> {
-//     let program = "const_10 :: Float -> Int\nconst_10 = \\x. 10\nmain :: Int\nmain = const_10 2.0";
+#[test]
+fn type_check_const_int_abst() {
+    tc_test_should_pass(
+        "const_10 :: Float -> Int\nconst_10 = \\x :: Float. 10\nmain :: Int\nmain = const_10 2.0",
+    )
+}
 
-//     let ast = Parser::from_string(program.to_string())
-//         .parse_module()
-//         .unwrap();
-//     let mut tc = TypeChecker::new();
-//     tc.check_module(&ast, ast.root)?;
+#[test]
+fn type_check_extra_arg_should_fail() {
+    tc_test_should_fail(
+        "const_10 :: Float -> Int\nconst_10 = \\x :: Float. 10\nmain :: Int\nmain = const_10 2.0 10",
+    )
+}
 
-//     Ok(())
-// }
+#[test]
+fn type_check_const_abst() {
+    tc_test_should_pass("main :: Int\nmain = (\\_ :: Float . 10) 2.0");
+    tc_test_should_fail("main :: Int\nmain = (\\x :: Float y :: Int . x) 2.0");
+    tc_test_should_pass("main :: Float\nmain = (\\x :: Float y :: Int . x) 2.0 20");
+    tc_test_should_pass("main :: Int\nmain = (\\x :: Float y :: Int . y) 2.0 20");
+    tc_test_should_pass("main :: Int\nmain = (\\x :: Int -> Int. x) (\\x :: Int.x) 20");
+
+}
 
 // #[test]
 // fn type_check_extra_arg_should_fail() {

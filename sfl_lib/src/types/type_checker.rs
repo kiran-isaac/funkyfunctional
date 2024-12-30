@@ -105,6 +105,24 @@ impl TypeChecker {
                     _ => unimplemented!()
                 }
             }
+            ASTNodeType::Abstraction => {
+                let var = ast.get_abstr_var(exp);
+                let var_name = ast.get(var).get_value();
+                let var_type = ast.get(var).type_assignment.clone().unwrap();
+                #[cfg(debug_assertions)]
+                let _var_type_str = var_type.to_string();
+
+                self.type_map.insert(var_name.clone(), var_type.clone());
+                let abst_exp = ast.get_abstr_exp(exp);
+                self.type_map.remove(&var_name);
+                #[cfg(debug_assertions)]
+                let _abst_exp_str = ast.to_string(abst_exp);
+                let abst_exp_type = self.check_expression(ast, abst_exp, &Type::g(0))?;
+                #[cfg(debug_assertions)]
+                let _abst_exp_type_str = abst_exp_type.to_string();
+
+                Ok(Type::f(var_type, abst_exp_type))
+            }
             _ => unimplemented!(),
         }
     }
