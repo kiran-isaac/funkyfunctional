@@ -146,6 +146,34 @@ impl Type {
                     }
                 }
             }
+            (_, Type::Generic(g)) => {
+                if self.is_concrete() {
+                    if let Some(t) = generic_map.get(g) {
+                        if t.concrete_eq(self) {
+                            Ok(t.clone())
+                        } else {
+                            Err(format!(
+                                "Generic type {self:?} cannot match both {} and {}",
+                                t.to_string(),
+                                self.to_string()
+                            ))
+                        }
+                    } else {
+                        generic_map.insert(*g, self.clone());
+                        Ok(self.clone())
+                    }
+                } else {
+                    if let Some(t) = generic_map.get(g) {
+                        Ok(t.clone())
+                    } else {
+                        Err(format!(
+                            "Insufficient type information to reconsile {} and {}",
+                            self.to_string(),
+                            self.to_string()
+                        ))
+                    }
+                }
+            }
             _ => Err(format!("Failed to match types {:?} and {:?}", self, other)),
         }
     }

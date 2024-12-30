@@ -138,9 +138,9 @@ impl Parser {
     fn parse_abstraction(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
         match self.peek(0)?.tt {
             TokenType::Id => {
-                let id = self.consume()?;
+                let id_tk = self.consume()?;
 
-                let varname = id.value.clone();
+                let varname = id_tk.value.clone();
                 if varname != "_" {
                     if self.bound.is_bound(&varname) {
                         return Err(self.parse_error(format!(
@@ -151,28 +151,26 @@ impl Parser {
                     self.bind(varname.clone());
                 }
                 self.advance();
-                let var_type = match self.peek(0) {
+                let line = self.lexer.line;
+                let col = self.lexer.col;
+
+                let id = match self.peek(0) {
                     Ok(t) => match t.tt {
                         TokenType::DoubleColon => {
                             self.advance();
-                            self.parse_type_expression(ast)?
+                            let var_type = self.parse_type_expression(ast)?;
+                            #[cfg(debug_assertions)]
+                            let _type_str = var_type.to_string();
+                            ast.add_typed_id(id_tk, line, col, var_type)            
                         }
                         _ => {
-                            return Err(self.parse_error(
-                                format!("Expected type assignment after lambda id, got {:?}", t)
-                                    .to_string(),
-                            ))
+                            ast.add_id(id_tk, line, col)
                         }
                     },
                     Err(e) => return Err(e),
                 };
 
-                let line = self.lexer.line;
-                let col = self.lexer.col;
-                let id = ast.add_typed_id(id, line, col, var_type);
 
-                #[cfg(debug_assertions)]
-                let _type_str = ast.get(id).type_assignment.clone().unwrap().to_string();
                 match self.peek(0)?.tt {
                     TokenType::Dot => {
                         self.advance();
