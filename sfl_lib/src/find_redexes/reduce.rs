@@ -1,18 +1,18 @@
-use std::collections::HashMap;
 use crate::functions::LabelTable;
+use std::collections::HashMap;
 
 use super::*;
 
 /// This will check for applications to functions:
 /// - lables with func types
 /// - lambda abstractions
-/// - inbuilt functions 
-/// with the right num of args. 
+/// - inbuilt functions
+/// with the right num of args.
 /// For example, a call to a inbuilt add could be: add 2 3
 /// Which would look like
 /// App[[App add 2], 3]
 /// This function checks that the rhs is a literal, and the lhs is
-/// either a function or an App of a function in the set of funcs 
+/// either a function or an App of a function in the set of funcs
 /// with the right num of args
 fn check_for_ready_call(
     ast: &AST,

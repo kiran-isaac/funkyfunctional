@@ -1,5 +1,7 @@
 use crate::{
-    find_redexes::{reduce::*, RCPair}, functions::LabelTable, ASTNodeType, Parser, TypeChecker, AST
+    find_redexes::{reduce::*, RCPair},
+    functions::LabelTable,
+    ASTNodeType, Parser, TypeChecker, AST,
 };
 
 /// O(n^2) so only use for small things
@@ -157,15 +159,13 @@ fn inc_test() {
 
     assert_eq!(rcs.len(), 1);
 
-    assert_eq!(
-        "inc 2 => add 1 2",
-        rc_pair_to_string(&ast, &rcs[0])
-    );
+    assert_eq!("inc 2 => add 1 2", rc_pair_to_string(&ast, &rcs[0]));
 }
 
 #[test]
 fn myadd_test() {
-    let program = "myadd::Int -> Int -> Int\nmyadd = \\x y.add y x\nmain::Int\nmain = myadd 2 3".to_string();
+    let program =
+        "myadd::Int -> Int -> Int\nmyadd = \\x y.add x y\nmain::Int\nmain = myadd 2 3".to_string();
 
     let ast = Parser::from_string(program).parse_module().unwrap();
 
@@ -179,8 +179,5 @@ fn myadd_test() {
 
     assert_eq!(rcs.len(), 1);
 
-    assert_eq!(
-        "myadd 2 3 => add 2 3",
-        rc_pair_to_string(&ast, &rcs[0])
-    );
+    assert_eq!("myadd 2 3 => add 2 3", rc_pair_to_string(&ast, &rcs[0]));
 }
