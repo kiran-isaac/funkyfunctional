@@ -297,7 +297,7 @@ impl Lexer {
                 self.advance();
                 match self.c() {
                     '/' => {
-                        while self.c() != '\n' {
+                        while self.c() != '\n' && self.c() != '\0' {
                             self.advance();
                         }
                     }
