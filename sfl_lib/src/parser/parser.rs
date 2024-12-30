@@ -2,7 +2,7 @@ use super::ast::AST;
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
-use crate::{Primitive, Type};
+use crate::{ASTNodeType, Primitive, Type};
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
 use std::fs::File;
@@ -26,7 +26,9 @@ impl Debug for ParserError {
         write!(
             f,
             "Parser Error at [{}:{}]: {}",
-            self.line, self.col, self.e
+            self.line + 1,
+            self.col + 1,
+            self.e
         )
     }
 }
@@ -138,9 +140,9 @@ impl Parser {
     fn parse_abstraction(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
         match self.peek(0)?.tt {
             TokenType::Id => {
-                let id = self.consume()?;
+                let id_tk = self.consume()?;
 
-                let varname = id.value.clone();
+                let varname = id_tk.value.clone();
                 if varname != "_" {
                     if self.bound.is_bound(&varname) {
                         return Err(self.parse_error(format!(
@@ -150,16 +152,36 @@ impl Parser {
                     }
                     self.bind(varname.clone());
                 }
+                self.advance();
                 let line = self.lexer.line;
                 let col = self.lexer.col;
-                let id = ast.add_id(id, line, col);
+
+                let id = match self.peek(0) {
+                    Ok(t) => match t.tt {
+                        TokenType::DoubleColon => {
+                            self.advance();
+                            let var_type = self.parse_type_expression(ast)?;
+                            #[cfg(debug_assertions)]
+                            let _type_str = var_type.to_string();
+                            ast.add_typed_id(id_tk, line, col, var_type)
+                        }
+                        _ => ast.add_id(id_tk, line, col),
+                    },
+                    Err(e) => return Err(e),
+                };
+
                 match self.peek(0)?.tt {
                     TokenType::Dot => {
                         self.advance();
                         let expr = match self.peek(0)?.tt {
                             TokenType::Lambda => {
                                 self.advance();
-                                self.parse_abstraction(ast)?
+                                let inner_abst = self.parse_abstraction(ast)?;
+
+                                // If we have a lambda inside a lambda, we need to wait for all
+                                // arguments to be applied before we can substitute
+                                ast.wait_for_args(inner_abst);
+                                inner_abst
                             }
                             _ => self.parse_expression(ast)?,
                         };
@@ -251,10 +273,10 @@ impl Parser {
             TokenType::If => Ok(self.parse_ite(ast)?),
             // Removed support for lambda except at the top level
             // for now, untill i figure out type inference
-            // TokenType::Lambda => {
-            //     self.advance();
-            //     self.parse_abstraction(ast)
-            // }
+            TokenType::Lambda => {
+                self.advance();
+                self.parse_abstraction(ast)
+            }
             TokenType::LParen => {
                 let exp = self.parse_expression(ast)?;
                 self.advance();
@@ -305,7 +327,11 @@ impl Parser {
                     let right = self.parse_type_expression(ast)?;
                     left = Type::Function(Box::new(left), Box::new(right));
                 }
-                TokenType::RParen | TokenType::Newline | TokenType::EOF => return Ok(left),
+                TokenType::RParen
+                | TokenType::Newline
+                | TokenType::EOF
+                | TokenType::Id
+                | TokenType::Dot => return Ok(left),
                 _ => {
                     return Err(self
                         .parse_error(format!("Unexpected token in type expression: {:?}", next)))
@@ -323,12 +349,12 @@ impl Parser {
                 match id.as_str() {
                     "Int" => Ok(Type::Primitive(Primitive::Int64)),
                     "Float" => Ok(Type::Primitive(Primitive::Float64)),
+                    "Bool" => Ok(Type::Primitive(Primitive::Bool)),
                     _ => unimplemented!("Only Int and Float are supported"),
                 }
             }
             TokenType::LParen => {
                 let inner = self.parse_type_expression(ast)?;
-                let inner_string = inner.to_string();
                 self.advance();
                 Ok(inner)
             }
@@ -374,13 +400,16 @@ impl Parser {
         let col = self.lexer.col;
 
         self.bind(assid.value.clone());
-        let exp = match self.peek(0)?.tt {
-            TokenType::Lambda => {
-                self.advance();
-                self.parse_abstraction(ast)?
+        let exp = self.parse_expression(ast)?;
+
+        // If the expression is an abstraction, wait for all args before
+        // substitution
+        match ast.get(exp).t {
+            ASTNodeType::Abstraction => {
+                ast.wait_for_args(exp);
             }
-            _ => self.parse_expression(ast)?,
-        };
+            _ => {}
+        }
 
         let id = ast.add_id(assid, line, col);
 
@@ -443,13 +472,7 @@ impl Parser {
 
     pub fn parse_tl_expression(&mut self) -> Result<AST, ParserError> {
         let mut ast = AST::new();
-        ast.root = match self.peek(0)?.tt {
-            TokenType::Lambda => {
-                self.advance();
-                self.parse_abstraction(&mut ast)?
-            }
-            _ => self.parse_expression(&mut ast)?,
-        };
+        ast.root = self.parse_expression(&mut ast)?;
         Ok(ast)
     }
 }

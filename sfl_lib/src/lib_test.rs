@@ -2,16 +2,17 @@ use super::*;
 
 fn full_run_test(program: String) -> String {
     let mut ast = Parser::from_string(program).parse_module().unwrap();
-    TypeChecker::new().check_module(&ast, ast.root).unwrap();
+    let mut tc = TypeChecker::new();
+    let lt = tc.check_module(&ast, ast.root).unwrap();
     let mut exp = ast.get_assign_exp(ast.get_main(ast.root));
 
-    let mut rcs = find_redex_contraction_pairs(&ast, ast.root, exp);
+    let mut rcs = find_redex_contraction_pairs(&ast, ast.root, exp, lt);
     while rcs.len() != 0 {
         let rc = &rcs[0];
         ast.do_rc_subst(rc);
 
         exp = ast.get_assign_exp(ast.get_main(ast.root));
-        rcs = find_redex_contraction_pairs(&ast, ast.root, exp);
+        rcs = find_redex_contraction_pairs(&ast, ast.root, exp, lt);
     }
     ast.to_string(exp)
 }
@@ -26,7 +27,7 @@ fn full_run_1() {
     y = 2
 
     inc :: Int -> Int
-    inc = \i . add i 1
+    inc = \i :: Int . add i 1
 
     main :: Int
     main = sub (add 5 (inc x)) (mul 5 y)
@@ -43,13 +44,13 @@ fn full_run_2() {
     x = 100
 
     const_float::Int -> Float
-    const_float = \_. 1.5
+    const_float = \_ :: Int. 1.5
 
     y :: Float
     y = const_float x
 
     inc :: Float -> Float
-    inc = \i . addf i 1.0
+    inc = \i :: Float. addf i 1.0
 
     main :: Float
     main = inc y

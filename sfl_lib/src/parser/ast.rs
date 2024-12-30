@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Debug, vec};
 
-use crate::{types::TypeError, Primitive, Type};
+use crate::{find_redexes::RCPair, types::TypeError, Primitive, Type};
 
 use super::token::*;
 
@@ -31,6 +31,7 @@ pub struct ASTNode {
     pub line: usize,
     pub col: usize,
     pub type_assignment: Option<Type>,
+    pub wait_for_args: bool,
 }
 
 impl ASTNode {
@@ -52,6 +53,7 @@ impl ASTNode {
     }
 
     /// Get the string value of the identifier or literal
+    #[inline(always)]
     pub fn get_value(&self) -> String {
         assert!(self.t == ASTNodeType::Identifier || self.t == ASTNodeType::Literal);
         match &self.info {
@@ -68,6 +70,7 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
         }
     }
 
@@ -79,6 +82,7 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
         }
     }
 
@@ -90,6 +94,7 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
         }
     }
 
@@ -101,6 +106,7 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
         }
     }
 
@@ -112,6 +118,7 @@ impl ASTNode {
             line,
             col,
             type_assignment: t,
+            wait_for_args: false,
         }
     }
 
@@ -123,7 +130,12 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
         }
+    }
+
+    fn wait_for_args(&mut self) {
+        self.wait_for_args = true;
     }
 }
 
@@ -132,6 +144,14 @@ impl AST {
         Self {
             vec: vec![],
             root: 0,
+        }
+    }
+
+    pub fn wait_for_args(&mut self, node: usize) {
+        self.vec[node].wait_for_args();
+        let expr = self.get_abstr_exp(node);
+        if self.get(expr).t == ASTNodeType::Abstraction {
+            self.wait_for_args(expr);
         }
     }
 
@@ -159,7 +179,7 @@ impl AST {
         ast
     }
 
-    pub fn do_rc_subst(&mut self, rc : &(usize, AST)) {
+    pub fn do_rc_subst(&mut self, rc: &RCPair) {
         let other = &rc.1;
         let old = rc.0;
         let new = self.append(other, other.root);
@@ -223,6 +243,18 @@ impl AST {
         self.add(ASTNode::new_id(tk, line, col))
     }
 
+    pub fn add_typed_id(
+        &mut self,
+        tk: Token,
+        line: usize,
+        col: usize,
+        assigned_type: Type,
+    ) -> usize {
+        let node = self.add(ASTNode::new_id(tk, line, col));
+        self.vec[node].type_assignment = Some(assigned_type);
+        node
+    }
+
     pub fn add_lit(&mut self, tk: Token, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_lit(tk, line, col))
     }
@@ -255,6 +287,7 @@ impl AST {
         self.vec[module].children.push(assign);
     }
 
+    #[inline(always)]
     pub fn get(&self, i: usize) -> &ASTNode {
         &self.vec[i]
     }
@@ -300,6 +333,36 @@ impl AST {
     pub fn get_abst_var_usages(&self, abst: usize) -> Vec<usize> {
         let var_name = self.get(self.get_abstr_var(abst)).get_value();
         self.get_all_instances_of_var_in_exp(self.get_abstr_exp(abst), &var_name)
+    }
+
+    pub fn do_multiple_abst_substs(&self, abst: usize, substs: Vec<usize>) -> Self {
+        assert!(substs.len() > 0);
+
+        let mut abst_ast = self.do_abst_subst(abst, *substs.last().unwrap());
+        let substs = &substs[..substs.len() - 1];
+        for subst in substs {
+            let subst = abst_ast.append(self, *subst);
+            abst_ast = abst_ast.do_abst_subst(abst_ast.root, subst);
+        }
+
+        abst_ast
+    }
+
+    pub fn do_abst_subst(&self, abst: usize, subst: usize) -> Self {
+        assert!(self.get(abst).t == ASTNodeType::Abstraction);
+        // All usages of the abstracted variable
+        let var_name = self.get(self.get_abstr_var(abst)).get_value();
+        let mut cloned_abst_expr = self.clone_node(self.get_abstr_exp(abst));
+
+        let usages =
+            cloned_abst_expr.get_all_instances_of_var_in_exp(cloned_abst_expr.root, &var_name);
+        let arg_id = cloned_abst_expr.append(&self, subst);
+
+        for usage in usages {
+            cloned_abst_expr.replace(usage, arg_id);
+        }
+
+        cloned_abst_expr
     }
 
     pub fn get_func(&self, app: usize) -> usize {
@@ -406,9 +469,10 @@ impl AST {
     pub fn to_string(&self, node: usize) -> String {
         let n = self.get(node);
         match n.t {
-            ASTNodeType::Identifier => {
-                format!("{}", n.get_value())
-            }
+            ASTNodeType::Identifier => match &n.type_assignment {
+                Some(t) => format!("{} :: {}", n.get_value(), t.to_string()),
+                None => n.get_value(),
+            },
             ASTNodeType::Literal => {
                 format!("{}", n.get_value())
             }
@@ -478,9 +542,11 @@ impl AST {
                 s.trim().to_string()
             }
             ASTNodeType::Abstraction => {
-                let id = self.get(n.children[0]);
-                let exp = self.to_string(n.children[1]);
-                format!("\\{} . {}", id.get_value(), exp)
+                format!(
+                    "\\{} . {}",
+                    self.to_string(n.children[0]),
+                    self.to_string(n.children[1])
+                )
             }
         }
     }

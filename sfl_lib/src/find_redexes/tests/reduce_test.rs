@@ -1,4 +1,8 @@
-use crate::{find_redexes::reduce::*, parser::ParserError, ASTNodeType, Parser, AST};
+use crate::{
+    find_redexes::{reduce::*, RCPair},
+    functions::LabelTable,
+    ASTNodeType, Parser, TypeChecker, AST,
+};
 
 /// O(n^2) so only use for small things
 fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
@@ -13,7 +17,7 @@ fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
     }
 }
 
-fn rc_pair_to_string(ast: &AST, rc: &(usize, AST)) -> String {
+fn rc_pair_to_string(ast: &AST, rc: &RCPair) -> String {
     format!("{} => {:?}", ast.to_string(rc.0), rc.1)
 }
 
@@ -27,7 +31,7 @@ fn zero_ary_test() {
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module));
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
     assert!(rcs.len() == 1);
 
     let rc = &rcs[0];
@@ -58,8 +62,8 @@ fn unary_neg_test() {
         let modulef = astf.root;
         let expf = astf.get_assign_exp(astf.get_main(modulef));
 
-        let rcs = find_redex_contraction_pairs(&ast, module, exp);
-        let rcsf = find_redex_contraction_pairs(&astf, modulef, expf);
+        let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
+        let rcsf = find_redex_contraction_pairs(&astf, modulef, expf, &LabelTable::new());
         assert!(rcs.len() == 1);
         assert!(rcsf.len() == 1);
 
@@ -84,7 +88,7 @@ fn basic_add_test() {
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module));
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
     assert!(rcs.len() == 1);
 
     let rc = &rcs[0];
@@ -106,7 +110,7 @@ fn multi_op_test() {
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module));
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
 
     let correct = vec![
         format!("add {} {} => {}", a_int, b_int, a_int + b_int),
@@ -125,7 +129,7 @@ fn multi_op_test() {
         ast.do_rc_subst(&(old, new));
     }
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
     assert!(rcs.len() == 1);
     for (old, new) in rcs {
         ast.do_rc_subst(&(old, new));
@@ -138,24 +142,42 @@ fn multi_op_test() {
 }
 
 #[test]
-fn basic_abst_test() {
-    let program = "inc = \\x.add 1 x\nmain = inc 2".to_string();
+fn inc_test() {
+    let program = "inc::Int -> Int\ninc = \\x.add 1 x\nmain::Int\nmain = inc 2".to_string();
 
-    let mut ast = Parser::from_string(program).parse_module().unwrap();
+    let ast = Parser::from_string(program).parse_module().unwrap();
+
+    TypeChecker::new().check_module(&ast, ast.root).unwrap();
 
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module));
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+    let mut lt = LabelTable::new();
+    lt.consume_from_module(&ast, module).unwrap();
+
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &lt);
+
     assert_eq!(rcs.len(), 1);
 
-    ast.do_rc_subst(&rcs[0]);
+    assert_eq!("inc 2 => add 1 2", rc_pair_to_string(&ast, &rcs[0]));
+}
 
-    let rcs = find_redex_contraction_pairs(&ast, module, exp);
+#[test]
+fn myadd_test() {
+    let program =
+        "myadd::Int -> Int -> Int\nmyadd = \\x y.add x y\nmain::Int\nmain = myadd 2 3".to_string();
+
+    let ast = Parser::from_string(program).parse_module().unwrap();
+
+    let module = ast.root;
+    let exp = ast.get_assign_exp(ast.get_main(module));
+
+    let mut lt = LabelTable::new();
+    lt.consume_from_module(&ast, module).unwrap();
+
+    let rcs = find_redex_contraction_pairs(&ast, module, exp, &lt);
+
     assert_eq!(rcs.len(), 1);
 
-    assert_eq!(
-        "(\\x . add 1 x) 2 => add 1 2",
-        rc_pair_to_string(&ast, &rcs[0])
-    );
+    assert_eq!("myadd 2 3 => add 2 3", rc_pair_to_string(&ast, &rcs[0]));
 }

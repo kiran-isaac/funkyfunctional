@@ -10,11 +10,19 @@ pub struct LexerError {
 
 impl Debug for LexerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{}", self.e)
+        write!(
+            f,
+            "Lexer Error at [{}:{}]: {}",
+            self.line + 1,
+            self.col + 1,
+            self.e
+        )
     }
 }
+
 pub struct Lexer {
     file: Vec<char>,
+    #[allow(dead_code)]
     filename: Option<String>,
     i: usize,
     pub line: usize,
@@ -49,13 +57,14 @@ impl Lexer {
 
     fn error(&self, msg: String) -> LexerError {
         LexerError {
-            e: format!("error: [{}]: {}", self.pos_string(), msg),
+            e: msg,
             line: self.line,
             col: self.col,
         }
     }
 
     #[inline(always)]
+    #[allow(dead_code)]
     pub fn pos_string(&self) -> String {
         format!(
             "{}{}:{}",
@@ -239,12 +248,10 @@ impl Lexer {
         // If we hit other whitespace, skip it
         while self.i < self.file.len() && self.c().is_whitespace() {
             if self.c() == '\n' {
-                self.line += 1;
-                self.col = 0;
-                self.i += 1;
-
                 while self.c().is_whitespace() {
-                    self.advance();
+                    self.line += 1;
+                    self.col = 0;
+                    self.i += 1;
                 }
 
                 return Ok(Token {
@@ -294,14 +301,22 @@ impl Lexer {
                 self.advance();
                 match self.c() {
                     '/' => {
-                        while self.c() != '\n' {
+                        while self.c() != '\n' && self.c() != '\0' {
                             self.advance();
                         }
                     }
                     '*' => {
                         self.advance();
                         while !(self.c() == '*' && self.file[self.i + 1] == '/') {
-                            self.advance();
+                            if self.c() == '\n' {
+                                self.line += 1;
+                                self.col = 0;
+                                self.i += 1;
+                            } else if self.c() == '\0' {
+                                return Err(self.error(format!("Unterminated block comment")));
+                            } else {
+                                self.advance();
+                            }
                         }
                         self.advance();
                         self.advance();

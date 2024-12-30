@@ -7,10 +7,7 @@ use std::{
 fn main() {
     let argv: Vec<String> = env::args().collect();
 
-    let argv = vec![
-        "sfl_cli".to_string(),
-        "../test.sfl".to_string(),
-    ];
+    // let argv = vec!["sfl_cli".to_string(), "../test.sfl".to_string()];
 
     if argv.len() != 2 {
         eprintln!("Incorrect args");
@@ -33,15 +30,19 @@ fn main() {
     }
     let mut ast = ast.unwrap();
 
+    let mut tc = lib::TypeChecker::new();
     // Typecheck
-    if let Err(e) = lib::TypeChecker::new().check_module(&ast, ast.root) {
-        eprintln!("{:?}", e);
-        std::process::exit(1)
-    }
+    let lt = match tc.check_module(&ast, ast.root) {
+        Ok(lt) => lt,
+        Err(e) => {
+            eprintln!("{:?}", e);
+            std::process::exit(1)
+        }
+    };
 
     let exp = ast.get_assign_exp(ast.get_main(ast.root));
 
-    let mut rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp);
+    let mut rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp, lt);
 
     println!("{}\n", ast.to_string(ast.root));
 
@@ -68,7 +69,7 @@ fn main() {
 
         let exp = ast.get_assign_exp(ast.get_main(ast.root));
 
-        rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp);
+        rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp, lt);
         println!("\n{}", ast.to_string(exp));
     }
 }
