@@ -12,7 +12,7 @@ use super::*;
 /// App[[App add 2], 3]
 /// This function checks that the rhs is a literal, and the lhs is
 /// either an ID or an App of an ID in the set of inbuilts and a literal
-fn check_for_ready_call_to_label_or_abst(
+fn check_for_ready_call(
     ast: &AST,
     exp: usize,
     lt: &LabelTable,
@@ -116,7 +116,7 @@ pub fn find_redex_contraction_pairs(
             }
         }
         ASTNodeType::Application => {
-            if let Some(inbuilt_reduction) = check_for_ready_call_to_label_or_abst(ast, exp, &lt, am) {
+            if let Some(inbuilt_reduction) = check_for_ready_call(ast, exp, &lt, am) {
                 pairs.push((exp, inbuilt_reduction));
             }
 

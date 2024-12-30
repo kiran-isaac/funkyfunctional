@@ -338,8 +338,8 @@ impl AST {
     pub fn do_multiple_abst_substs(&self, abst: usize, substs: Vec<usize>) -> Self {
         assert!(substs.len() > 0);
 
-        let mut abst_ast = self.do_abst_subst(abst, substs[0]);
-        let substs = &substs[1..];
+        let mut abst_ast = self.do_abst_subst(abst, *substs.last().unwrap());
+        let substs = &substs[..substs.len() - 1];
         for subst in substs {
             let subst = abst_ast.append(self, *subst);
             abst_ast = abst_ast.do_abst_subst(abst_ast.root, subst);
