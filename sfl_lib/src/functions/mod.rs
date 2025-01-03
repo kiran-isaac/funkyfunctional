@@ -204,8 +204,8 @@ impl LabelTable {
         );
 
         let id_type = Type::f(Type::g(0), Type::g(0));
-        let const1_type = Type::f(Type::Generic(0), Type::f(Type::g(1), Type::g(0)));
-        let const2_type = Type::f(Type::Generic(0), Type::f(Type::g(1), Type::g(1)));
+        let const1_type = Type::f(Type::TypeVariable(0), Type::f(Type::g(1), Type::g(0)));
+        let const2_type = Type::f(Type::TypeVariable(0), Type::f(Type::g(1), Type::g(1)));
 
         self.add_inbuilt(
             "add".to_string(),
