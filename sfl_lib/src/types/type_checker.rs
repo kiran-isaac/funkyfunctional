@@ -1,15 +1,17 @@
+use std::collections::HashMap;
+
 use crate::{functions::LabelTable, ASTNodeType, AST};
 
 use super::{Type, TypeError};
 
 pub struct TypeChecker {
-    lt: LabelTable,
+    context: LabelTable,
 }
 
 impl TypeChecker {
     pub fn new() -> Self {
         TypeChecker {
-            lt: LabelTable::new(),
+            context: LabelTable::new(),
         }
     }
 
@@ -22,202 +24,94 @@ impl TypeChecker {
         };
     }
 
-    fn check_expression(
+    fn type_eq(&mut self, t1: &Type, t2: &Type) -> Result<(), String> {
+        if t1.is_concrete() && t2.is_concrete() {
+            if t1.concrete_eq(t2) {
+                Ok(())
+            } else {
+                Err(format!("Cannot match type {} and {}", t1.to_string(), t2.to_string()))
+            }
+        } else {
+            Ok(())
+        }
+    }
+
+    fn synthesize_expression_type(
         &mut self,
         ast: &AST,
-        exp: usize,
-        expected: &Type,
+        expr: usize,
     ) -> Result<Type, TypeError> {
         #[cfg(debug_assertions)]
-        let _pattern_str = expected.to_string();
-        #[cfg(debug_assertions)]
-        let _exp_str = ast.to_string(exp);
+        let _exp_str = ast.to_string(expr);
 
-        let node = ast.get(exp);
+        let node = ast.get(expr);
         match node.t {
             ASTNodeType::Identifier => {
                 let name = node.get_value();
 
-                match self.lt.get_type(&name) {
+                match self.context.get_type(&name) {
                     None => {
-                        return Err(self.type_error(
+                        Err(self.type_error(
                             format!("Unknown identifier {}", name),
                             ast,
-                            exp,
+                            expr,
                         ))
                     }
-                    Some(t) => {
-                        #[cfg(debug_assertions)]
-                        let _t_str = t.to_string();
-                        let filled = t.fill_pattern(expected);
-                        match filled {
-                            Ok(fill) => Ok(fill),
-                            Err(e) => Err(self.type_error(
-                                format!(
-                                    "Failed to typecheck variable {}, could not reconcile type {} with type {}: {}",
-                                    name, 
-                                    expected.to_string(),
-                                    t.to_string(),
-                                    e
-                                ),
-                                ast,
-                                exp,
-                            )),
-                        }
-                    }
+                    Some(t) => Ok(t.clone())
                 }
             }
             ASTNodeType::Literal => {
-                let lit_type = ast.get(exp).get_lit_type();
-                let filled = expected.fill_pattern(&lit_type);
-                match filled {
-                    Ok(fill) => Ok(fill),
-                    Err(_) => Err(self.type_error(
-                        format!(
-                            "Failed to match pattern {} with literal {}\n{:?}",
-                            expected.to_string(),
-                            lit_type.to_string(),
-                            ast.to_string(exp)
-                        ),
-                        ast,
-                        exp,
-                    )),
-                }
+                Ok(ast.get(expr).get_lit_type())
             }
-            ASTNodeType::Application => {
-                let f = ast.get_func(exp);
-                let x = ast.get_arg(exp);
-
-                #[cfg(debug_assertions)]
-                let _f_str = ast.to_string(f);
-                #[cfg(debug_assertions)]
-                let _x_str = ast.to_string(x);
-
-                let x_type = self.check_expression(ast, x, &Type::g(0))?;
-                if !x_type.is_concrete() {
-                    unimplemented!()
-                }
-
-                let f_pattern = Type::f(x_type.clone(), expected.clone());
-                #[cfg(debug_assertions)]
-                let _f_pattern_str = f_pattern.to_string();
-                let f_type = self.check_expression(ast, f, &f_pattern)?;
-                #[cfg(debug_assertions)]
-                let _f_type_str = f_type.to_string();
-
-                match f_type {
-                    Type::Function(f_f_type, f_x_type) => {
-                        #[cfg(debug_assertions)]
-                        assert!(f_f_type.is_concrete() && f_f_type.concrete_eq(&x_type));
-
-                        Ok(f_x_type.as_ref().clone())
-                    }
-                    _ => unimplemented!(),
-                }
-            }
+            // Arrow introduction
             ASTNodeType::Abstraction => {
-                match expected {
-                    Type::Function(f, x) => {
-                        let var = ast.get_abstr_var(exp);
-                        let var_name = ast.get(var).get_value();
-                        let var_type = f.as_ref().clone();
+                let abst_var = ast.get(ast.get_abstr_var(expr));
+                let abst_var_name = abst_var.get_value();
 
-                        #[cfg(debug_assertions)]
-                        let _var_type_str = var_type.to_string();
+                let abst_var_type = match &abst_var.type_assignment {
+                    Some(t) => t.clone(),
+                    None => Type::g(0)
+                };
 
-                        match var_type {
-                            Type::TypeVariable(_) => panic!("Generic type in function argument"),
-                            _ => {}
-                        }
+                self.context.add(abst_var_name.clone(), abst_var_type);
 
-                        // If there is a type assignment, make sure its correct
-                        match &ast.get(var).type_assignment {
-                            Some(t) => {
-                                let filled = var_type.fill_pattern(t);
-                                match filled {
-                                    Ok(_) => {}
-                                    Err(_) => {
-                                        return Err(self.type_error(
-                                            format!(
-                                                "Failed to type check abstraction:\n{}\nAbstraction variable is labled as having type {}, but it is used as if it has type {}\n",
-                                                ast.to_string(exp),
-                                                t.to_string(),
-                                                var_type.to_string(),
-                                            ),
-                                            ast,
-                                            exp,
-                                        ))
-                                    }
-                                }
-                            }
-                            None => {}
-                        }
+                let abst_expr = ast.get_abstr_exp(expr);
+                let abst_expr_type = self.synthesize_expression_type(ast, abst_expr)?;
 
-                        #[cfg(debug_assertions)]
-                        let _var_type_str = var_type.to_string();
+                self.context.remove(&abst_var_name);
 
-                        self.lt.add(var_name.clone(), var_type.clone());
-                        let abst_exp = ast.get_abstr_exp(exp);
-                        let abst_exp_type = match self.check_expression(ast, abst_exp, x) {
-                            Ok(t) => t,
-                            Err(e) => {
-                                return Err(self.type_error(
-                                    format!("Failed to type check abstraction:\n{}.\nThe abstraction's expression was expected to have type {}, but got this error while verifying the expression type:\n{}", ast.to_string(exp), x.to_string(), e.e),
-                                    ast,
-                                    exp,
-                                ))
-                            }
-                        };
-
-                        assert!(self.lt.remove(&var_name));
-
-                        #[cfg(debug_assertions)]
-                        let _abst_exp_type_str = abst_exp_type.to_string();
-
-                        Ok(Type::f(var_type, abst_exp_type))
-                    }
-                    Type::TypeVariable(_) => {
-                        let var = ast.get_abstr_var(exp);
-                        let var_name = ast.get(var).get_value();
-                        let var_type = ast.get(var).type_assignment.clone();
-
-                        if var_type.is_none() {
-                            return Err(self.type_error(
-                                format!(
-                                    "Failed to type check abstraction:\n{}\nType information needed for its variable {}, as it not applied to anything that can be typed",
-                                    ast.to_string(exp),
-                                    var_name,
-                                ),
-                                ast,
-                                var,
-                            ));
-                        }
-
-                        let var_type = var_type.unwrap();
-                        #[cfg(debug_assertions)]
-                        let _var_type_str = var_type.to_string();
-
-                        self.lt.add(var_name.clone(), var_type.clone());
-                        let abst_exp = ast.get_abstr_exp(exp);
-                        let abst_exp_type =
-                            self.check_expression(ast, abst_exp, &Type::TypeVariable(0))?;
-                        self.lt.remove(&var_name);
-
-                        #[cfg(debug_assertions)]
-                        let _abst_exp_type_str = abst_exp_type.to_string();
-
-                        Ok(Type::f(var_type, abst_exp_type))
-                    }
-                    Type::Primitive(_) => {
-                        return Err(self.type_error(
-                            format!("Expected function type, got {}", expected.to_string()),
-                            ast,
-                            exp,
-                        ))
-                    }
-                }
+                // The expression may update the type of the type var, for instance (\x.x 1) would result in
+                // (Int -> a) -> a
+                let updated_var_type = self.context.get_type_map().get(&abst_var_name).unwrap().clone();
+                Ok(Type::f(updated_var_type, abst_expr_type))
             }
-            _ => unimplemented!(),
+            _ => unreachable!("Invalid synthesis call")
+        }
+    }
+
+    fn check_expression_type(
+        &mut self,
+        ast: &AST,
+        expr: usize,
+        expected: &Type,
+    ) -> Result<(), TypeError> {
+        #[cfg(debug_assertions)]
+        let _pattern_str = expected.to_string();
+        #[cfg(debug_assertions)]
+        let _exp_str = ast.to_string(expr);
+
+        let node = ast.get(expr);
+        match node.t {
+            // Eq
+            ASTNodeType::Identifier | ASTNodeType::Literal => {
+                let synth_type = self.synthesize_expression_type(ast, expr)?;
+
+                if expected == synth_type {
+                    return Ok(())
+                } else {
+                    return Err(self.type_error(format!("Expected type {}, got type {}", expected.to_string(), ), ast, node))
+                }
+            },
         }
     }
 
@@ -237,18 +131,18 @@ impl TypeChecker {
         let _proclaimed_type_str = proclaimed_type.to_string();
 
         let expr = ast.get_assign_exp(assign);
-        self.check_expression(ast, expr, &proclaimed_type)?;
+        self.check_expression_type(ast, expr, &proclaimed_type)?;
 
         Ok(())
     }
 
     pub fn check_module(&mut self, ast: &AST, module: usize) -> Result<&LabelTable, TypeError> {
-        self.lt.consume_from_module(ast, module)?;
+        self.context.consume_from_module(ast, module)?;
 
         for (name, assign) in ast.get_assigns_map(module) {
             self.check_assign(ast, assign, name)?;
         }
 
-        Ok(&self.lt)
+        Ok(&self.context)
     }
 }
