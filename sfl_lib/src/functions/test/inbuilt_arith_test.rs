@@ -1,7 +1,7 @@
 use parser::Token;
 
 use super::super::*;
-use crate::{AST};
+use crate::AST;
 
 #[test]
 fn test_basic_int_arith() {

@@ -19,7 +19,7 @@
 // #[test]
 // fn full_run_1() {
 //     let program = r#"
-//     x :: Int 
+//     x :: Int
 //     x = 5
 
 //     y :: Int

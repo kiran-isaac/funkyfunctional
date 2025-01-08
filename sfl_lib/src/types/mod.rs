@@ -62,7 +62,7 @@ impl Type {
         Type::TypeVariable(usize)
     }
 
-    pub fn contains_existential(&self, ex : usize) -> bool {
+    pub fn contains_existential(&self, ex: usize) -> bool {
         match self {
             Type::Primitive(_) => false,
             Type::Function(t1, t2) => t1.contains_existential(ex) || t2.contains_existential(ex),

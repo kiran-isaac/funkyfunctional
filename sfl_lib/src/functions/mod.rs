@@ -195,11 +195,14 @@ impl LabelTable {
             Box::new(Type::Primitive(Primitive::Float64)),
         );
 
-        let if_type = Type::Function(
-            Box::new(Type::Primitive(Primitive::Bool)),
+        let if_type = Type::Forall(
+            0,
             Box::new(Type::Function(
-                Box::new(Type::g(0)),
-                Box::new(Type::Function(Box::new(Type::g(0)), Box::new(Type::g(0)))),
+                Box::new(Type::Primitive(Primitive::Bool)),
+                Box::new(Type::Function(
+                    Box::new(Type::g(0)),
+                    Box::new(Type::Function(Box::new(Type::g(0)), Box::new(Type::g(0)))),
+                )),
             )),
         );
 

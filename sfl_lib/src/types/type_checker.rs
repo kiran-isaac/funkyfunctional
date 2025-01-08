@@ -171,8 +171,8 @@ impl Context {
         match t {
             Type::Existential(ex) => match self.get_existential(*ex) {
                 Some(o) => match o {
-                    Some(t2) => return t2.clone(),
-                    None => return t.clone(),
+                    Some(t2) => t2.clone(),
+                    None => t.clone(),
                 },
                 None => {
                     unimplemented!()
@@ -204,19 +204,18 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
     let _b_str = b.to_string();
 
     match (a, b) {
-        // <:Exvar
-        (Type::Existential(a), Type::Existential(b)) => {
-            if a == b {
-                Ok(c)
-            } else {
-                Err(format!("{} is not a subtype of {}", a, b))
-            }
-        }
         // <:InstantiateL
         (Type::Existential(ex), _) => {
             assert!(!b.contains_existential(*ex));
 
             instantiate_l(c, *ex, b)
+        }
+
+        // <:InstantiateR
+        (_, Type::Existential(ex)) => {
+            assert!(!a.contains_existential(*ex));
+
+            instantiate_r(c, *ex, a)
         }
 
         // <:Var
@@ -238,13 +237,6 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
 
         // <:Unit
         (Type::Unit, Type::Unit) => Ok(c),
-
-        // <:InstantiatR
-        (_, Type::Existential(ex)) => {
-            assert!(!a.contains_existential(*ex));
-
-            instantiate_r(c, *ex, a)
-        }
 
         // <:ForallL
         (Type::Forall(var, t), _) => {
@@ -435,14 +427,17 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
 // "Γ ⊢ A • e ⇒⇒ C ⊣ ∆: Under input context Γ, applying a function of type A to e synthesizes type C, with output context ∆"
 fn synthesize_app_type(
     c: Context,
-    a: &Type,
+    applied_type: &Type,
     ast: &AST,
     expr: usize,
 ) -> Result<(Type, Context), TypeError> {
     #[cfg(debug_assertions)]
     let _expr_str = ast.to_string(expr);
 
-    match a {
+    #[cfg(debug_assertions)]
+    let _applied_type = applied_type.to_string();
+
+    match applied_type {
         // Forall App
         Type::Forall(var, t) => {
             let new_c = c.append(ContextItem::Existential(
@@ -452,7 +447,7 @@ fn synthesize_app_type(
 
             let a_subst = match t.substitute_type_variable(
                 *var,
-                &Type::Existential(new_c.get_next_existential_identifier()),
+                &Type::Existential(c.get_next_existential_identifier()),
             ) {
                 Ok(t) => t,
                 Err(s) => {
@@ -483,6 +478,8 @@ fn synthesize_app_type(
                 .add_before_existential(*var, a2);
             let a1t = Type::Existential(a1n);
             let a2t = Type::Existential(a2n);
+
+            let c = check_type(c, &a2t, ast, expr)?;
 
             Ok((
                 a2t.clone(),
@@ -515,11 +512,12 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
         }
 
         // Arrow introduction
-        (Type::Function(from, _), ASTNodeType::Abstraction) => {
+        (Type::Function(from, to), ASTNodeType::Abstraction) => {
             let var_name = ast.get(ast.get_abstr_var(expr)).get_value();
 
             let new_ass = ContextItem::TypeAssignment(var_name.clone(), from.as_ref().clone());
-            let pred = check_type(c.append(new_ass.clone()), from.as_ref(), ast, expr)?;
+            let c = c.append(new_ass.clone());
+            let pred = check_type(c, to, ast, ast.get_abstr_exp(expr))?;
             Ok(pred.get_before_item(new_ass))
         }
 
@@ -542,9 +540,14 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
 }
 
 pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), TypeError> {
-    match check_type(Context::from_labels(&LabelTable::new()), expected, ast, expr) {
+    match check_type(
+        Context::from_labels(&LabelTable::new()),
+        expected,
+        ast,
+        expr,
+    ) {
         Ok(_) => Ok(()),
-        Err(e) => Err(e)
+        Err(e) => Err(e),
     }
 }
 
@@ -559,7 +562,10 @@ pub fn typecheck_module(ast: &AST, module: usize) -> Result<(), TypeError> {
         let assign_expr = ast.get_assign_exp(assign);
         let assign_type = ast.get(assign).type_assignment.clone().unwrap();
         c = check_type(c, &assign_type, ast, assign_expr)?;
-        c = c.assigns_only().append(ContextItem::TypeAssignment(assign_var.clone(), assign_type.clone()));
+        c = c.assigns_only().append(ContextItem::TypeAssignment(
+            assign_var.clone(),
+            assign_type.clone(),
+        ));
     }
 
     Ok(())
