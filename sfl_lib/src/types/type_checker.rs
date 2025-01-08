@@ -18,6 +18,35 @@ struct Context {
 }
 
 impl Context {
+    fn empty() -> Self {
+        Self { vec: vec![] }
+    }
+
+    fn from_labels(labels: &LabelTable) -> Self {
+        let mut vec = vec![];
+
+        for (k, v) in labels.get_type_map() {
+            vec.push(ContextItem::TypeAssignment(k.clone(), v.clone()));
+        }
+
+        Self { vec }
+    }
+
+    fn assigns_only(&self) -> Self {
+        let mut new_v = vec![];
+
+        for i in &self.vec {
+            match i {
+                ContextItem::TypeAssignment(_, _) => {
+                    new_v.push(i.clone());
+                }
+                _ => {}
+            }
+        }
+
+        Self { vec: new_v }
+    }
+
     fn append(&self, item: ContextItem) -> Self {
         let mut new_v = vec![];
 
@@ -364,12 +393,18 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
 
 // "Γ ⊢ e ⇒ A ⊣ ∆: Under input context Γ, e synthesizes output type A, with output context ∆"
 fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context), TypeError> {
+    #[cfg(debug_assertions)]
+    let _expr_str = ast.to_string(expr);
+
     let node = ast.get(expr);
 
     match node.t {
         // Var
         ASTNodeType::Identifier => {
             let var = node.get_value();
+
+            #[cfg(debug_assertions)]
+            let _var_str = var.clone();
             match c.get_type_assignment(&var) {
                 Some(t) => Ok((t, c)),
                 None => Err(type_error("Unbound variable".to_string(), ast, expr)),
@@ -408,8 +443,15 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
             let rhs = ast.get_arg(expr);
 
             let (f_type, f_c) = synthesize_type(c, ast, lhs)?;
-            let a = f_c.substitute(&f_type);
-            synthesize_app_type(f_c, &a, ast, rhs)
+
+            #[cfg(debug_assertions)]
+            let _f_type_str = f_type.to_string();
+
+            let f_type = f_c.substitute(&f_type);
+
+            #[cfg(debug_assertions)]
+            let _f_type_str = f_type.to_string();
+            synthesize_app_type(f_c, &f_type, ast, rhs)
         }
 
         _ => unreachable!("Non expression"),
@@ -423,6 +465,9 @@ fn synthesize_app_type(
     ast: &AST,
     expr: usize,
 ) -> Result<(Type, Context), TypeError> {
+    #[cfg(debug_assertions)]
+    let _expr_str = ast.to_string(expr);
+
     match a {
         // Forall App
         Type::Forall(var, t) => {
@@ -479,6 +524,9 @@ fn synthesize_app_type(
 fn check_type(c: Context, a: &Type, ast: &AST, expr: usize) -> Result<Context, TypeError> {
     let node = ast.get(expr);
 
+    #[cfg(debug_assertions)]
+    let _expr_str = ast.to_string(expr);
+
     match (a, &node.t) {
         // Unit always checks
         (Type::Unit, _) => Ok(c),
@@ -501,6 +549,10 @@ fn check_type(c: Context, a: &Type, ast: &AST, expr: usize) -> Result<Context, T
         // Sub
         _ => {
             let (synth_t, synth_c) = synthesize_type(c, ast, expr)?;
+
+            #[cfg(debug_assertions)]
+            let _synth_t_str = synth_t.to_string();
+
             let a = synth_c.substitute(&synth_t);
             let b = synth_c.substitute(&a);
 
@@ -510,4 +562,26 @@ fn check_type(c: Context, a: &Type, ast: &AST, expr: usize) -> Result<Context, T
             }
         }
     }
+}
+
+pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), TypeError> {
+    match check_type(Context::from_labels(&LabelTable::new()), expected, ast, expr) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e)
+    }
+}
+
+pub fn typecheck_module(ast: &AST, module: usize) -> Result<(), TypeError> {
+    let mut c = Context::from_labels(&LabelTable::new());
+
+    for assign_var in &ast.get_assignee_names(module) {
+        let assign = ast.get_assign_to(module, assign_var.clone()).unwrap();
+
+        let assign_expr = ast.get_assign_exp(assign);
+        let assign_type = ast.get(assign).type_assignment.clone().unwrap();
+        c = check_type(c, &assign_type, ast, assign_expr)?;
+        c = c.assigns_only().append(ContextItem::TypeAssignment(assign_var.clone(), assign_type.clone()));
+    }
+
+    Ok(())
 }

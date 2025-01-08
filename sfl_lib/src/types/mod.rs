@@ -1,7 +1,5 @@
 mod type_checker;
-use std::collections::HashMap;
-
-pub use type_checker::TypeChecker;
+pub use type_checker::*;
 
 #[cfg(test)]
 mod type_checker_test;
@@ -13,14 +11,16 @@ pub enum Primitive {
     Int64,
     Float64,
     Bool,
-    Unit
 }
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Type {
+    Unit,
     Primitive(Primitive),
     Function(Box<Type>, Box<Type>),
     TypeVariable(usize),
+    Existential(usize),
+    Forall(usize, Box<Type>),
 }
 
 pub struct TypeError {
@@ -54,10 +54,6 @@ impl Type {
         Type::Primitive(Primitive::Bool)
     }
 
-    // pub fn char() -> Type {
-    //     Type::Primitive(Primitive::Char)
-    // }
-
     pub fn f(t1: Type, t2: Type) -> Type {
         Type::Function(Box::new(t1), Box::new(t2))
     }
@@ -66,11 +62,50 @@ impl Type {
         Type::TypeVariable(usize)
     }
 
+    pub fn contains_existential(&self, ex : usize) -> bool {
+        match self {
+            Type::Primitive(_) => false,
+            Type::Function(t1, t2) => t1.contains_existential(ex) || t2.contains_existential(ex),
+            Type::TypeVariable(_) => false,
+            Type::Existential(e) => *e == ex,
+            Type::Forall(_, t) => t.contains_existential(ex),
+            Type::Unit => false,
+        }
+    }
+
+    pub fn substitute_type_variable(&self, var: usize, replacement: &Type) -> Result<Self, String> {
+        match self {
+            Type::Primitive(p) => Ok(Type::Primitive(*p)),
+            Type::Function(t1, t2) => Ok(Type::Function(
+                Box::new(t1.substitute_type_variable(var, replacement)?),
+                Box::new(t2.substitute_type_variable(var, replacement)?),
+            )),
+            Type::TypeVariable(n) => {
+                if *n == var {
+                    Ok(replacement.clone())
+                } else {
+                    Ok(Type::TypeVariable(*n))
+                }
+            }
+            Type::Existential(_) => Ok(self.clone()),
+            Type::Forall(_, _) => unimplemented!("Forall not implemented"),
+            Type::Unit => Ok(Type::Unit),
+        }
+    }
+
+    pub fn is_monotype(&self) -> bool {
+        match self {
+            Type::Function(t1, t2) => t1.is_monotype() && t2.is_monotype(),
+            Self::Forall(_, _) => false,
+            _ => true,
+        }
+    }
+
     pub fn is_concrete(&self) -> bool {
         match self {
             Type::Primitive(_) => true,
             Type::Function(t1, t2) => t1.is_concrete() && t2.is_concrete(),
-            Type::TypeVariable(_) => false,
+            _ => false,
         }
     }
 
@@ -92,22 +127,20 @@ impl Type {
 
     fn max_type_var(&self) -> usize {
         match self {
-            Type::Primitive(_) => 0,
             Type::Function(t1, t2) => std::cmp::max(t1.max_type_var(), t2.max_type_var()),
             Type::TypeVariable(n) => *n,
+            _ => 0,
         }
     }
 
     fn add_to_type_vars(&self, increment: usize) -> Self {
         match self {
-            Type::Primitive(p) => Type::Primitive(*p),
-            Type::Function(t1, t2) => {
-                Type::Function(
-                    Box::new(t1.add_to_type_vars(increment)),
-                    Box::new(t2.add_to_type_vars(increment)),
-                )
-            }
+            Type::Function(t1, t2) => Type::Function(
+                Box::new(t1.add_to_type_vars(increment)),
+                Box::new(t2.add_to_type_vars(increment)),
+            ),
             Type::TypeVariable(n) => Type::TypeVariable(n + increment),
+            t => t.clone(),
         }
     }
 
@@ -119,9 +152,8 @@ impl Type {
 
     pub fn get_arity(&self) -> usize {
         match self {
-            Type::Primitive(_) => 0,
             Type::Function(_, t) => 1 + t.get_arity(),
-            Type::TypeVariable(_) => 0,
+            _ => 0,
         }
     }
 
@@ -150,7 +182,7 @@ impl Type {
 
                 format!("{} -> {}", t1_string, t2_string)
             }
-            Type::TypeVariable(n) => {
+            Type::TypeVariable(n) | Type::Existential(n) => {
                 let mut s = String::new();
                 let mut n = *n;
                 s.insert(0, (b'a' + (n % 26) as u8) as char);
@@ -160,6 +192,14 @@ impl Type {
                     n /= 26;
                 }
                 s
+            }
+            Type::Unit => "1".to_string(),
+            Type::Forall(n, t) => {
+                format!(
+                    "∀{}. {}",
+                    Type::g(*n).to_string_internal(full_braces),
+                    t.to_string_internal(full_braces)
+                )
             }
         }
     }
