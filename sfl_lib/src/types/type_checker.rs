@@ -4,145 +4,510 @@ use crate::{functions::LabelTable, ASTNodeType, AST};
 
 use super::{Type, TypeError};
 
-pub struct TypeChecker {
-    context: LabelTable,
+#[derive(Clone, PartialEq, Eq)]
+enum ContextItem {
+    TypeVariable(usize),
+    TypeAssignment(String, Type),
+    Existential(usize, Option<Type>),
+    Marker(usize),
 }
 
-impl TypeChecker {
-    pub fn new() -> Self {
-        TypeChecker {
-            context: LabelTable::new(),
-        }
+#[derive(Clone)]
+struct Context {
+    vec: Vec<ContextItem>,
+}
+
+impl Context {
+    fn append(&self, item: ContextItem) -> Self {
+        let mut new_v = vec![];
+
+        new_v.push(item);
+        Self { vec: new_v }
     }
 
-    fn type_error(&self, msg: String, ast: &AST, node: usize) -> TypeError {
-        let n = ast.get(node);
-        return TypeError {
-            e: msg,
-            col: n.col,
-            line: n.line,
-        };
-    }
+    fn get_before_item(&self, item: ContextItem) -> Self {
+        let mut new_v = vec![];
 
-    fn type_eq(&mut self, t1: &Type, t2: &Type) -> Result<(), String> {
-        if t1.is_concrete() && t2.is_concrete() {
-            if t1.concrete_eq(t2) {
-                Ok(())
-            } else {
-                Err(format!("Cannot match type {} and {}", t1.to_string(), t2.to_string()))
+        for i in &self.vec {
+            if i == &item {
+                break;
             }
-        } else {
-            Ok(())
+
+            new_v.push(i.clone());
         }
+
+        Self { vec: new_v }
     }
 
-    fn synthesize_expression_type(
-        &mut self,
-        ast: &AST,
-        expr: usize,
-    ) -> Result<Type, TypeError> {
-        #[cfg(debug_assertions)]
-        let _exp_str = ast.to_string(expr);
+    fn get_before_assignment(&self, str: String) -> Self {
+        let mut new_v = vec![];
 
-        let node = ast.get(expr);
-        match node.t {
-            ASTNodeType::Identifier => {
-                let name = node.get_value();
-
-                match self.context.get_type(&name) {
-                    None => {
-                        Err(self.type_error(
-                            format!("Unknown identifier {}", name),
-                            ast,
-                            expr,
-                        ))
+        for i in &self.vec {
+            match i {
+                ContextItem::TypeAssignment(v, _) => {
+                    if v == &str {
+                        break;
                     }
-                    Some(t) => Ok(t.clone())
                 }
+                _ => {}
             }
-            ASTNodeType::Literal => {
-                Ok(ast.get(expr).get_lit_type())
-            }
-            // Arrow introduction
-            ASTNodeType::Abstraction => {
-                let abst_var = ast.get(ast.get_abstr_var(expr));
-                let abst_var_name = abst_var.get_value();
 
-                let abst_var_type = match &abst_var.type_assignment {
-                    Some(t) => t.clone(),
-                    None => Type::g(0)
-                };
-
-                self.context.add(abst_var_name.clone(), abst_var_type);
-
-                let abst_expr = ast.get_abstr_exp(expr);
-                let abst_expr_type = self.synthesize_expression_type(ast, abst_expr)?;
-
-                self.context.remove(&abst_var_name);
-
-                // The expression may update the type of the type var, for instance (\x.x 1) would result in
-                // (Int -> a) -> a
-                let updated_var_type = self.context.get_type_map().get(&abst_var_name).unwrap().clone();
-                Ok(Type::f(updated_var_type, abst_expr_type))
-            }
-            _ => unreachable!("Invalid synthesis call")
+            new_v.push(i.clone());
         }
+
+        Self { vec: new_v }
     }
 
-    fn check_expression_type(
-        &mut self,
-        ast: &AST,
-        expr: usize,
-        expected: &Type,
-    ) -> Result<(), TypeError> {
-        #[cfg(debug_assertions)]
-        let _pattern_str = expected.to_string();
-        #[cfg(debug_assertions)]
-        let _exp_str = ast.to_string(expr);
+    fn get_type_assignment(&self, var: &str) -> Option<Type> {
+        for i in &self.vec {
+            match i {
+                ContextItem::TypeAssignment(v, t) => {
+                    if v == var {
+                        return Some(t.clone());
+                    }
+                }
+                _ => {}
+            }
+        }
 
-        let node = ast.get(expr);
-        match node.t {
-            // Eq
-            ASTNodeType::Identifier | ASTNodeType::Literal => {
-                let synth_type = self.synthesize_expression_type(ast, expr)?;
+        return None;
+    }
 
-                if expected == synth_type {
-                    return Ok(())
-                } else {
-                    return Err(self.type_error(format!("Expected type {}, got type {}", expected.to_string(), ), ast, node))
+    fn get_before_existential(&self, existential: usize) -> Self {
+        let mut new_v = vec![];
+
+        for i in &self.vec {
+            match i {
+                ContextItem::Existential(e, _) => {
+                    if *e == existential {
+                        break;
+                    }
+                }
+                _ => {}
+            }
+
+            new_v.push(i.clone());
+        }
+
+        Self { vec: new_v }
+    }
+
+    fn add_before_item(&self, before: ContextItem, item: ContextItem) -> Self {
+        let mut new_v = vec![];
+
+        for i in &self.vec {
+            if i == &before {
+                new_v.push(item.clone());
+            }
+
+            new_v.push(i.clone());
+        }
+
+        Self { vec: new_v }
+    }
+
+    fn add_before_existential(&self, existential: usize, item: ContextItem) -> Self {
+        let mut new_v = vec![];
+
+        for i in &self.vec {
+            match i {
+                ContextItem::Existential(e, _) => {
+                    if *e == existential {
+                        new_v.push(item.clone());
+                    }
+                }
+                _ => {}
+            }
+            new_v.push(i.clone());
+        }
+
+        Self { vec: new_v }
+    }
+
+    fn set_existential_definition(&self, existential: usize, t: Type) -> Self {
+        let mut new_v = vec![];
+
+        for i in &self.vec {
+            match i {
+                ContextItem::Existential(e, None) => {
+                    if *e == existential {
+                        new_v.push(ContextItem::Existential(*e, Some(t.clone())));
+                        continue;
+                    }
+                }
+                ContextItem::Existential(e, Some(_)) => {
+                    assert_ne!(*e, existential);
+                }
+                _ => {}
+            }
+            new_v.push(i.clone());
+        }
+
+        Self { vec: new_v }
+    }
+
+    fn get_next_existential_identifier(&self) -> usize {
+        let mut max = 0;
+
+        for i in &self.vec {
+            match i {
+                ContextItem::Existential(n, _) => {
+                    max = std::cmp::max(*n, max);
+                }
+                _ => {}
+            }
+        }
+
+        max + 1
+    }
+
+    // Stupid name
+    fn get_existential(&self, ex: usize) -> Option<Option<Type>> {
+        for i in &self.vec {
+            match i {
+                ContextItem::Existential(ex2, o) => {
+                    if ex == *ex2 {
+                        return Some(o.clone());
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        return None;
+    }
+
+    fn substitute(&self, t: &Type) -> Type {
+        match t {
+            Type::Existential(ex) => match self.get_existential(*ex) {
+                Some(o) => match o {
+                    Some(t2) => return t2.clone(),
+                    None => return t.clone(),
+                },
+                None => {
+                    unimplemented!()
                 }
             },
+            Type::Function(from, to) => Type::Function(
+                Box::new(self.substitute(from.as_ref())),
+                Box::new(self.substitute(to.as_ref())),
+            ),
+            Type::Forall(var, t) => Type::Forall(*var, Box::new(self.substitute(t.as_ref()))),
+            _ => t.clone(),
         }
     }
+}
 
-    fn check_assign(&mut self, ast: &AST, assign: usize, name: String) -> Result<(), TypeError> {
-        let proclaimed_type = match &ast.get(assign).type_assignment {
-            None => {
-                return Err(self.type_error(
-                    format!("Assignment without associated type assignment {name}"),
-                    ast,
-                    assign,
-                ))
+fn type_error(msg: String, ast: &AST, expr: usize) -> TypeError {
+    let n = ast.get(expr);
+    return TypeError {
+        e: msg,
+        col: n.col,
+        line: n.line,
+    };
+}
+
+fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
+    match (a, b) {
+        // <:Var
+        (Type::TypeVariable(a), Type::TypeVariable(b)) => {
+            if a == b {
+                Ok(c)
+            } else {
+                Err(format!("{} is not a subtype of {}", a, b))
             }
-            Some(t) => t.clone(),
-        };
-
-        #[cfg(debug_assertions)]
-        let _proclaimed_type_str = proclaimed_type.to_string();
-
-        let expr = ast.get_assign_exp(assign);
-        self.check_expression_type(ast, expr, &proclaimed_type)?;
-
-        Ok(())
-    }
-
-    pub fn check_module(&mut self, ast: &AST, module: usize) -> Result<&LabelTable, TypeError> {
-        self.context.consume_from_module(ast, module)?;
-
-        for (name, assign) in ast.get_assigns_map(module) {
-            self.check_assign(ast, assign, name)?;
         }
 
-        Ok(&self.context)
+        // <:Unit
+        (Type::Unit, Type::Unit) => Ok(c),
+
+        // <:Exvar
+        (Type::Existential(a), Type::Existential(b)) => {
+            if a == b {
+                Ok(c)
+            } else {
+                Err(format!("{} is not a subtype of {}", a, b))
+            }
+        }
+        // <:InstantiateL
+        (Type::Existential(ex), _) => {
+            assert!(!b.contains_existential(*ex));
+
+            instantiate_l(c, *ex, b)
+        }
+
+        // <:InstantiatR
+        (_, Type::Existential(ex)) => {
+            assert!(!a.contains_existential(*ex));
+
+            instantiate_r(c, *ex, a)
+        }
+
+        // <:ForallL
+        (Type::Forall(var, t), _) => {
+            let exst = c.get_next_existential_identifier();
+            let c = c
+                .append(ContextItem::Marker(exst))
+                .append(ContextItem::Existential(exst, None));
+
+            let new_body = t.substitute_type_variable(*var, &Type::Existential(exst))?;
+            let pred = subtype(c, &new_body, b)?;
+            Ok(pred.get_before_item(ContextItem::Marker(exst)))
+        }
+
+        // <:ForallR
+        (_, Type::Forall(var, t)) => {
+            let c = c.append(ContextItem::TypeVariable(*var));
+            let pred = subtype(c, a, t.as_ref())?;
+            Ok(pred.get_before_item(ContextItem::TypeVariable(*var)))
+        }
+
+        // <:->
+        (Type::Function(a1, a2), Type::Function(b1, b2)) => {
+            let pred1 = subtype(c, b1.as_ref(), a1)?;
+            let a2 = &pred1.substitute(a2);
+            let b2 = &pred1.substitute(b2);
+            let pred2 = subtype(pred1, a2, b2)?;
+            Ok(pred2)
+        }
+
+        _ => Err("Subtype failiure".to_string()),
+    }
+}
+
+fn instantiate_l(c: Context, exst: usize, b: &Type) -> Result<Context, String> {
+    match b {
+        // InstLReach
+        Type::Existential(exst2) => {
+            Ok(c.set_existential_definition(*exst2, Type::Existential(exst)))
+        }
+
+        // InstLArr
+        Type::Function(from, to) => {
+            let a1n = c.get_next_existential_identifier();
+            let a2n = c.get_next_existential_identifier() + 1;
+            let a1 = ContextItem::Existential(a1n, None);
+            let a2 = ContextItem::Existential(a2n, None);
+            let c = c
+                .add_before_existential(exst, a1)
+                .add_before_existential(exst, a2);
+
+            let pred1_c = instantiate_r(c, exst, from.as_ref())?;
+            let to_subst = pred1_c.substitute(to);
+            let pred2 = instantiate_l(pred1_c, a2n, &to_subst)?;
+            Ok(pred2)
+        }
+
+        // InstLAllR
+        Type::Forall(var, t) => {
+            let new_c = c.append(ContextItem::TypeVariable(*var));
+            let pred = instantiate_l(new_c, exst, t.as_ref())?;
+            Ok(pred.get_before_item(ContextItem::TypeVariable(*var)))
+        }
+
+        _ => {
+            if !b.is_monotype() {
+                return Err("Failed Substitution".to_string());
+            }
+
+            // InstLSolve
+            Ok(c.set_existential_definition(exst, b.clone()))
+        }
+    }
+}
+
+fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
+    match a {
+        // InstRReach
+        Type::Existential(exst2) => {
+            Ok(c.set_existential_definition(*exst2, Type::Existential(exst)))
+        }
+
+        // InstLArr
+        Type::Function(from, to) => {
+            let a1n = c.get_next_existential_identifier();
+            let a2n = c.get_next_existential_identifier() + 1;
+            let a1 = ContextItem::Existential(a1n, None);
+            let a2 = ContextItem::Existential(a2n, None);
+            let c = c
+                .add_before_existential(exst, a1)
+                .add_before_existential(exst, a2);
+
+            let pred1_c = instantiate_l(c, exst, from.as_ref())?;
+            let to_subst = pred1_c.substitute(to.as_ref());
+            let pred2 = instantiate_r(pred1_c, a2n, &to_subst)?;
+            Ok(pred2)
+        }
+
+        // InstRAllL
+        Type::Forall(var, t) => {
+            let next_ext = c.get_next_existential_identifier();
+            let c = c
+                .append(ContextItem::Marker(next_ext))
+                .append(ContextItem::Existential(next_ext, None));
+
+            let t = t.substitute_type_variable(*var, &Type::Existential(next_ext))?;
+            let pred1 = instantiate_l(c, exst, &t)?;
+            Ok(pred1.get_before_item(ContextItem::Marker(next_ext)))
+        }
+
+        _ => {
+            if !a.is_monotype() {
+                return Err("Failed Substitution".to_string());
+            }
+
+            // InstRSolve
+            Ok(c.set_existential_definition(exst, a.clone()))
+        }
+    }
+}
+
+// "Γ ⊢ e ⇒ A ⊣ ∆: Under input context Γ, e synthesizes output type A, with output context ∆"
+fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context), TypeError> {
+    let node = ast.get(expr);
+
+    match node.t {
+        // Var
+        ASTNodeType::Identifier => {
+            let var = node.get_value();
+            match c.get_type_assignment(&var) {
+                Some(t) => Ok((t, c)),
+                None => Err(type_error("Unbound variable".to_string(), ast, expr)),
+            }
+        }
+
+        ASTNodeType::Literal => Ok((node.get_lit_type(), c)),
+
+        // ->I=>
+        ASTNodeType::Abstraction => {
+            let next_exst = c.get_next_existential_identifier();
+            let abst_var = ast.get(ast.get_abstr_var(expr)).get_value();
+            let c = c
+                .append(ContextItem::Existential(next_exst, None))
+                .append(ContextItem::Existential(next_exst + 1, None))
+                .append(ContextItem::TypeAssignment(
+                    abst_var.clone(),
+                    Type::Existential(next_exst),
+                ));
+            let pred = check_type(
+                c,
+                &Type::Existential(next_exst + 1),
+                ast,
+                ast.get_abstr_exp(expr),
+            )?;
+            let abst_type = Type::f(
+                Type::Existential(next_exst),
+                Type::Existential(next_exst + 1),
+            );
+            Ok((abst_type, pred.get_before_assignment(abst_var)))
+        }
+
+        // ->E
+        ASTNodeType::Application => {
+            let lhs = ast.get_func(expr);
+            let rhs = ast.get_arg(expr);
+
+            let (f_type, f_c) = synthesize_type(c, ast, lhs)?;
+            let a = f_c.substitute(&f_type);
+            synthesize_app_type(f_c, &a, ast, rhs)
+        }
+
+        _ => unreachable!("Non expression"),
+    }
+}
+
+// "Γ ⊢ A • e ⇒⇒ C ⊣ ∆: Under input context Γ, applying a function of type A to e synthesizes type C, with output context ∆"
+fn synthesize_app_type(
+    c: Context,
+    a: &Type,
+    ast: &AST,
+    expr: usize,
+) -> Result<(Type, Context), TypeError> {
+    match a {
+        // Forall App
+        Type::Forall(var, t) => {
+            let new_c = c.append(ContextItem::Existential(
+                c.get_next_existential_identifier(),
+                None,
+            ));
+
+            let a_subst = match t.substitute_type_variable(
+                *var,
+                &Type::Existential(new_c.get_next_existential_identifier()),
+            ) {
+                Ok(t) => t,
+                Err(s) => {
+                    return Err(type_error(
+                        format!("Failed to substitute in forall app: {}", s),
+                        ast,
+                        expr,
+                    ))
+                }
+            };
+            synthesize_app_type(new_c, &a_subst, ast, expr)
+        }
+
+        // -> App
+        Type::Function(from, to) => {
+            let pred = check_type(c, &from, ast, expr)?;
+
+            Ok((to.as_ref().clone(), pred))
+        }
+
+        Type::Existential(var) => {
+            let a1n = c.get_next_existential_identifier();
+            let a2n = c.get_next_existential_identifier() + 1;
+            let a1 = ContextItem::Existential(a1n, None);
+            let a2 = ContextItem::Existential(a2n, None);
+            let c = c
+                .add_before_existential(*var, a1)
+                .add_before_existential(*var, a2);
+            let a1t = Type::Existential(a1n);
+            let a2t = Type::Existential(a2n);
+
+            Ok((
+                a2t.clone(),
+                c.set_existential_definition(*var, Type::f(a1t, a2t)),
+            ))
+        }
+
+        _ => Err(type_error("App synthesis error".to_string(), ast, expr)),
+    }
+}
+
+// "Γ ⊢ e ⇐ A ⊣ ∆: Under input context Γ, e checks against input type A, with output context ∆"
+fn check_type(c: Context, a: &Type, ast: &AST, expr: usize) -> Result<Context, TypeError> {
+    let node = ast.get(expr);
+
+    match (a, &node.t) {
+        // Unit always checks
+        (Type::Unit, _) => Ok(c),
+
+        // Forall Introduction
+        (Type::Forall(var, t), _) => {
+            let pred = check_type(c.append(ContextItem::TypeVariable(*var)), t, ast, expr)?;
+            Ok(pred.get_before_item(ContextItem::TypeVariable(*var)))
+        }
+
+        // Arrow introduction
+        (Type::Function(from, _), ASTNodeType::Abstraction) => {
+            let var_name = ast.get(ast.get_abstr_var(expr)).get_value();
+
+            let new_ass = ContextItem::TypeAssignment(var_name.clone(), from.as_ref().clone());
+            let pred = check_type(c.append(new_ass.clone()), from.as_ref(), ast, expr)?;
+            Ok(pred.get_before_item(new_ass))
+        }
+
+        // Sub
+        _ => {
+            let (synth_t, synth_c) = synthesize_type(c, ast, expr)?;
+            let a = synth_c.substitute(&synth_t);
+            let b = synth_c.substitute(&a);
+
+            match subtype(synth_c, &a, &b) {
+                Ok(c) => Ok(c),
+                Err(e) => Err(type_error(format!("Check sub error: {}", e), ast, expr)),
+            }
+        }
     }
 }
