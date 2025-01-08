@@ -66,7 +66,7 @@ impl Type {
         Type::TypeVariable(usize)
     }
 
-    fn is_concrete(&self) -> bool {
+    pub fn is_concrete(&self) -> bool {
         match self {
             Type::Primitive(_) => true,
             Type::Function(t1, t2) => t1.is_concrete() && t2.is_concrete(),
@@ -74,7 +74,7 @@ impl Type {
         }
     }
 
-    fn concrete_eq(&self, other: &Type) -> bool {
+    pub fn concrete_eq(&self, other: &Type) -> bool {
         #[cfg(debug_assertions)]
         {
             assert!(self.is_concrete());
@@ -90,118 +90,31 @@ impl Type {
         }
     }
 
-    fn fill_type_pattern_recurse(
-        &self,
-        other: &Type,
-        generic_map: &mut HashMap<usize, Type>,
-    ) -> Result<Type, String> {
-        #[cfg(debug_assertions)]
-        let _pattern_str = self.to_string();
-        #[cfg(debug_assertions)]
-        let _other_str = other.to_string();
-        #[cfg(debug_assertions)]
-        let mut _generic_map_str = format!("{:?}", generic_map);
-
-        match (self, other) {
-            (Type::Function(f1, x1), Type::Function(f2, x2)) => {
-                let f_type = f1.fill_type_pattern_recurse(f2, generic_map)?;
-                #[cfg(debug_assertions)]
-                {
-                    _generic_map_str = format!("{:?}", generic_map);
-                }
-
-                let x_type = x1.fill_type_pattern_recurse(x2, generic_map)?;
-                #[cfg(debug_assertions)]
-                {
-                    _generic_map_str = format!("{:?}", generic_map);
-                }
-                Ok(Type::Function(Box::new(f_type), Box::new(x_type)))
-            }
-            (Type::Primitive(p1), Type::Primitive(p2)) => {
-                if *p1 != *p2 {
-                    Err(format!(
-                        "Failed to match types {} and {}",
-                        self.to_string(),
-                        self.to_string()
-                    ))
-                } else {
-                    Ok(self.clone())
-                }
-            }
-            (Type::TypeVariable(g), _) => {
-                if other.is_concrete() {
-                    if let Some(t) = generic_map.get(g) {
-                        if t.concrete_eq(other) {
-                            Ok(t.clone())
-                        } else {
-                            Err(format!(
-                                "Generic type {} cannot match both {} and {}",
-                                self.to_string(),
-                                t.to_string(),
-                                other.to_string()
-                            ))
-                        }
-                    } else {
-                        generic_map.insert(*g, other.clone());
-                        Ok(other.clone())
-                    }
-                } else {
-                    if let Some(t) = generic_map.get(g) {
-                        Ok(t.clone())
-                    } else {
-                        Err(format!(
-                            "Insufficient type information to reconsile {} and {}",
-                            self.to_string(),
-                            other.to_string()
-                        ))
-                    }
-                }
-            }
-            (_, Type::TypeVariable(g)) => {
-                if self.is_concrete() {
-                    if let Some(t) = generic_map.get(g) {
-                        if t.concrete_eq(self) {
-                            Ok(t.clone())
-                        } else {
-                            Err(format!(
-                                "Generic type {} cannot match both {} and {}",
-                                other.to_string(),
-                                t.to_string(),
-                                self.to_string()
-                            ))
-                        }
-                    } else {
-                        generic_map.insert(*g, self.clone());
-                        Ok(self.clone())
-                    }
-                } else {
-                    if let Some(t) = generic_map.get(g) {
-                        Ok(t.clone())
-                    } else {
-                        Err(format!(
-                            "Insufficient type information to reconsile {} and {}",
-                            self.to_string(),
-                            self.to_string()
-                        ))
-                    }
-                }
-            }
-            _ => Err(format!(
-                "Failed to match types {} and {}",
-                self.to_string(),
-                other.to_string()
-            )),
+    fn max_type_var(&self) -> usize {
+        match self {
+            Type::Primitive(_) => 0,
+            Type::Function(t1, t2) => std::cmp::max(t1.max_type_var(), t2.max_type_var()),
+            Type::TypeVariable(n) => *n,
         }
     }
 
-    /// If the pattern is a -> b -> a and the other type is Int -> Float -> a, this function
-    /// extrapolates the type of a to be Int and returns the type Int -> Float -> Int
-    fn fill_pattern(&self, other: &Type) -> Result<Type, String> {
-        let t = self.fill_type_pattern_recurse(other, &mut HashMap::new())?;
-        #[cfg(debug_assertions)]
-        assert!(t.is_concrete());
+    fn add_to_type_vars(&self, increment: usize) -> Self {
+        match self {
+            Type::Primitive(p) => Type::Primitive(*p),
+            Type::Function(t1, t2) => {
+                Type::Function(
+                    Box::new(t1.add_to_type_vars(increment)),
+                    Box::new(t2.add_to_type_vars(increment)),
+                )
+            }
+            Type::TypeVariable(n) => Type::TypeVariable(n + increment),
+        }
+    }
 
-        Ok(t)
+    /// Make sure that t1 and t2 dont have overlapping type variables
+    pub fn ensure_different_type_params(t1: Type, t2: Type) -> (Type, Type) {
+        let t2 = t2.add_to_type_vars(t1.max_type_var() + 1);
+        (t1, t2)
     }
 
     pub fn get_arity(&self) -> usize {
