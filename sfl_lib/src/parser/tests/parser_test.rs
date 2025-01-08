@@ -1,7 +1,3 @@
-use std::collections::HashMap;
-
-use ast::AST;
-
 use crate::parser::*;
 
 #[test]
@@ -96,8 +92,7 @@ fn abstraction() -> Result<(), ParserError> {
     let str = "x = \\y :: Int. add y 5";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?;
-    let module = 0;
+    let _ = parser.parse_module()?;
 
     // Should error because y is not bound
     let unbound_str = "x = (\\y . add y 5) y";

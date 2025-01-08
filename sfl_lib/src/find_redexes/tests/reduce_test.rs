@@ -1,8 +1,8 @@
-use crate::{
-    find_redexes::{reduce::*, RCPair},
-    functions::LabelTable,
-    ASTNodeType, Parser, AST,
-};
+// use crate::{
+//     find_redexes::{reduce::*, RCPair},
+//     functions::LabelTable,
+//     ASTNodeType, Parser, AST,
+// };
 
 // /// O(n^2) so only use for small things
 // fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {

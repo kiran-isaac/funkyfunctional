@@ -91,7 +91,7 @@ fn char_lit() {
 
     let invalid_char_lits = vec!["'\t'", "''", "'aa'", "'aaa'", "'\\a'"];
     for lit in invalid_char_lits {
-        let errors = test_lex_should_err(lit.to_string()).unwrap();
+        test_lex_should_err(lit.to_string()).unwrap();
     }
 }
 

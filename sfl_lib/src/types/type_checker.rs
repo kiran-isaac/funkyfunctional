@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-
 use crate::{functions::LabelTable, ASTNodeType, AST};
 
 use super::{Type, TypeError};
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum ContextItem {
     TypeVariable(usize),
     TypeAssignment(String, Type),
@@ -12,16 +10,12 @@ enum ContextItem {
     Marker(usize),
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct Context {
     vec: Vec<ContextItem>,
 }
 
 impl Context {
-    fn empty() -> Self {
-        Self { vec: vec![] }
-    }
-
     fn from_labels(labels: &LabelTable) -> Self {
         let mut vec = vec![];
 
@@ -48,10 +42,10 @@ impl Context {
     }
 
     fn append(&self, item: ContextItem) -> Self {
-        let mut new_v = vec![];
+        let mut new = self.clone();
 
-        new_v.push(item);
-        Self { vec: new_v }
+        new.vec.push(item);
+        new
     }
 
     fn get_before_item(&self, item: ContextItem) -> Self {
@@ -100,39 +94,6 @@ impl Context {
         }
 
         return None;
-    }
-
-    fn get_before_existential(&self, existential: usize) -> Self {
-        let mut new_v = vec![];
-
-        for i in &self.vec {
-            match i {
-                ContextItem::Existential(e, _) => {
-                    if *e == existential {
-                        break;
-                    }
-                }
-                _ => {}
-            }
-
-            new_v.push(i.clone());
-        }
-
-        Self { vec: new_v }
-    }
-
-    fn add_before_item(&self, before: ContextItem, item: ContextItem) -> Self {
-        let mut new_v = vec![];
-
-        for i in &self.vec {
-            if i == &before {
-                new_v.push(item.clone());
-            }
-
-            new_v.push(i.clone());
-        }
-
-        Self { vec: new_v }
     }
 
     fn add_before_existential(&self, existential: usize, item: ContextItem) -> Self {
@@ -237,19 +198,12 @@ fn type_error(msg: String, ast: &AST, expr: usize) -> TypeError {
 }
 
 fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
+    #[cfg(debug_assertions)]
+    let _a_str = a.to_string();
+    #[cfg(debug_assertions)]
+    let _b_str = b.to_string();
+
     match (a, b) {
-        // <:Var
-        (Type::TypeVariable(a), Type::TypeVariable(b)) => {
-            if a == b {
-                Ok(c)
-            } else {
-                Err(format!("{} is not a subtype of {}", a, b))
-            }
-        }
-
-        // <:Unit
-        (Type::Unit, Type::Unit) => Ok(c),
-
         // <:Exvar
         (Type::Existential(a), Type::Existential(b)) => {
             if a == b {
@@ -264,6 +218,26 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
 
             instantiate_l(c, *ex, b)
         }
+
+        // <:Var
+        (Type::TypeVariable(a), Type::TypeVariable(b)) => {
+            if a == b {
+                Ok(c)
+            } else {
+                Err(format!("{} is not a subtype of {}", a, b))
+            }
+        }
+
+        (Type::Primitive(a), Type::Primitive(b)) => {
+            if a == b {
+                Ok(c)
+            } else {
+                Err(format!("{:?} is not a subtype of {:?}", a, b))
+            }
+        }
+
+        // <:Unit
+        (Type::Unit, Type::Unit) => Ok(c),
 
         // <:InstantiatR
         (_, Type::Existential(ex)) => {
@@ -521,13 +495,16 @@ fn synthesize_app_type(
 }
 
 // "Γ ⊢ e ⇐ A ⊣ ∆: Under input context Γ, e checks against input type A, with output context ∆"
-fn check_type(c: Context, a: &Type, ast: &AST, expr: usize) -> Result<Context, TypeError> {
+fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Context, TypeError> {
     let node = ast.get(expr);
 
     #[cfg(debug_assertions)]
     let _expr_str = ast.to_string(expr);
 
-    match (a, &node.t) {
+    #[cfg(debug_assertions)]
+    let _expected_type_str = expected.to_string();
+
+    match (expected, &node.t) {
         // Unit always checks
         (Type::Unit, _) => Ok(c),
 
@@ -554,7 +531,7 @@ fn check_type(c: Context, a: &Type, ast: &AST, expr: usize) -> Result<Context, T
             let _synth_t_str = synth_t.to_string();
 
             let a = synth_c.substitute(&synth_t);
-            let b = synth_c.substitute(&a);
+            let b = synth_c.substitute(&expected);
 
             match subtype(synth_c, &a, &b) {
                 Ok(c) => Ok(c),
@@ -575,6 +552,8 @@ pub fn typecheck_module(ast: &AST, module: usize) -> Result<(), TypeError> {
     let mut c = Context::from_labels(&LabelTable::new());
 
     for assign_var in &ast.get_assignee_names(module) {
+        #[cfg(debug_assertions)]
+        let _c_str = format!("{:?}", c);
         let assign = ast.get_assign_to(module, assign_var.clone()).unwrap();
 
         let assign_expr = ast.get_assign_exp(assign);
