@@ -41,7 +41,6 @@ impl ASTNode {
                 Some(tk) => match tk.tt {
                     TokenType::IntLit => Type::Primitive(Primitive::Int64),
                     TokenType::FloatLit => Type::Primitive(Primitive::Float64),
-                    TokenType::CharLit => Type::Primitive(Primitive::Char),
                     TokenType::BoolLit => Type::Primitive(Primitive::Bool),
                     TokenType::StringLit => unimplemented!("String literal type"),
                     _ => unreachable!("Literal node with bad token"),

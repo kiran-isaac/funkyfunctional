@@ -13,14 +13,14 @@ pub enum Primitive {
     Int64,
     Float64,
     Bool,
-    Char,
+    Unit
 }
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Type {
     Primitive(Primitive),
     Function(Box<Type>, Box<Type>),
-    Generic(usize),
+    TypeVariable(usize),
 }
 
 pub struct TypeError {
@@ -63,14 +63,14 @@ impl Type {
     }
 
     pub fn g(usize: usize) -> Type {
-        Type::Generic(usize)
+        Type::TypeVariable(usize)
     }
 
     fn is_concrete(&self) -> bool {
         match self {
             Type::Primitive(_) => true,
             Type::Function(t1, t2) => t1.is_concrete() && t2.is_concrete(),
-            Type::Generic(_) => false,
+            Type::TypeVariable(_) => false,
         }
     }
 
@@ -85,7 +85,7 @@ impl Type {
             (Type::Function(t1, t2), Type::Function(t3, t4)) => {
                 t1.concrete_eq(t3) && t2.concrete_eq(t4)
             }
-            (Type::Generic(_), _) | (_, Type::Generic(_)) => unreachable!(),
+            (Type::TypeVariable(_), _) | (_, Type::TypeVariable(_)) => unreachable!(),
             _ => false,
         }
     }
@@ -128,7 +128,7 @@ impl Type {
                     Ok(self.clone())
                 }
             }
-            (Type::Generic(g), _) => {
+            (Type::TypeVariable(g), _) => {
                 if other.is_concrete() {
                     if let Some(t) = generic_map.get(g) {
                         if t.concrete_eq(other) {
@@ -157,7 +157,7 @@ impl Type {
                     }
                 }
             }
-            (_, Type::Generic(g)) => {
+            (_, Type::TypeVariable(g)) => {
                 if self.is_concrete() {
                     if let Some(t) = generic_map.get(g) {
                         if t.concrete_eq(self) {
@@ -208,7 +208,7 @@ impl Type {
         match self {
             Type::Primitive(_) => 0,
             Type::Function(_, t) => 1 + t.get_arity(),
-            Type::Generic(_) => 0,
+            Type::TypeVariable(_) => 0,
         }
     }
 
@@ -237,7 +237,7 @@ impl Type {
 
                 format!("{} -> {}", t1_string, t2_string)
             }
-            Type::Generic(n) => {
+            Type::TypeVariable(n) => {
                 let mut s = String::new();
                 let mut n = *n;
                 s.insert(0, (b'a' + (n % 26) as u8) as char);
@@ -300,21 +300,21 @@ mod tests {
         );
         assert_eq!(t5.to_string(), "(Int -> Int) -> Float");
 
-        let t6 = Type::Generic(0);
+        let t6 = Type::TypeVariable(0);
         assert_eq!(t6.to_string(), "a");
 
         println!("{:?}", t6);
 
-        let t6 = Type::Generic(26);
+        let t6 = Type::TypeVariable(26);
         assert_eq!(t6.to_string(), "aa");
 
-        let t6 = Type::Generic(27);
+        let t6 = Type::TypeVariable(27);
         assert_eq!(t6.to_string(), "ab");
 
-        let t6 = Type::Generic(28);
+        let t6 = Type::TypeVariable(28);
         assert_eq!(t6.to_string(), "ac");
 
-        let t6 = Type::Generic(26 * 2);
+        let t6 = Type::TypeVariable(26 * 2);
         assert_eq!(t6.to_string(), "ba");
     }
 }

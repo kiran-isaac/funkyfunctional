@@ -126,7 +126,7 @@ impl TypeChecker {
                         let _var_type_str = var_type.to_string();
 
                         match var_type {
-                            Type::Generic(_) => panic!("Generic type in function argument"),
+                            Type::TypeVariable(_) => panic!("Generic type in function argument"),
                             _ => {}
                         }
 
@@ -176,7 +176,7 @@ impl TypeChecker {
 
                         Ok(Type::f(var_type, abst_exp_type))
                     }
-                    Type::Generic(_) => {
+                    Type::TypeVariable(_) => {
                         let var = ast.get_abstr_var(exp);
                         let var_name = ast.get(var).get_value();
                         let var_type = ast.get(var).type_assignment.clone();
@@ -200,7 +200,7 @@ impl TypeChecker {
                         self.lt.add(var_name.clone(), var_type.clone());
                         let abst_exp = ast.get_abstr_exp(exp);
                         let abst_exp_type =
-                            self.check_expression(ast, abst_exp, &Type::Generic(0))?;
+                            self.check_expression(ast, abst_exp, &Type::TypeVariable(0))?;
                         self.lt.remove(&var_name);
 
                         #[cfg(debug_assertions)]
