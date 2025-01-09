@@ -182,7 +182,7 @@ impl Type {
 
                 format!("{} -> {}", t1_string, t2_string)
             }
-            Type::TypeVariable(n) | Type::Existential(n) => {
+            Type::TypeVariable(n) => {
                 let mut s = String::new();
                 let mut n = *n;
                 s.insert(0, (b'a' + (n % 26) as u8) as char);
@@ -192,6 +192,12 @@ impl Type {
                     n /= 26;
                 }
                 s
+            }
+            Type::Existential(n) => {
+                format!(
+                    "E{}",
+                    Type::TypeVariable(*n).to_string_internal(full_braces)
+                )
             }
             Type::Unit => "1".to_string(),
             Type::Forall(n, t) => {

@@ -2,12 +2,26 @@ use crate::{functions::LabelTable, ASTNodeType, AST};
 
 use super::{Type, TypeError};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 enum ContextItem {
     TypeVariable(usize),
     TypeAssignment(String, Type),
     Existential(usize, Option<Type>),
     Marker(usize),
+}
+
+impl std::fmt::Debug for ContextItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ContextItem::TypeVariable(v) => write!(f, "{}", Type::TypeVariable(*v).to_string()),
+            ContextItem::Existential(v, ass) => match ass {
+                Some(t) =>  write!(f, "{}:{}", Type::Existential(*v).to_string(), t.to_string()),
+                None => write!(f, "{}", Type::Existential(*v).to_string()),
+            },
+            ContextItem::Marker(v) => write!(f, "|{}|", Type::Existential(*v).to_string()),
+            ContextItem::TypeAssignment(name, t) => write!(f, "{}:{}", name, t.to_string())
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -16,6 +30,10 @@ struct Context {
 }
 
 impl Context {
+    fn new() -> Self {
+        Self { vec: vec![] }
+    }
+
     fn from_labels(labels: &LabelTable) -> Self {
         let mut vec = vec![];
 
@@ -125,8 +143,10 @@ impl Context {
                         continue;
                     }
                 }
-                ContextItem::Existential(e, Some(_)) => {
-                    assert_ne!(*e, existential);
+                ContextItem::Existential(e, Some(t2)) => {
+                    if *e == existential {
+                        panic!("Attempt to overwrite existential {} definition from {} to {}. \nContext: {:?}", Type::Existential(*e).to_string(), t2.to_string(), t.to_string(), self.vec);
+                    }
                 }
                 _ => {}
             }
@@ -318,18 +338,26 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
             Ok(c.set_existential_definition(*exst2, Type::Existential(exst)))
         }
 
-        // InstLArr
+        // InstRArr
         Type::Function(from, to) => {
             let a1n = c.get_next_existential_identifier();
             let a2n = c.get_next_existential_identifier() + 1;
             let a1 = ContextItem::Existential(a1n, None);
             let a2 = ContextItem::Existential(a2n, None);
             let c = c
-                .add_before_existential(exst, a1)
-                .add_before_existential(exst, a2);
+                .set_existential_definition(
+                    exst,
+                    Type::f(Type::Existential(a1n), Type::Existential(a2n)),
+                )
+                .add_before_existential(exst, a2)
+                .add_before_existential(exst, a1);
 
             let pred1_c = instantiate_l(c, exst, from.as_ref())?;
             let to_subst = pred1_c.substitute(to.as_ref());
+
+            #[cfg(debug_assertions)]
+            let _to_subst_str = to_subst.to_string();
+
             let pred2 = instantiate_r(pred1_c, a2n, &to_subst)?;
             Ok(pred2)
         }
@@ -474,17 +502,15 @@ fn synthesize_app_type(
             let a1 = ContextItem::Existential(a1n, None);
             let a2 = ContextItem::Existential(a2n, None);
             let c = c
-                .add_before_existential(*var, a1)
-                .add_before_existential(*var, a2);
+                .add_before_existential(*var, a2)
+                .add_before_existential(*var, a1);
             let a1t = Type::Existential(a1n);
             let a2t = Type::Existential(a2n);
+            let c = c.set_existential_definition(*var, Type::f(a1t, a2t.clone()));
 
             let c = check_type(c, &a2t, ast, expr)?;
 
-            Ok((
-                a2t.clone(),
-                c.set_existential_definition(*var, Type::f(a1t, a2t)),
-            ))
+            Ok((a2t.clone(), c))
         }
 
         _ => Err(type_error("App synthesis error".to_string(), ast, expr)),
@@ -551,12 +577,18 @@ pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), 
     }
 }
 
+fn stringify_context(context: &Context) -> String {
+    format!("{:?}", context.vec)
+}
+
 pub fn typecheck_module(ast: &AST, module: usize) -> Result<(), TypeError> {
-    let mut c = Context::from_labels(&LabelTable::new());
+    // let mut c = Context::from_labels(&LabelTable::new());
+    let mut c = Context::new();
 
     for assign_var in &ast.get_assignee_names(module) {
         #[cfg(debug_assertions)]
-        let _c_str = format!("{:?}", c);
+        let _c_str = stringify_context(&c);
+
         let assign = ast.get_assign_to(module, assign_var.clone()).unwrap();
 
         let assign_expr = ast.get_assign_exp(assign);
