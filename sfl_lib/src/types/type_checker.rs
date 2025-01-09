@@ -15,11 +15,11 @@ impl std::fmt::Debug for ContextItem {
         match self {
             ContextItem::TypeVariable(v) => write!(f, "{}", Type::TypeVariable(*v).to_string()),
             ContextItem::Existential(v, ass) => match ass {
-                Some(t) =>  write!(f, "{}:{}", Type::Existential(*v).to_string(), t.to_string()),
+                Some(t) => write!(f, "{}:{}", Type::Existential(*v).to_string(), t.to_string()),
                 None => write!(f, "{}", Type::Existential(*v).to_string()),
             },
             ContextItem::Marker(v) => write!(f, "|{}|", Type::Existential(*v).to_string()),
-            ContextItem::TypeAssignment(name, t) => write!(f, "{}:{}", name, t.to_string())
+            ContextItem::TypeAssignment(name, t) => write!(f, "{}:{}", name, t.to_string()),
         }
     }
 }
@@ -43,7 +43,7 @@ impl Context {
 
         Self { vec }
     }
-
+    
     fn assigns_only(&self) -> Self {
         let mut new_v = vec![];
 
@@ -111,7 +111,7 @@ impl Context {
             }
         }
 
-        return None;
+        None
     }
 
     fn add_before_existential(&self, existential: usize, item: ContextItem) -> Self {
@@ -145,13 +145,22 @@ impl Context {
                 }
                 ContextItem::Existential(e, Some(t2)) => {
                     if *e == existential {
-                        panic!("Attempt to overwrite existential {} definition from {} to {}. \nContext: {:?}", Type::Existential(*e).to_string(), t2.to_string(), t.to_string(), self.vec);
+                        match t2 {
+                            Type::Existential(e2) => {
+                                self.set_existential_definition(*e2, t.clone());
+                                new_v.push(ContextItem::Existential(*e, Some(t.clone())));
+                            },
+                            _ => panic!("Attempt to overwrite existential {} definition from {} to {}. \nContext: {:?}", Type::Existential(*e).to_string(), t2.to_string(), t.to_string(), self.vec)
+                        }
                     }
                 }
                 _ => {}
             }
             new_v.push(i.clone());
         }
+
+        #[cfg(debug_assertions)]
+        let _new_v_str = format!("{:?}", new_v);
 
         Self { vec: new_v }
     }
@@ -184,10 +193,15 @@ impl Context {
             }
         }
 
-        return None;
+        None
     }
 
     fn substitute(&self, t: &Type) -> Type {
+        #[cfg(debug_assertions)]
+        let _c_str = format!("{:?}", self);
+        #[cfg(debug_assertions)]
+        let _t_str = format!("{}", t.to_string());
+        
         match t {
             Type::Existential(ex) => match self.get_existential(*ex) {
                 Some(o) => match o {
@@ -218,6 +232,8 @@ fn type_error(msg: String, ast: &AST, expr: usize) -> TypeError {
 }
 
 fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
+    #[cfg(debug_assertions)]
+    let _c_str = format!("{:?}", &c);
     #[cfg(debug_assertions)]
     let _a_str = a.to_string();
     #[cfg(debug_assertions)]
@@ -265,6 +281,9 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
                 .append(ContextItem::Marker(exst))
                 .append(ContextItem::Existential(exst, None));
 
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
+
             let new_body = t.substitute_type_variable(*var, &Type::Existential(exst))?;
             let pred = subtype(c, &new_body, b)?;
             Ok(pred.get_before_item(ContextItem::Marker(exst)))
@@ -291,6 +310,12 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
 }
 
 fn instantiate_l(c: Context, exst: usize, b: &Type) -> Result<Context, String> {
+    #[cfg(debug_assertions)]
+    let _c_str = format!("{:?}", &c);
+    #[cfg(debug_assertions)]
+    let _exst_str = format!("{}", Type::Existential(exst).to_string());
+    #[cfg(debug_assertions)]
+    let _b_str = format!("{}", &b.to_string());
     match b {
         // InstLReach
         Type::Existential(exst2) => {
@@ -307,8 +332,15 @@ fn instantiate_l(c: Context, exst: usize, b: &Type) -> Result<Context, String> {
                 .add_before_existential(exst, a1)
                 .add_before_existential(exst, a2);
 
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
+
             let pred1_c = instantiate_r(c, exst, from.as_ref())?;
             let to_subst = pred1_c.substitute(to);
+
+            #[cfg(debug_assertions)]
+            let _to_subst_str = format!("{:?}", &to_subst);
+
             let pred2 = instantiate_l(pred1_c, a2n, &to_subst)?;
             Ok(pred2)
         }
@@ -332,6 +364,12 @@ fn instantiate_l(c: Context, exst: usize, b: &Type) -> Result<Context, String> {
 }
 
 fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
+    #[cfg(debug_assertions)]
+    let _c_str = format!("{:?}", &c);
+    #[cfg(debug_assertions)]
+    let _exst_str = format!("{}", Type::Existential(exst).to_string());
+    #[cfg(debug_assertions)]
+    let _a_str = format!("{}", &a.to_string());
     match a {
         // InstRReach
         Type::Existential(exst2) => {
@@ -340,10 +378,18 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
 
         // InstRArr
         Type::Function(from, to) => {
+            #[cfg(debug_assertions)]
+            let _from_str = format!("{}", &from.to_string());
+            #[cfg(debug_assertions)]
+            let _to_str = format!("{}", &to.to_string());
+            
             let a1n = c.get_next_existential_identifier();
             let a2n = c.get_next_existential_identifier() + 1;
             let a1 = ContextItem::Existential(a1n, None);
             let a2 = ContextItem::Existential(a2n, None);
+            #[cfg(debug_assertions)]
+            let _c_str1 = format!("{:?}", &c);
+
             let c = c
                 .set_existential_definition(
                     exst,
@@ -352,7 +398,10 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
                 .add_before_existential(exst, a2)
                 .add_before_existential(exst, a1);
 
-            let pred1_c = instantiate_l(c, exst, from.as_ref())?;
+            #[cfg(debug_assertions)]
+            let _c_str2 = format!("{:?}", &c);
+
+            let pred1_c = instantiate_l(c, a1n, from.as_ref())?;
             let to_subst = pred1_c.substitute(to.as_ref());
 
             #[cfg(debug_assertions)]
@@ -368,6 +417,9 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
             let c = c
                 .append(ContextItem::Marker(next_ext))
                 .append(ContextItem::Existential(next_ext, None));
+
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
 
             let t = t.substitute_type_variable(*var, &Type::Existential(next_ext))?;
             let pred1 = instantiate_l(c, exst, &t)?;
@@ -389,6 +441,9 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
 fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context), TypeError> {
     #[cfg(debug_assertions)]
     let _expr_str = ast.to_string(expr);
+
+    #[cfg(debug_assertions)]
+    let _c_str = format!("{:?}", &c);
 
     let node = ast.get(expr);
 
@@ -418,17 +473,35 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
                     abst_var.clone(),
                     Type::Existential(next_exst),
                 ));
-            let pred = check_type(
+
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
+
+            let c = check_type(
                 c,
                 &Type::Existential(next_exst + 1),
                 ast,
                 ast.get_abstr_exp(expr),
             )?;
+
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
+            #[cfg(debug_assertions)]
+            let _x = 1 + 1;
+
             let abst_type = Type::f(
                 Type::Existential(next_exst),
                 Type::Existential(next_exst + 1),
             );
-            Ok((abst_type, pred.get_before_assignment(abst_var)))
+            let c = c.get_before_assignment(abst_var);
+
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
+
+            #[cfg(debug_assertions)]
+            let _abst_type_str = format!("{}", &abst_type.to_string());
+
+            Ok((abst_type, c))
         }
 
         // ->E
@@ -461,6 +534,9 @@ fn synthesize_app_type(
 ) -> Result<(Type, Context), TypeError> {
     #[cfg(debug_assertions)]
     let _expr_str = ast.to_string(expr);
+
+    #[cfg(debug_assertions)]
+    let _c_str = format!("{:?}", &c);
 
     #[cfg(debug_assertions)]
     let _applied_type = applied_type.to_string();
@@ -508,6 +584,9 @@ fn synthesize_app_type(
             let a2t = Type::Existential(a2n);
             let c = c.set_existential_definition(*var, Type::f(a1t, a2t.clone()));
 
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
+
             let c = check_type(c, &a2t, ast, expr)?;
 
             Ok((a2t.clone(), c))
@@ -523,6 +602,9 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
 
     #[cfg(debug_assertions)]
     let _expr_str = ast.to_string(expr);
+
+    #[cfg(debug_assertions)]
+    let _c_str = format!("{:?}", &c);
 
     #[cfg(debug_assertions)]
     let _expected_type_str = expected.to_string();
@@ -550,15 +632,29 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
         // Sub
         _ => {
             let (synth_t, synth_c) = synthesize_type(c, ast, expr)?;
+            let c = synth_c;
+
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
 
             #[cfg(debug_assertions)]
             let _synth_t_str = synth_t.to_string();
 
-            let a = synth_c.substitute(&synth_t);
-            let b = synth_c.substitute(&expected);
+            let a = c.substitute(&synth_t);
+            let b = c.substitute(&expected);
 
-            match subtype(synth_c, &a, &b) {
-                Ok(c) => Ok(c),
+            let st = subtype(c, &a, &b);
+
+            match st {
+                Ok(new_c) => {
+                    #[cfg(debug_assertions)]
+                    let _c_str = format!("{:?}", &new_c);
+
+                    #[cfg(debug_assertions)]
+                    let _x = 1+1;
+
+                    Ok(new_c)
+                },
                 Err(e) => Err(type_error(format!("Check sub error: {}", e), ast, expr)),
             }
         }
@@ -576,18 +672,13 @@ pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), 
         Err(e) => Err(e),
     }
 }
-
-fn stringify_context(context: &Context) -> String {
-    format!("{:?}", context.vec)
-}
-
-pub fn typecheck_module(ast: &AST, module: usize) -> Result<(), TypeError> {
-    // let mut c = Context::from_labels(&LabelTable::new());
-    let mut c = Context::new();
+pub fn typecheck_module(ast: &AST, module: usize) -> Result<LabelTable, TypeError> {
+    let mut lt = LabelTable::new();
+    let mut c = Context::from_labels(&lt);
 
     for assign_var in &ast.get_assignee_names(module) {
         #[cfg(debug_assertions)]
-        let _c_str = stringify_context(&c);
+        let _c_str = format!("{:?}", &c);
 
         let assign = ast.get_assign_to(module, assign_var.clone()).unwrap();
 
@@ -598,7 +689,8 @@ pub fn typecheck_module(ast: &AST, module: usize) -> Result<(), TypeError> {
             assign_var.clone(),
             assign_type.clone(),
         ));
+        lt.add(assign_var.clone(), assign_type.clone());
     }
 
-    Ok(())
+    Ok(lt)
 }

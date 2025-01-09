@@ -543,8 +543,8 @@ impl AST {
             ASTNodeType::Abstraction => {
                 let expr_str = self.to_string(n.children[1]);
                 let var_str = self.to_string(n.children[0]);
-                
-                let mut res = "\\\\".to_string();
+
+                let mut res = "\\".to_string();
                 res.push_str(&var_str);
                 res.push_str(" . ");
                 res.push_str(&expr_str);
