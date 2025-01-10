@@ -302,7 +302,12 @@ impl LabelTable {
             inbuilt_int_gte,
             binary_int_bool_type.clone(),
         );
-        self.add_inbuilt("gt".to_string(), 2, inbuilt_int_gt, binary_int_bool_type.clone());
+        self.add_inbuilt(
+            "gt".to_string(),
+            2,
+            inbuilt_int_gt,
+            binary_int_bool_type.clone(),
+        );
         self.add_inbuilt(">".to_string(), 2, inbuilt_int_gt, binary_int_bool_type);
 
         self.add_inbuilt(

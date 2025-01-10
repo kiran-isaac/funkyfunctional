@@ -395,11 +395,19 @@ impl Parser {
 
     fn parse_assignment(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
         assert_eq!(self.peek(0)?.tt, TokenType::Id);
-        assert_eq!(self.peek(1)?.tt, TokenType::Assignment);
 
         let assid = self.peek(0)?;
         let name = assid.value.clone();
+
+        let mut abst_vars = vec![];
+
         self.advance();
+        while self.peek(0)?.tt == TokenType::Id {
+            abst_vars.push(self.peek(0)?.clone());
+            self.advance();
+        }
+
+        assert_eq!(self.peek(0)?.tt, TokenType::Assignment);
         self.advance();
 
         if self.bound.is_bound(&assid.value) {
@@ -410,7 +418,19 @@ impl Parser {
         let col = self.lexer.col;
 
         self.bind(assid.value.clone());
-        let exp = self.parse_expression(ast)?;
+
+        for var in &abst_vars {
+            self.bind(var.value.clone());
+        }
+
+        let mut exp = self.parse_expression(ast)?;
+
+        for var in abst_vars {
+            self.unbind(var.value.clone());
+            let var = ast.add_id(var, line, col);
+            exp = ast.add_abstraction(var, exp, line, col);
+            ast.fancy_assign_abst_syntax(exp);
+        }
 
         // If the expression is an abstraction, wait for all args before
         // substitution
@@ -443,30 +463,33 @@ impl Parser {
             let t = self.peek(0)?;
 
             match t.tt {
-                TokenType::Id => match self.peek(1)?.tt {
-                    TokenType::Assignment => {
-                        if main_found {
-                            return Err(self.parse_error(
-                                "Main should be the last assignment in the module".to_string(),
-                            ));
+                TokenType::Id => {
+                    let next = self.peek(1)?;
+                    match next.tt {
+                        TokenType::Assignment | TokenType::Id => {
+                            if main_found {
+                                return Err(self.parse_error(
+                                    "Main should be the last assignment in the module".to_string(),
+                                ));
+                            }
+
+                            let assignment = self.parse_assignment(&mut ast)?;
+                            ast.add_to_module(module, assignment);
+
+                            if ast.get_assignee(assignment) == "main" {
+                                main_found = true;
+                            }
                         }
-
-                        let assignment = self.parse_assignment(&mut ast)?;
-                        ast.add_to_module(module, assignment);
-
-                        if ast.get_assignee(assignment) == "main" {
-                            main_found = true;
+                        TokenType::DoubleColon => self.parse_type_assignment(&mut ast)?,
+                        _ => {
+                            return Err(self.parse_error(format!(
+                                "Unexpected Token: {:?}. Expected assignment operator: {:?}",
+                                t,
+                                TokenType::Assignment
+                            )))
                         }
                     }
-                    TokenType::DoubleColon => self.parse_type_assignment(&mut ast)?,
-                    _ => {
-                        return Err(self.parse_error(format!(
-                            "Unexpected Token: {:?}. Expected assignment operator: {:?}",
-                            t,
-                            TokenType::Assignment
-                        )))
-                    }
-                },
+                }
                 TokenType::Newline => {
                     self.advance();
                 }

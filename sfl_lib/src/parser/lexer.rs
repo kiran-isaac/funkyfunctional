@@ -363,7 +363,7 @@ impl Lexer {
                             tt: TokenType::Id,
                             value: "==".to_string(),
                         })
-                    },
+                    }
                     _ => Ok(Token {
                         tt: TokenType::Assignment,
                         value: "=".to_string(),
@@ -379,7 +379,7 @@ impl Lexer {
                             tt: TokenType::Id,
                             value: "<=".to_string(),
                         })
-                    },
+                    }
                     _ => Ok(Token {
                         tt: TokenType::Id,
                         value: "<".to_string(),
@@ -395,7 +395,7 @@ impl Lexer {
                             tt: TokenType::Id,
                             value: ">=".to_string(),
                         })
-                    },
+                    }
                     _ => Ok(Token {
                         tt: TokenType::Id,
                         value: ">".to_string(),

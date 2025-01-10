@@ -110,6 +110,13 @@ fn infix_expr() -> Result<(), ParserError> {
 }
 
 #[test]
+fn fancy_abst_syntax_test() -> Result<(), ParserError> {
+    let program = "inc x = x + 1";
+    unchanged_parse_output_str_test(program)?;
+    Ok(())
+}
+
+#[test]
 fn abstraction() -> Result<(), ParserError> {
     let str = "x = \\y :: Int. add y 5";
     let mut parser = Parser::from_string(str.to_string());

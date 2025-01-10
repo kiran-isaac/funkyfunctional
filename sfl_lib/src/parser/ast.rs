@@ -1,6 +1,6 @@
-use std::{collections::HashMap, fmt::Debug, vec};
-use std::collections::HashSet;
 use crate::{find_redexes::RCPair, types::TypeError, Primitive, Type};
+use std::collections::HashSet;
+use std::{collections::HashMap, fmt::Debug, vec};
 
 use super::token::*;
 
@@ -32,6 +32,7 @@ pub struct ASTNode {
     pub col: usize,
     pub type_assignment: Option<Type>,
     pub wait_for_args: bool,
+    pub fancy_assign_abst_syntax: bool,
 }
 
 impl ASTNode {
@@ -70,6 +71,7 @@ impl ASTNode {
             col,
             type_assignment: None,
             wait_for_args: false,
+            fancy_assign_abst_syntax: false,
         }
     }
 
@@ -82,6 +84,7 @@ impl ASTNode {
             col,
             type_assignment: None,
             wait_for_args: false,
+            fancy_assign_abst_syntax: false,
         }
     }
 
@@ -94,6 +97,7 @@ impl ASTNode {
             col,
             type_assignment: None,
             wait_for_args: false,
+            fancy_assign_abst_syntax: false,
         }
     }
 
@@ -106,6 +110,7 @@ impl ASTNode {
             col,
             type_assignment: None,
             wait_for_args: false,
+            fancy_assign_abst_syntax: false,
         }
     }
 
@@ -118,6 +123,7 @@ impl ASTNode {
             col,
             type_assignment: t,
             wait_for_args: false,
+            fancy_assign_abst_syntax: false,
         }
     }
 
@@ -130,6 +136,7 @@ impl ASTNode {
             col,
             type_assignment: None,
             wait_for_args: false,
+            fancy_assign_abst_syntax: false,
         }
     }
 
@@ -154,6 +161,10 @@ impl AST {
         }
     }
 
+    pub fn fancy_assign_abst_syntax(&mut self, node: usize) {
+        self.vec[node].fancy_assign_abst_syntax = true;
+    }
+
     pub fn add(&mut self, n: ASTNode) -> usize {
         self.vec.push(n);
         self.vec.len() - 1
@@ -161,9 +172,10 @@ impl AST {
 
     pub fn expr_eq(&mut self, n1: usize, n2: usize) -> bool {
         match (&self.get(n1).t, &self.get(n2).t) {
-            (ASTNodeType::Identifier, ASTNodeType::Identifier) | (ASTNodeType::Literal , ASTNodeType::Literal) => {
+            (ASTNodeType::Identifier, ASTNodeType::Identifier)
+            | (ASTNodeType::Literal, ASTNodeType::Literal) => {
                 self.get(n1).get_value() == self.get(n2).get_value()
-            },
+            }
             (ASTNodeType::Application, ASTNodeType::Application) => {
                 let f1 = self.get_func(n1);
                 let f2 = self.get_func(n2);
@@ -175,8 +187,8 @@ impl AST {
             (ASTNodeType::Abstraction, ASTNodeType::Abstraction) => {
                 let v1 = self.get_abstr_var(n1);
                 let v2 = self.get_abstr_var(n2);
-                let x1 = self.get_arg(n1);
-                let x2 = self.get_arg(n2);
+                let x1 = self.get_abstr_exp(n1);
+                let x2 = self.get_abstr_exp(n2);
 
                 self.expr_eq(v1, v2) && self.expr_eq(x1, x2)
             }
@@ -210,7 +222,7 @@ impl AST {
         self.replace_references_to_node(old, new);
     }
 
-    pub fn filter_identical_rcs(&mut self, rcs : &Vec<RCPair>) -> Vec<RCPair> {
+    pub fn filter_identical_rcs(&mut self, rcs: &Vec<RCPair>) -> Vec<RCPair> {
         let mut stringset = HashSet::new();
         let mut new_rcs = vec![];
         for rc in rcs {
@@ -223,7 +235,7 @@ impl AST {
         new_rcs
     }
 
-    pub fn do_rc_subst_and_identical_rcs(&mut self, rc0: &RCPair, rcs : &Vec<RCPair>) {
+    pub fn do_rc_subst_and_identical_rcs(&mut self, rc0: &RCPair, rcs: &Vec<RCPair>) {
         for rc in rcs {
             if self.expr_eq(rc0.0, rc.0) {
                 self.do_rc_subst(rc);
@@ -572,15 +584,27 @@ impl AST {
 
                 if let Some(tk) = &self.get(func).info {
                     if tk.is_infix_id() {
-                        return format!("{} {}", arg_str, func_str)
+                        return format!("{} {}", arg_str, func_str);
                     }
                 }
                 format!("{} {}", func_str, arg_str)
             }
             ASTNodeType::Assignment => {
                 let id = self.get(self.get(node).children[0]);
-                let exp = self.to_string(self.get_assign_exp(node));
-                format!("{} = {}", id.get_value(), exp)
+                let mut exp = self.to_string(self.get_assign_exp(node));
+
+                let mut fancy_syntax_abst_vars = "".to_string();
+                let mut ass_abst = self.get_assign_exp(node);
+
+                while self.get(ass_abst).fancy_assign_abst_syntax {
+                    assert_eq!(self.get(ass_abst).t, ASTNodeType::Abstraction);
+                    fancy_syntax_abst_vars += " ";
+                    fancy_syntax_abst_vars += self.get(self.get_abstr_var(ass_abst)).get_value().as_str();
+                    exp = self.to_string(self.get_abstr_exp(ass_abst));
+                    ass_abst = self.get_abstr_exp(ass_abst);
+                }
+
+                format!("{}{} = {}", id.get_value(), fancy_syntax_abst_vars, exp)
             }
             ASTNodeType::Module => {
                 let mut s = String::new();

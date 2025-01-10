@@ -4,8 +4,11 @@ inc = \i . add i 1
 dec :: Int -> Int
 dec = \i . sub i 1
 
+const3 :: Int -> Int -> Int
+const3 x y = x
+
 fac :: Int -> Int
-fac = \n . if eq n 0 then 1 else mul n (fac (dec n))
+fac n = if eq n 0 then 1 else mul n (fac (dec n))
 
 type_check_nightmare :: Int
 type_check_nightmare = (\x.x) (if eq (fac 3) 6 then 10 else 20)
