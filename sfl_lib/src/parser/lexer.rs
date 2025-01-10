@@ -66,7 +66,7 @@ impl Lexer {
     #[inline(always)]
     fn is_id_char(&self, c: char) -> bool {
         match c {
-            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '+' | '-' | '/' | '*' => true,
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '+' | '-' | '/' | '*' | '%' => true,
             _ => false,
         }
     }
@@ -266,7 +266,7 @@ impl Lexer {
         let c = self.c();
 
         match c {
-            'a'..='z' | '_' | '+' | '*' => self.parse_id(),
+            'a'..='z' | '_' | '+' | '*' | '%' => self.parse_id(),
             'A'..='Z' => self.parse_type_id(),
             '0'..='9' => self.parse_num_lit(),
             '-' => match self.file[self.i + 1] {

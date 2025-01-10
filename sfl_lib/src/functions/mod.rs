@@ -252,7 +252,14 @@ impl LabelTable {
             inbuilt_int_div,
             binary_int_type.clone(),
         );
-        self.add_inbuilt("/".to_string(), 2, inbuilt_int_div, binary_int_type);
+        self.add_inbuilt("/".to_string(), 2, inbuilt_int_div, binary_int_type.clone());
+        self.add_inbuilt(
+            "mod".to_string(),
+            2,
+            inbuilt_int_mod,
+            binary_int_type.clone(),
+        );
+        self.add_inbuilt("%".to_string(), 2, inbuilt_int_mod, binary_int_type.clone());
 
         self.add_inbuilt(
             "eq".to_string(),

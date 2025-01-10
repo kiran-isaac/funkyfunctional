@@ -243,7 +243,11 @@ impl AST {
         }
     }
 
-    fn get_laziest_rc_recurse(&self, expr: usize, rc_map: &HashMap<usize, &RCPair>) -> Option<RCPair> {
+    fn get_laziest_rc_recurse(
+        &self,
+        expr: usize,
+        rc_map: &HashMap<usize, &RCPair>,
+    ) -> Option<RCPair> {
         if rc_map.contains_key(&expr) {
             return Some(rc_map[&expr].clone());
         }
@@ -644,7 +648,8 @@ impl AST {
                 while self.get(ass_abst).fancy_assign_abst_syntax {
                     assert_eq!(self.get(ass_abst).t, ASTNodeType::Abstraction);
                     fancy_syntax_abst_vars += " ";
-                    fancy_syntax_abst_vars += self.get(self.get_abstr_var(ass_abst)).get_value().as_str();
+                    fancy_syntax_abst_vars +=
+                        self.get(self.get_abstr_var(ass_abst)).get_value().as_str();
                     exp = self.to_string_sugar(self.get_abstr_exp(ass_abst));
                     ass_abst = self.get_abstr_exp(ass_abst);
                 }

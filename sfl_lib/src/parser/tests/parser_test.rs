@@ -133,7 +133,10 @@ fn abstraction() -> Result<(), ParserError> {
     let multi_abstr2 = "x = \\y :: Int . \\z :: Int . add y 5";
     let ast = Parser::from_string(multi_abstr.to_string()).parse_module()?;
     let ast2 = Parser::from_string(multi_abstr2.to_string()).parse_module()?;
-    assert_eq!(ast.to_string_sugar(ast.root), ast2.to_string_sugar(ast2.root));
+    assert_eq!(
+        ast.to_string_sugar(ast.root),
+        ast2.to_string_sugar(ast2.root)
+    );
 
     let ignore_directive = "x = \\_ :: Int . 1.5";
     Parser::from_string(ignore_directive.to_string()).parse_module()?;

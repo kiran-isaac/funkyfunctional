@@ -51,6 +51,15 @@ pub fn inbuilt_int_div(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
     inbuilt_binary(call, args, i64::div, Primitive::Int64)
 }
 
+pub fn inbuilt_int_mod(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
+    inbuilt_binary(
+        call,
+        args,
+        |x: i64, y: i64| x - ((x / y) * y),
+        Primitive::Int64,
+    )
+}
+
 pub fn inbuilt_int_neg(call: &ASTNode, args: Vec<&ASTNode>) -> AST {
     assert_eq!(args.len(), 1);
     let x: i64 = args[0].get_value().parse().unwrap();
