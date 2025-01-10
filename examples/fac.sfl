@@ -1,8 +1,5 @@
 fac :: Int -> Int
 fac n = if n <= 1 then 1 else n * (fac (n - 1))
 
-four :: Int
-four = 1 * 2 + 2
-
 main :: Int
-main = fac (four - 1)
+main = fac 3
