@@ -524,6 +524,11 @@ impl AST {
                     _ => arg_str,
                 };
 
+                if let Some(tk) = &self.get(func).info {
+                    if tk.is_infix_id() {
+                        return format!("{} {}", arg_str, func_str)
+                    }
+                }
                 format!("{} {}", func_str, arg_str)
             }
             ASTNodeType::Assignment => {

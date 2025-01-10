@@ -236,14 +236,24 @@ impl Parser {
                     left = ast.add_app(left, ite, line, col);
                 }
 
-                // If Primary
-                TokenType::Id
-                | TokenType::FloatLit
+                TokenType::FloatLit
                 | TokenType::CharLit
                 | TokenType::IntLit
                 | TokenType::BoolLit => {
                     let right = self.parse_primary(ast)?;
                     left = ast.add_app(left, right, line, col);
+                }
+
+                TokenType::Id => {
+                    if self.peek(0)?.is_infix_id() {
+                        let id_node = self.parse_primary(ast)?;
+                        let right = self.parse_expression(ast)?;
+                        left = ast.add_app(id_node, left, line, col);
+                        left = ast.add_app(left, right, line, col);
+                    } else {
+                        let id_node = self.parse_primary(ast)?;
+                        left = ast.add_app(left, id_node, line, col);
+                    }
                 }
 
                 _ => {

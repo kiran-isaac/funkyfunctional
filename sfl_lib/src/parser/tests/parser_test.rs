@@ -87,6 +87,28 @@ fn bound() -> Result<(), ParserError> {
     Ok(())
 }
 
+fn unchanged_parse_output_str_test(program_str: &str) -> Result<(), ParserError> {
+    let mut parser = Parser::from_string(program_str.to_string());
+    let ast = parser.parse_module()?;
+    assert_eq!(program_str, ast.to_string(ast.root));
+    Ok(())
+}
+
+#[test]
+fn infix_expr() -> Result<(), ParserError> {
+    unchanged_parse_output_str_test("x = 1 + 1")?;
+    unchanged_parse_output_str_test("x = 1 - 1")?;
+    unchanged_parse_output_str_test("x = 1 * 1")?;
+    unchanged_parse_output_str_test("x = 1 / 1")?;
+    unchanged_parse_output_str_test("x = 1 == 1")?;
+    unchanged_parse_output_str_test("x = 1 > 1")?;
+    unchanged_parse_output_str_test("x = 1 < 1")?;
+    unchanged_parse_output_str_test("x = 1 >= 1")?;
+    unchanged_parse_output_str_test("x = 1 <= 1")?;
+
+    Ok(())
+}
+
 #[test]
 fn abstraction() -> Result<(), ParserError> {
     let str = "x = \\y :: Int. add y 5";

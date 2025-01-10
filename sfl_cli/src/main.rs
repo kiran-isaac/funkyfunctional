@@ -58,7 +58,9 @@ fn main() {
 
     while rcs.len() != 0 {
         for (i, rc) in rcs.iter().enumerate() {
-            println!("{}) {} => {:?}", i + 1, ast.to_string(rc.0), rc.1);
+            let s1 = ast.to_string(rc.0);
+            let s2 = rc.1.to_string(rc.1.root);
+            println!("{}) {} => {}", i + 1, s1, s2);
         }
 
         io::stdout().flush().unwrap();

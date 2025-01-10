@@ -131,6 +131,28 @@ fn lex_abstraction() {
 }
 
 #[test]
+fn lex_id() {
+    lexer_tokentype_test!(
+        "x y x_y + - / * == >= <= > <",
+        vec![
+            TokenType::Id,
+            TokenType::Id,
+            TokenType::Id,
+            TokenType::Id,
+            TokenType::Id,
+            TokenType::Id,
+            TokenType::Id,
+            TokenType::Id,
+            TokenType::Id,
+            TokenType::Id,
+            TokenType::Id,
+            TokenType::Id,
+            TokenType::EOF
+        ]
+    );
+}
+
+#[test]
 fn lex_type_stuff() {
     lexer_tokentype_test!(
         "add :: Int -> Int -> Int",

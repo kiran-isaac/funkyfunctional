@@ -49,3 +49,15 @@ impl Debug for Token {
         }
     }
 }
+
+impl Token {
+    pub fn is_infix_id(&self) -> bool {
+        if self.tt != TokenType::Id {
+            return false;
+        }
+        match self.value.chars().next().unwrap() {
+            'a'..='z' | 'A'..='Z' | '_' => false,
+            _ => true,
+        }
+    }
+}

@@ -231,21 +231,37 @@ impl LabelTable {
             inbuilt_int_add,
             binary_int_type.clone(),
         );
+        self.add_inbuilt("+".to_string(), 2, inbuilt_int_add, binary_int_type.clone());
         self.add_inbuilt(
             "sub".to_string(),
             2,
             inbuilt_int_sub,
             binary_int_type.clone(),
         );
+        self.add_inbuilt("-".to_string(), 2, inbuilt_int_sub, binary_int_type.clone());
         self.add_inbuilt(
             "mul".to_string(),
             2,
             inbuilt_int_mul,
             binary_int_type.clone(),
         );
-        self.add_inbuilt("div".to_string(), 2, inbuilt_int_div, binary_int_type);
+        self.add_inbuilt("*".to_string(), 2, inbuilt_int_mul, binary_int_type.clone());
+        self.add_inbuilt(
+            "div".to_string(),
+            2,
+            inbuilt_int_div,
+            binary_int_type.clone(),
+        );
+        self.add_inbuilt("/".to_string(), 2, inbuilt_int_div, binary_int_type);
+
         self.add_inbuilt(
             "eq".to_string(),
+            2,
+            inbuilt_int_eq,
+            binary_int_bool_type.clone(),
+        );
+        self.add_inbuilt(
+            "==".to_string(),
             2,
             inbuilt_int_eq,
             binary_int_bool_type.clone(),
@@ -257,7 +273,19 @@ impl LabelTable {
             binary_int_bool_type.clone(),
         );
         self.add_inbuilt(
+            "<=".to_string(),
+            2,
+            inbuilt_int_lte,
+            binary_int_bool_type.clone(),
+        );
+        self.add_inbuilt(
             "lt".to_string(),
+            2,
+            inbuilt_int_lt,
+            binary_int_bool_type.clone(),
+        );
+        self.add_inbuilt(
+            "<".to_string(),
             2,
             inbuilt_int_lt,
             binary_int_bool_type.clone(),
@@ -268,7 +296,14 @@ impl LabelTable {
             inbuilt_int_gte,
             binary_int_bool_type.clone(),
         );
-        self.add_inbuilt("gt".to_string(), 2, inbuilt_int_gt, binary_int_bool_type);
+        self.add_inbuilt(
+            ">=".to_string(),
+            2,
+            inbuilt_int_gte,
+            binary_int_bool_type.clone(),
+        );
+        self.add_inbuilt("gt".to_string(), 2, inbuilt_int_gt, binary_int_bool_type.clone());
+        self.add_inbuilt(">".to_string(), 2, inbuilt_int_gt, binary_int_bool_type);
 
         self.add_inbuilt(
             "addf".to_string(),

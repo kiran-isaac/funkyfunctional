@@ -64,6 +64,14 @@ impl Lexer {
     }
 
     #[inline(always)]
+    fn is_id_char(&self, c: char) -> bool {
+        match c {
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '+' | '-' | '/' | '*' => true,
+            _ => false,
+        }
+    }
+
+    #[inline(always)]
     #[allow(dead_code)]
     pub fn pos_string(&self) -> String {
         format!(
@@ -82,16 +90,9 @@ impl Lexer {
 
         self.advance();
 
-        while !self.c().is_whitespace() {
-            match self.c() {
-                'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
-                    str.push(self.c());
-                    self.advance();
-                }
-                _ => {
-                    break;
-                }
-            };
+        while self.is_id_char(self.c()) {
+            str.push(self.c());
+            self.advance();
         }
 
         match str.as_str() {
@@ -122,10 +123,10 @@ impl Lexer {
             _ => {}
         }
 
-        return Ok(Token {
+        Ok(Token {
             tt: TokenType::Id,
             value: str,
-        });
+        })
     }
 
     /// Hijack the parse_id function to parse type ids and then
@@ -182,15 +183,15 @@ impl Lexer {
         }
 
         if has_point {
-            return Ok(Token {
+            Ok(Token {
                 tt: TokenType::FloatLit,
                 value: str,
-            });
+            })
         } else {
-            return Ok(Token {
+            Ok(Token {
                 tt: TokenType::IntLit,
                 value: str,
-            });
+            })
         }
     }
 
@@ -265,7 +266,7 @@ impl Lexer {
         let c = self.c();
 
         match c {
-            'a'..='z' | '_' => self.parse_id(),
+            'a'..='z' | '_' | '+' | '*' => self.parse_id(),
             'A'..='Z' => self.parse_type_id(),
             '0'..='9' => self.parse_num_lit(),
             '-' => match self.file[self.i + 1] {
@@ -278,7 +279,7 @@ impl Lexer {
                     })
                 }
                 '0'..='9' | '.' => self.parse_num_lit(),
-                _ => Err(self.error(format!("Unexpected char: {}", self.c()))),
+                _ => self.parse_id(),
             },
             '.' => match self.file[self.i + 1] {
                 '0'..='9' => self.parse_num_lit(),
@@ -298,14 +299,15 @@ impl Lexer {
                 })
             }
             '/' => {
-                self.advance();
-                match self.c() {
+                match self.file[self.i + 1] {
                     '/' => {
+                        self.advance();
                         while self.c() != '\n' && self.c() != '\0' {
                             self.advance();
                         }
                     }
                     '*' => {
+                        self.advance();
                         self.advance();
                         while !(self.c() == '*' && self.file[self.i + 1] == '/') {
                             if self.c() == '\n' {
@@ -321,7 +323,7 @@ impl Lexer {
                         self.advance();
                         self.advance();
                     }
-                    _ => return Err(self.error(format!("Unexpected char: {}", self.c()))),
+                    _ => return self.parse_id(),
                 }
                 self.get_token()
             }
@@ -354,10 +356,51 @@ impl Lexer {
             }
             '=' => {
                 self.advance();
-                Ok(Token {
-                    tt: TokenType::Assignment,
-                    value: "=".to_string(),
-                })
+                match self.c() {
+                    '=' => {
+                        self.advance();
+                        Ok(Token {
+                            tt: TokenType::Id,
+                            value: "==".to_string(),
+                        })
+                    },
+                    _ => Ok(Token {
+                        tt: TokenType::Assignment,
+                        value: "=".to_string(),
+                    }),
+                }
+            }
+            '<' => {
+                self.advance();
+                match self.c() {
+                    '=' => {
+                        self.advance();
+                        Ok(Token {
+                            tt: TokenType::Id,
+                            value: "<=".to_string(),
+                        })
+                    },
+                    _ => Ok(Token {
+                        tt: TokenType::Id,
+                        value: "<".to_string(),
+                    }),
+                }
+            }
+            '>' => {
+                self.advance();
+                match self.c() {
+                    '=' => {
+                        self.advance();
+                        Ok(Token {
+                            tt: TokenType::Id,
+                            value: ">=".to_string(),
+                        })
+                    },
+                    _ => Ok(Token {
+                        tt: TokenType::Id,
+                        value: ">".to_string(),
+                    }),
+                }
             }
             '\'' => self.parse_char_lit(),
             '\0' => Ok(Token {

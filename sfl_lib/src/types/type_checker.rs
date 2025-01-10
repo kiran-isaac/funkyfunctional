@@ -48,10 +48,6 @@ impl std::fmt::Debug for Context {
 }
 
 impl Context {
-    fn new() -> Self {
-        Self { vec: vec![] }
-    }
-
     fn from_labels(labels: &LabelTable) -> Self {
         let mut vec = vec![];
 

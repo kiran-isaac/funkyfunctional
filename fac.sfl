@@ -2,7 +2,7 @@ dec :: Int -> Int
 dec = \i . sub i 1
 
 fac :: Int -> Int
-fac = \n . if eq n 0 then 1 else mul n (fac (dec n))
+fac = \n . if n == 0 then 1 else mul n (fac (n - 1))
 
 main :: Int
 main = fac 3
