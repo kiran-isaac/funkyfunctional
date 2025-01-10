@@ -83,7 +83,7 @@ fn main() {
                 eprintln!("Invalid choice\n");
                 continue;
             }
-            &rcs_filtered[num]
+            &rcs_filtered[num - 1]
         };
 
         ast.do_rc_subst_and_identical_rcs(choice, &rcs);

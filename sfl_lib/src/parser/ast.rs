@@ -243,9 +243,9 @@ impl AST {
         }
     }
 
-    fn get_laziest_rc_recurse(&self, expr: usize, rc_map: &HashMap<usize, &RCPair>, depth: usize) -> Option<(usize, RCPair)> {
+    fn get_laziest_rc_recurse(&self, expr: usize, rc_map: &HashMap<usize, &RCPair>) -> Option<RCPair> {
         if rc_map.contains_key(&expr) {
-            return Some((depth, rc_map[&expr].clone()));
+            return Some(rc_map[&expr].clone());
         }
 
         #[cfg(debug_assertions)]
@@ -264,29 +264,11 @@ impl AST {
                 let f = self.get_func(expr);
                 let x = self.get_arg(expr);
 
-                let laziest_left = self.get_laziest_rc_recurse(f, &rc_map, depth + 1);
-                let laziest_right = self.get_laziest_rc_recurse(x, &rc_map, depth + 1);
-
-                if laziest_left.is_none() && laziest_right.is_none() {
-                    return None;
+                if let Some(rc) = self.get_laziest_rc_recurse(f, &rc_map) {
+                    return Some(rc);
                 }
 
-                if laziest_left.is_none() {
-                    return laziest_right;
-                }
-
-                if laziest_right.is_none() {
-                    return laziest_left
-                }
-
-                let laziest_left = laziest_left.unwrap();
-                let laziest_right = laziest_right.unwrap();
-
-                if laziest_left.0 <= laziest_right.0 {
-                    Some(laziest_left)
-                } else {
-                    Some(laziest_right)
-                }
+                self.get_laziest_rc_recurse(x, &rc_map)
             }
             _ => None,
         }
@@ -302,11 +284,7 @@ impl AST {
         if rcs.is_empty() {
             None
         } else {
-            if let Some((_, rc)) = self.get_laziest_rc_recurse(expr, &rc_map, 0) {
-                Some(rc)
-            } else {
-                None
-            }
+            self.get_laziest_rc_recurse(expr, &rc_map)
         }
     }
 
