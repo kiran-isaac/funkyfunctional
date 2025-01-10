@@ -667,10 +667,10 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
                     let _c_str = format!("{:?}", &new_c);
 
                     #[cfg(debug_assertions)]
-                    let _x = 1+1;
+                    let _x = 1 + 1;
 
                     Ok(new_c)
-                },
+                }
                 Err(e) => Err(type_error(format!("Check sub error: {}", e), ast, expr)),
             }
         }

@@ -149,12 +149,16 @@ impl LabelTable {
         Ok(())
     }
 
-    pub fn get_n_ary_labels(&self, arity: usize) -> &HashMap<String, Label> {
-        &self.map[arity]
+    pub fn get_n_ary_labels(&self, arity: usize) -> Option<&HashMap<String, Label>> {
+        if arity < self.map.len() {
+            Some(&self.map[arity])
+        } else {
+            None
+        }
     }
 
     pub fn get(&self, arity: usize, name: String) -> Option<&Label> {
-        self.get_n_ary_labels(arity).get(&name)
+        self.get_n_ary_labels(arity)?.get(&name)
     }
 
     fn populate_inbuilts(&mut self) {
@@ -207,8 +211,14 @@ impl LabelTable {
         );
 
         let id_type = Type::fa(vec![0], Type::f(Type::g(0), Type::g(0)));
-        let const1_type = Type::fa(vec![0, 1], Type::f(Type::TypeVariable(0), Type::f(Type::g(1), Type::g(0))));
-        let const2_type = Type::fa(vec![0, 1], Type::f(Type::TypeVariable(0), Type::f(Type::g(1), Type::g(1))));
+        let const1_type = Type::fa(
+            vec![0, 1],
+            Type::f(Type::TypeVariable(0), Type::f(Type::g(1), Type::g(0))),
+        );
+        let const2_type = Type::fa(
+            vec![0, 1],
+            Type::f(Type::TypeVariable(0), Type::f(Type::g(1), Type::g(1))),
+        );
 
         self.add_inbuilt("id".to_string(), 1, inbuilt_id, id_type);
         self.add_inbuilt("const".to_string(), 2, inbuilt_const1, const1_type.clone());

@@ -62,14 +62,14 @@ impl Type {
         Type::TypeVariable(usize)
     }
 
-    pub fn fa(forall: Vec<usize>, t : Self) -> Self {
+    pub fn fa(forall: Vec<usize>, t: Self) -> Self {
         let mut t = t;
         for i in forall {
             t = Type::Forall(i, Box::new(t));
         }
         t
     }
-    
+
     pub fn contains_existential(&self, ex: usize) -> bool {
         match self {
             Type::Primitive(_) => false,
@@ -100,8 +100,11 @@ impl Type {
                 if *var2 == var {
                     panic!("Duplicate forall")
                 }
-                Ok(Type::fa(vec![*var2], t2.substitute_type_variable(var, replacement)?))
-            },
+                Ok(Type::fa(
+                    vec![*var2],
+                    t2.substitute_type_variable(var, replacement)?,
+                ))
+            }
             Type::Unit => Ok(Type::Unit),
         }
     }

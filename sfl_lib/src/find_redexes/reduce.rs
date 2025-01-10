@@ -28,7 +28,7 @@ fn check_for_ready_call(
     // True if only literals encountered. If true, then we can call inbuilt functions
     let mut literals_only = true;
 
-    for _ in 1..lt.get_max_arity() {
+    loop {
         argv.push(ast.get(x));
         argv_ids.push(x);
         match ast.get(x).t {
@@ -38,39 +38,44 @@ fn check_for_ready_call(
 
         match ast.get(f).t {
             ASTNodeType::Identifier => {
-                let labels_of_arity = lt.get_n_ary_labels(argv.len());
+                let labels_of_arity = if let Some(lables) = lt.get_n_ary_labels(argv.len()) {
+                    lables
+                } else {
+                    return None;
+                };
                 let name = ast.get(f).get_value();
-                if labels_of_arity.contains_key(&name) {
+
+                return if labels_of_arity.contains_key(&name) {
                     let label = labels_of_arity.get(&name).unwrap();
                     if label.is_inbuilt() {
                         if literals_only {
-                            return Some(
+                            Some(
                                 labels_of_arity
                                     .get(&name)
                                     .unwrap()
                                     .call_inbuilt(ast.get(f), argv),
-                            );
+                            )
                         } else {
-                            return None;
+                            None
                         }
                     } else {
                         if !(ast.get(f).wait_for_args && literals_only) {
                             let assign = *am.get(&name).unwrap();
                             let assign_exp = ast.get_assign_exp(assign);
-                            return Some(ast.do_multiple_abst_substs(assign_exp, argv_ids));
+                            Some(ast.do_multiple_abst_substs(assign_exp, argv_ids))
                         } else {
-                            return None;
+                            None
                         }
                     }
                 } else {
-                    return None;
-                }
+                    None
+                };
             }
             ASTNodeType::Abstraction => {
-                if !(ast.get(f).wait_for_args && literals_only) {
-                    return Some(ast.do_multiple_abst_substs(f, argv_ids));
+                return if !(ast.get(f).wait_for_args && literals_only) {
+                    Some(ast.do_multiple_abst_substs(f, argv_ids))
                 } else {
-                    return None;
+                    None
                 }
             }
             ASTNodeType::Application => {
@@ -80,8 +85,6 @@ fn check_for_ready_call(
             _ => return None,
         }
     }
-
-    None
 }
 
 pub fn find_redex_contraction_pairs(
@@ -100,61 +103,40 @@ pub fn find_redex_contraction_pairs(
     let am: HashMap<String, usize> = ast.get_assigns_map(module);
 
     match ast.get(exp).t {
+        ASTNodeType::Literal | ASTNodeType::Abstraction => {}
         ASTNodeType::Identifier => {
             let value = ast.get(exp).get_value();
 
             // It should not be non zero_ary func as otherwise it would be caught by the app case
-            if lt.get_n_ary_labels(0).contains_key(&value) {
-                let label = lt.get_n_ary_labels(0).get(&value).unwrap();
+            if let Some(labels) = lt.get_n_ary_labels(0) {
+                if labels.contains_key(&value) {
+                    let label = labels.get(&value).unwrap();
 
-                if label.is_inbuilt() {
-                    let inbuilt = label.call_inbuilt(&ast.get(exp), vec![]);
-                    pairs.push((exp, inbuilt));
-                } else {
-                    let assign = *am.get(&value).unwrap();
-                    let assign_exp = ast.get_assign_exp(assign);
-                    pairs.push((exp, ast.clone_node(assign_exp)));
+                    if label.is_inbuilt() {
+                        let inbuilt = label.call_inbuilt(&ast.get(exp), vec![]);
+                        pairs.push((exp, inbuilt));
+                    } else {
+                        let assign = *am.get(&value).unwrap();
+                        let assign_exp = ast.get_assign_exp(assign);
+                        pairs.push((exp, ast.clone_node(assign_exp)));
+                    }
                 }
+            } else {
+                unreachable!("No label match: {}", value);
             }
         }
         ASTNodeType::Application => {
+            let f = ast.get_func(exp);
+            let x = ast.get_arg(exp);
+
             if let Some(inbuilt_reduction) = check_for_ready_call(ast, exp, &lt, am) {
                 pairs.push((exp, inbuilt_reduction));
             }
 
-            let f = ast.get_func(exp);
-            let x = ast.get_arg(exp);
-
-            #[cfg(debug_assertions)]
-            let _f_str = ast.to_string(f);
-            #[cfg(debug_assertions)]
-            let _x_str = ast.to_string(x);
-            match ast.get(f).t {
-                ASTNodeType::Application | ASTNodeType::Identifier => {
-                    pairs.extend(find_redex_contraction_pairs(ast, module, f, &lt));
-                }
-                // ASTNodeType::Abstraction => pairs.push((exp, ast.do_abst_subst(f, x))),
-                ASTNodeType::Literal | ASTNodeType::Abstraction => {}
-                _ => unreachable!("Expected expression"),
-            }
-
-            match ast.get(x).t {
-                ASTNodeType::Application | ASTNodeType::Identifier => {
-                    pairs.extend(find_redex_contraction_pairs(ast, module, f, &lt));
-                }
-                // ASTNodeType::Abstraction => pairs.push((exp, ast.do_abst_subst(f, x))),
-                ASTNodeType::Literal | ASTNodeType::Abstraction => {}
-                _ => unreachable!("Expected expression"),
-            }
-
-            pairs.extend(find_redex_contraction_pairs(
-                ast,
-                module,
-                ast.get_arg(exp),
-                &lt,
-            ));
+            pairs.extend(find_redex_contraction_pairs(ast, module, f, &lt));
+            pairs.extend(find_redex_contraction_pairs(ast, module, x, &lt));
         }
-        _ => {}
+        _ => unreachable!("Expected expression"),
     }
 
     pairs
