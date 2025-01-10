@@ -51,13 +51,14 @@ fn main() {
     let exp = ast.get_assign_exp(ast.get_main(ast.root));
 
     let mut rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp, &lt);
+    let mut rcs_filtered = ast.filter_identical_rcs(&rcs);
 
     println!("{}\n", ast.to_string(ast.root));
 
     println!("{}", ast.to_string(exp));
 
     while rcs.len() != 0 {
-        for (i, rc) in rcs.iter().enumerate() {
+        for (i, rc) in rcs_filtered.iter().enumerate() {
             let s1 = ast.to_string(rc.0);
             let s2 = rc.1.to_string(rc.1.root);
             println!("{}) {} => {}", i + 1, s1, s2);
@@ -75,11 +76,12 @@ fn main() {
             eprintln!("Invalid choice\n");
             continue;
         }
-        ast.do_rc_subst(&rcs[choice - 1]);
+        ast.do_rc_subst_and_identical_rcs(&rcs[choice - 1], &rcs);
 
         let exp = ast.get_assign_exp(ast.get_main(ast.root));
 
         rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp, &lt);
+        rcs_filtered = ast.filter_identical_rcs(&rcs);
         println!("\n{}", ast.to_string(exp));
     }
 }

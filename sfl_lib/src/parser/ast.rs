@@ -1,5 +1,5 @@
 use std::{collections::HashMap, fmt::Debug, vec};
-
+use std::collections::HashSet;
 use crate::{find_redexes::RCPair, types::TypeError, Primitive, Type};
 
 use super::token::*;
@@ -183,6 +183,29 @@ impl AST {
         let old = rc.0;
         let new = self.append(other, other.root);
         self.replace_references_to_node(old, new);
+    }
+
+    pub fn filter_identical_rcs(&mut self, rcs : &Vec<RCPair>) -> Vec<RCPair> {
+        let mut stringset = HashSet::new();
+        let mut new_rcs = vec![];
+        for rc in rcs {
+            let str = self.to_string(rc.0);
+            if !stringset.contains(&str) {
+                new_rcs.push(rc.clone());
+            }
+            stringset.insert(str);
+        }
+        new_rcs
+    }
+
+    pub fn do_rc_subst_and_identical_rcs(&mut self, rc: &RCPair, rcs : &Vec<RCPair>) {
+        let str = self.to_string(rc.0);
+        self.do_rc_subst(rc);
+        for rc in rcs {
+            if self.to_string(rc.0) == str {
+                self.do_rc_subst(rc);
+            }
+        }
     }
 
     pub fn replace(&mut self, old: usize, new: usize) {
