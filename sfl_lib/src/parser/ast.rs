@@ -226,7 +226,7 @@ impl AST {
         let mut stringset = HashSet::new();
         let mut new_rcs = vec![];
         for rc in rcs {
-            let str = self.to_string(rc.0);
+            let str = self.to_string_sugar(rc.0);
             if !stringset.contains(&str) {
                 new_rcs.push(rc.clone());
             }
@@ -523,7 +523,7 @@ impl AST {
         }
     }
 
-    pub fn to_string(&self, node: usize) -> String {
+    pub fn to_string_sugar(&self, node: usize) -> String {
         let n = self.get(node);
         match n.t {
             ASTNodeType::Identifier => match &n.type_assignment {
@@ -554,9 +554,9 @@ impl AST {
                             if self.get(func).get_value() == "if" {
                                 return format!(
                                     "if {} then {} else {}",
-                                    self.to_string(args[2]),
-                                    self.to_string(args[1]),
-                                    self.to_string(args[0])
+                                    self.to_string_sugar(args[2]),
+                                    self.to_string_sugar(args[1]),
+                                    self.to_string_sugar(args[0])
                                 );
                             }
                         }
@@ -567,7 +567,7 @@ impl AST {
                 let func = self.get_func(node);
                 let arg = self.get_arg(node);
 
-                let func_str = self.to_string(func);
+                let func_str = self.to_string_sugar(func);
 
                 // If the func is an abstraction, wrap it in parens
                 let func_str = match self.get(func).t {
@@ -575,7 +575,7 @@ impl AST {
                     _ => func_str,
                 };
 
-                let arg_str = self.to_string(arg);
+                let arg_str = self.to_string_sugar(arg);
                 // If the argument is an application, wrap it in parens
                 let arg_str = match self.get(arg).t {
                     ASTNodeType::Application | ASTNodeType::Abstraction => format!("({})", arg_str),
@@ -591,7 +591,7 @@ impl AST {
             }
             ASTNodeType::Assignment => {
                 let id = self.get(self.get(node).children[0]);
-                let mut exp = self.to_string(self.get_assign_exp(node));
+                let mut exp = self.to_string_sugar(self.get_assign_exp(node));
 
                 let mut fancy_syntax_abst_vars = "".to_string();
                 let mut ass_abst = self.get_assign_exp(node);
@@ -600,7 +600,7 @@ impl AST {
                     assert_eq!(self.get(ass_abst).t, ASTNodeType::Abstraction);
                     fancy_syntax_abst_vars += " ";
                     fancy_syntax_abst_vars += self.get(self.get_abstr_var(ass_abst)).get_value().as_str();
-                    exp = self.to_string(self.get_abstr_exp(ass_abst));
+                    exp = self.to_string_sugar(self.get_abstr_exp(ass_abst));
                     ass_abst = self.get_abstr_exp(ass_abst);
                 }
 
@@ -609,15 +609,74 @@ impl AST {
             ASTNodeType::Module => {
                 let mut s = String::new();
                 for c in &n.children {
-                    s.push_str(&self.to_string(*c));
+                    s.push_str(&self.to_string_sugar(*c));
                     s.push_str("\n");
                 }
 
                 s.trim().to_string()
             }
             ASTNodeType::Abstraction => {
-                let expr_str = self.to_string(n.children[1]);
-                let var_str = self.to_string(n.children[0]);
+                let expr_str = self.to_string_sugar(n.children[1]);
+                let var_str = self.to_string_sugar(n.children[0]);
+
+                let mut res = "\\".to_string();
+                res.push_str(&var_str);
+                res.push_str(" . ");
+                res.push_str(&expr_str);
+                res
+            }
+        }
+    }
+
+    pub fn to_string_desugar(&self, node: usize) -> String {
+        let n = self.get(node);
+        match n.t {
+            ASTNodeType::Identifier => match &n.type_assignment {
+                Some(t) => format!("{} :: {}", n.get_value(), t.to_string()),
+                None => n.get_value(),
+            },
+            ASTNodeType::Literal => {
+                format!("{}", n.get_value())
+            }
+            ASTNodeType::Application => {
+                let func = self.get_func(node);
+                let arg = self.get_arg(node);
+
+                let func_str = self.to_string_desugar(func);
+
+                // If the func is an abstraction, wrap it in parens
+                let func_str = match self.get(func).t {
+                    ASTNodeType::Abstraction => format!("({})", func_str),
+                    _ => func_str,
+                };
+
+                let arg_str = self.to_string_desugar(arg);
+                // If the argument is an application, wrap it in parens
+                let arg_str = match self.get(arg).t {
+                    ASTNodeType::Application | ASTNodeType::Abstraction => format!("({})", arg_str),
+                    _ => arg_str,
+                };
+
+                format!("{} {}", func_str, arg_str)
+            }
+            ASTNodeType::Assignment => {
+                let id = self.get(self.get(node).children[0]);
+                let exp = self.to_string_desugar(self.get_assign_exp(node));
+
+                format!("{} = {}", id.get_value(), exp)
+            }
+            ASTNodeType::Module => {
+                let mut s = String::new();
+                for c in &n.children {
+                    s.push_str(&self.to_string_desugar(*c));
+                    s.push_str("\n");
+                }
+
+                s.trim().to_string()
+            }
+            ASTNodeType::Abstraction => {
+                let expr_str = self.to_string_desugar(n.children[1]);
+                let var_str = self.to_string_desugar(n.children[0]);
 
                 let mut res = "\\".to_string();
                 res.push_str(&var_str);
@@ -651,6 +710,6 @@ impl AST {
 
 impl Debug for AST {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string(self.root))
+        write!(f, "{}", self.to_string_sugar(self.root))
     }
 }

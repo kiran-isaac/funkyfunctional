@@ -13,7 +13,7 @@ fn full_run_test(program: String) -> String {
         exp = ast.get_assign_exp(ast.get_main(ast.root));
         rcs = find_redex_contraction_pairs(&ast, ast.root, exp, &lt);
     }
-    ast.to_string(exp)
+    ast.to_string_sugar(exp)
 }
 
 #[test]

@@ -41,7 +41,7 @@ fn assign_2() -> Result<(), ParserError> {
     assert!(ast.get(ast.get_func(y_z)).get_value() == "y");
     assert!(ast.get(ast.get_arg(y_z)).get_value() == "z");
 
-    println!("{}", ast.to_string(module));
+    println!("{}", ast.to_string_sugar(module));
 
     Ok(())
 }
@@ -63,7 +63,7 @@ fn multi_assign() -> Result<(), ParserError> {
     let ass3 = ast.get_assign_to(module, "z".to_string()).unwrap();
     assert!(ast.get(ast.get_assign_exp(ass3)).get_value() == "7");
 
-    assert!(ast.to_string(module) == "x = 5\ny = 6\nz = 7".to_string());
+    assert!(ast.to_string_sugar(module) == "x = 5\ny = 6\nz = 7".to_string());
 
     Ok(())
 }
@@ -90,7 +90,7 @@ fn bound() -> Result<(), ParserError> {
 fn unchanged_parse_output_str_test(program_str: &str) -> Result<(), ParserError> {
     let mut parser = Parser::from_string(program_str.to_string());
     let ast = parser.parse_module()?;
-    assert_eq!(program_str, ast.to_string(ast.root));
+    assert_eq!(program_str, ast.to_string_sugar(ast.root));
     Ok(())
 }
 
@@ -133,7 +133,7 @@ fn abstraction() -> Result<(), ParserError> {
     let multi_abstr2 = "x = \\y :: Int . \\z :: Int . add y 5";
     let ast = Parser::from_string(multi_abstr.to_string()).parse_module()?;
     let ast2 = Parser::from_string(multi_abstr2.to_string()).parse_module()?;
-    assert_eq!(ast.to_string(ast.root), ast2.to_string(ast2.root));
+    assert_eq!(ast.to_string_sugar(ast.root), ast2.to_string_sugar(ast2.root));
 
     let ignore_directive = "x = \\_ :: Int . 1.5";
     Parser::from_string(ignore_directive.to_string()).parse_module()?;
@@ -184,14 +184,14 @@ fn ite_1() -> Result<(), ParserError> {
     let ast = parser.parse_module()?;
     let module = 0;
 
-    assert_eq!(ast.to_string(module), str);
+    assert_eq!(ast.to_string_sugar(module), str);
 
     let str = "x = \\_ :: Int . add (if true then 1 else 2) (if true then 2 else 3)";
     let mut parser = Parser::from_string(str.to_string());
 
     let ast = parser.parse_module()?;
     let module = 0;
-    assert_eq!(ast.to_string(module), str);
+    assert_eq!(ast.to_string_sugar(module), str);
 
     Ok(())
 }

@@ -96,7 +96,7 @@ pub fn find_redex_contraction_pairs(
     let mut pairs: Vec<(usize, AST)> = vec![];
 
     #[cfg(debug_assertions)]
-    let _exp_str = ast.to_string(exp);
+    let _exp_str = ast.to_string_sugar(exp);
 
     // Dont need to worry about this as main must be at the end, so everything defined in
     // the module is defined here
