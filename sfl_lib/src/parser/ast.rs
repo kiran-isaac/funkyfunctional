@@ -243,6 +243,73 @@ impl AST {
         }
     }
 
+    fn get_laziest_rc_recurse(&self, expr: usize, rc_map: &HashMap<usize, &RCPair>, depth: usize) -> Option<(usize, RCPair)> {
+        if rc_map.contains_key(&expr) {
+            return Some((depth, rc_map[&expr].clone()));
+        }
+
+        #[cfg(debug_assertions)]
+        let _expr_str = self.to_string_sugar(expr);
+        #[cfg(debug_assertions)]
+        let _rcs_strs = {
+            let mut _rcs_strs = vec![];
+            for rc in rc_map.values() {
+                _rcs_strs.push(self.to_string_sugar(rc.0));
+            }
+            _rcs_strs
+        };
+
+        match self.get(expr).t {
+            ASTNodeType::Application => {
+                let f = self.get_func(expr);
+                let x = self.get_arg(expr);
+
+                let laziest_left = self.get_laziest_rc_recurse(f, &rc_map, depth + 1);
+                let laziest_right = self.get_laziest_rc_recurse(x, &rc_map, depth + 1);
+
+                if laziest_left.is_none() && laziest_right.is_none() {
+                    return None;
+                }
+
+                if laziest_left.is_none() {
+                    return laziest_right;
+                }
+
+                if laziest_right.is_none() {
+                    return laziest_left
+                }
+
+                let laziest_left = laziest_left.unwrap();
+                let laziest_right = laziest_right.unwrap();
+
+                if laziest_left.0 <= laziest_right.0 {
+                    Some(laziest_left)
+                } else {
+                    Some(laziest_right)
+                }
+            }
+            _ => None,
+        }
+    }
+
+    pub fn get_laziest_rc(&self, expr: usize, rcs: &Vec<RCPair>) -> Option<RCPair> {
+        // Convert to map for O(1) lookup of whether a node is an RC
+        let mut rc_map: HashMap<usize, &RCPair> = HashMap::new();
+        for rc in rcs {
+            rc_map.insert(rc.0, &rc);
+        }
+
+        if rcs.is_empty() {
+            None
+        } else {
+            if let Some((_, rc)) = self.get_laziest_rc_recurse(expr, &rc_map, 0) {
+                Some(rc)
+            } else {
+                None
+            }
+        }
+    }
+
     pub fn replace(&mut self, old: usize, new: usize) {
         // Replace references to the old node with the new node
         self.replace_references_to_node(old, new);

@@ -50,16 +50,16 @@ fn main() {
         }
     };
 
-    let exp = ast.get_assign_exp(ast.get_main(ast.root));
+    let mut expr = ast.get_assign_exp(ast.get_main(ast.root));
 
-    let mut rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp, &lt);
+    let mut rcs = lib::find_redex_contraction_pairs(&ast, Some(ast.root), expr, &lt);
     let mut rcs_filtered = ast.filter_identical_rcs(&rcs);
 
     println!("{}\n{}", ast.to_string_sugar(ast.root), HORIZONTAL_SEPARATOR);
 
     println!("\nDESUGARED:\n{}\n{}\n", ast.to_string_desugar(ast.root), HORIZONTAL_SEPARATOR);
 
-    println!("{}", ast.to_string_sugar(exp));
+    println!("{}", ast.to_string_sugar(expr));
 
     while rcs.len() != 0 {
         for (i, rc) in rcs_filtered.iter().enumerate() {
@@ -74,18 +74,24 @@ fn main() {
         io::stdin()
             .read_line(&mut input)
             .expect("Failed to read line");
-        let choice: usize = input.trim().parse().expect("Invalid input");
+        input = input.trim().to_string();
+        let choice = if input == "" {
+            &ast.get_laziest_rc(expr, &rcs_filtered).unwrap()
+        } else {
+            let num = input.trim().parse::<usize>().unwrap();
+            if num > rcs.len() {
+                eprintln!("Invalid choice\n");
+                continue;
+            }
+            &rcs_filtered[num]
+        };
 
-        if choice > rcs.len() {
-            eprintln!("Invalid choice\n");
-            continue;
-        }
-        ast.do_rc_subst_and_identical_rcs(&rcs[choice - 1], &rcs);
+        ast.do_rc_subst_and_identical_rcs(choice, &rcs);
 
-        let exp = ast.get_assign_exp(ast.get_main(ast.root));
+        expr = ast.get_assign_exp(ast.get_main(ast.root));
 
-        rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp, &lt);
+        rcs = lib::find_redex_contraction_pairs(&ast, Some(ast.root), expr, &lt);
         rcs_filtered = ast.filter_identical_rcs(&rcs);
-        println!("\n{}", ast.to_string_sugar(exp));
+        println!("\n{}", ast.to_string_sugar(expr));
     }
 }

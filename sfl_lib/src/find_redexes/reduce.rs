@@ -89,7 +89,7 @@ fn check_for_ready_call(
 
 pub fn find_redex_contraction_pairs(
     ast: &AST,
-    module: usize,
+    module: Option<usize>,
     exp: usize,
     lt: &LabelTable,
 ) -> Vec<(usize, AST)> {
@@ -100,7 +100,10 @@ pub fn find_redex_contraction_pairs(
 
     // Dont need to worry about this as main must be at the end, so everything defined in
     // the module is defined here
-    let am: HashMap<String, usize> = ast.get_assigns_map(module);
+    let am: HashMap<String, usize> = match module {
+        Some(m) => ast.get_assigns_map(m),
+        None => HashMap::new(),
+    };
 
     match ast.get(exp).t {
         ASTNodeType::Literal | ASTNodeType::Abstraction => {}
