@@ -210,6 +210,11 @@ impl LabelTable {
         let const1_type = Type::fa(vec![0, 1], Type::f(Type::TypeVariable(0), Type::f(Type::g(1), Type::g(0))));
         let const2_type = Type::fa(vec![0, 1], Type::f(Type::TypeVariable(0), Type::f(Type::g(1), Type::g(1))));
 
+        self.add_inbuilt("id".to_string(), 1, inbuilt_id, id_type);
+        self.add_inbuilt("const".to_string(), 2, inbuilt_const1, const1_type.clone());
+        self.add_inbuilt("const1".to_string(), 2, inbuilt_const1, const1_type);
+        self.add_inbuilt("const2".to_string(), 2, inbuilt_const2, const2_type);
+
         self.add_inbuilt(
             "add".to_string(),
             2,
@@ -304,10 +309,6 @@ impl LabelTable {
             inbuilt_float_gt,
             binary_float_bool_type,
         );
-
-        self.add_inbuilt("id".to_string(), 1, inbuilt_id, id_type);
-        self.add_inbuilt("const1".to_string(), 0, inbuilt_const1, const1_type);
-        self.add_inbuilt("const2".to_string(), 0, inbuilt_const2, const2_type);
 
         self.add_inbuilt("if".to_string(), 1, inbuilt_if, if_type);
 

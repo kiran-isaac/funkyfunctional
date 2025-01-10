@@ -24,9 +24,27 @@ impl std::fmt::Debug for ContextItem {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 struct Context {
     vec: Vec<ContextItem>,
+}
+
+impl std::fmt::Debug for Context {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let inbuilt_map = LabelTable::new().get_type_map();
+        write!(f, "[")?;
+        for item in &self.vec {
+            match item {
+                ContextItem::TypeAssignment(name, _) => {
+                    if !inbuilt_map.contains_key(name) {
+                        write!(f, "{:?}, ", item)?;
+                    }
+                }
+                _ => write!(f, "{:?}, ", item)?,
+            }
+        }
+        write!(f, "]")
+    }
 }
 
 impl Context {
@@ -43,7 +61,7 @@ impl Context {
 
         Self { vec }
     }
-    
+
     fn assigns_only(&self) -> Self {
         let mut new_v = vec![];
 
@@ -81,6 +99,8 @@ impl Context {
     }
 
     fn get_before_assignment(&self, str: String) -> Self {
+        #[cfg(debug_assertions)]
+        let _c_str = format!("{:?}", &self);
         let mut new_v = vec![];
 
         for i in &self.vec {
@@ -96,7 +116,11 @@ impl Context {
             new_v.push(i.clone());
         }
 
-        Self { vec: new_v }
+        let new_s = Self { vec: new_v };
+
+        #[cfg(debug_assertions)]
+        let _new_s_str = format!("{:?}", &new_s);
+        new_s
     }
 
     fn get_type_assignment(&self, var: &str) -> Option<Type> {
@@ -137,21 +161,10 @@ impl Context {
 
         for i in &self.vec {
             match i {
-                ContextItem::Existential(e, None) => {
+                ContextItem::Existential(e, _) => {
                     if *e == existential {
                         new_v.push(ContextItem::Existential(*e, Some(t.clone())));
                         continue;
-                    }
-                }
-                ContextItem::Existential(e, Some(t2)) => {
-                    if *e == existential {
-                        match t2 {
-                            Type::Existential(e2) => {
-                                self.set_existential_definition(*e2, t.clone());
-                                new_v.push(ContextItem::Existential(*e, Some(t.clone())));
-                            },
-                            _ => panic!("Attempt to overwrite existential {} definition from {} to {}. \nContext: {:?}", Type::Existential(*e).to_string(), t2.to_string(), t.to_string(), self.vec)
-                        }
                     }
                 }
                 _ => {}
@@ -201,7 +214,7 @@ impl Context {
         let _c_str = format!("{:?}", self);
         #[cfg(debug_assertions)]
         let _t_str = format!("{}", t.to_string());
-        
+
         match t {
             Type::Existential(ex) => match self.get_existential(*ex) {
                 Some(o) => match o {
@@ -382,7 +395,7 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
             let _from_str = format!("{}", &from.to_string());
             #[cfg(debug_assertions)]
             let _to_str = format!("{}", &to.to_string());
-            
+
             let a1n = c.get_next_existential_identifier();
             let a2n = c.get_next_existential_identifier() + 1;
             let a1 = ContextItem::Existential(a1n, None);
@@ -510,6 +523,9 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
             let rhs = ast.get_arg(expr);
 
             let (f_type, f_c) = synthesize_type(c, ast, lhs)?;
+
+            #[cfg(debug_assertions)]
+            let _f_c_str = format!("{:?}", &f_c);
 
             #[cfg(debug_assertions)]
             let _f_type_str = f_type.to_string();
@@ -682,13 +698,16 @@ pub fn typecheck_module(ast: &AST, module: usize) -> Result<LabelTable, TypeErro
 
         let assign = ast.get_assign_to(module, assign_var.clone()).unwrap();
 
+        #[cfg(debug_assertions)]
+        let _assign_str = format!("{}", ast.to_string(assign));
+
         let assign_expr = ast.get_assign_exp(assign);
         let assign_type = ast.get(assign).type_assignment.clone().unwrap();
-        c = check_type(c, &assign_type, ast, assign_expr)?;
         c = c.assigns_only().append(ContextItem::TypeAssignment(
             assign_var.clone(),
             assign_type.clone(),
         ));
+        c = check_type(c, &assign_type, ast, assign_expr)?;
         lt.add(assign_var.clone(), assign_type.clone());
     }
 

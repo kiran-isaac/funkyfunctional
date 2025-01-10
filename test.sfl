@@ -10,9 +10,5 @@ fac = \n . if eq n 0 then 1 else mul n (fac (dec n))
 type_check_nightmare :: Int
 type_check_nightmare = (\x.x) (if eq (fac 3) 6 then 10 else 20)
 
-/*
-
-*/
-
 main :: Int
-main = const1 type_check_nightmare 2.0
+main = (\x y z. x) type_check_nightmare 2.0 true

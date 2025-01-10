@@ -1,4 +1,4 @@
-use sfl_lib as lib;
+use sfl_lib::{self as lib, typecheck_module, LabelTable};
 use std::{
     env, fs,
     io::{self, Write},
@@ -7,14 +7,18 @@ use std::{
 fn main() {
     let argv: Vec<String> = env::args().collect();
 
-    // let argv = vec!["sfl_cli".to_string(), "../test.sfl".to_string()];
-
-    if argv.len() != 2 {
+    let (file_path, typechecked) =     if argv.len() == 2 {
+        (argv[1].clone(), false)
+    } else if argv.len() == 3 {
+        if argv[1].as_str() != "t" {
+            eprintln!("Unrecognized argument: {}", argv[1]);
+            std::process::exit(1);
+        }
+        (argv[2].clone(), true)
+    } else {
         eprintln!("Incorrect args");
         std::process::exit(1);
-    }
-
-    let file_path = argv[1].clone();
+    };
 
     let file_string = if fs::metadata(&file_path).is_ok() {
         fs::read_to_string(&file_path).expect("Failed to read file")
@@ -30,19 +34,23 @@ fn main() {
     }
     let mut ast = ast.unwrap();
 
-    let mut tc = lib::TypeChecker::new();
     // Typecheck
-    let lt = match tc.check_module(&ast, ast.root) {
-        Ok(lt) => lt,
-        Err(e) => {
+    let lt = if typechecked {
+        typecheck_module(&ast, ast.root).unwrap_or_else(|e| {
             eprintln!("{:?}", e);
             std::process::exit(1)
+        })
+    } else {
+        let mut lt = LabelTable::new();
+        match &lt.consume_from_module(&ast, ast.root) {
+            Ok(()) => lt,
+            Err(e) => panic!("{:?}", e),
         }
     };
 
     let exp = ast.get_assign_exp(ast.get_main(ast.root));
 
-    let mut rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp, lt);
+    let mut rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp, &lt);
 
     println!("{}\n", ast.to_string(ast.root));
 
@@ -69,7 +77,7 @@ fn main() {
 
         let exp = ast.get_assign_exp(ast.get_main(ast.root));
 
-        rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp, lt);
+        rcs = lib::find_redex_contraction_pairs(&ast, ast.root, exp, &lt);
         println!("\n{}", ast.to_string(exp));
     }
 }

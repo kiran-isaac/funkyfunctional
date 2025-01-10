@@ -58,6 +58,7 @@ fn type_check_const_int_abst() {
 
 #[test]
 fn type_check_abst() {
+    tc_test_should_pass("main :: Int\nmain = (\\x y z.x) 10 10 10");
     tc_test_should_pass("main :: Int -> Int\nmain = (\\x.x) (\\x.x)");
     tc_test_should_pass("main :: Int\nmain = (\\x.x) ((\\x.x) 10)");
     tc_test_should_fail("main :: Int\nmain = (\\x y. y) 10 true");
