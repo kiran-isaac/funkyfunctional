@@ -159,6 +159,31 @@ impl AST {
         self.vec.len() - 1
     }
 
+    pub fn expr_eq(&mut self, n1: usize, n2: usize) -> bool {
+        match (&self.get(n1).t, &self.get(n2).t) {
+            (ASTNodeType::Identifier, ASTNodeType::Identifier) | (ASTNodeType::Literal , ASTNodeType::Literal) => {
+                self.get(n1).get_value() == self.get(n2).get_value()
+            },
+            (ASTNodeType::Application, ASTNodeType::Application) => {
+                let f1 = self.get_func(n1);
+                let f2 = self.get_func(n2);
+                let x1 = self.get_arg(n1);
+                let x2 = self.get_arg(n2);
+
+                self.expr_eq(f1, f2) && self.expr_eq(x1, x2)
+            }
+            (ASTNodeType::Abstraction, ASTNodeType::Abstraction) => {
+                let v1 = self.get_abstr_var(n1);
+                let v2 = self.get_abstr_var(n2);
+                let x1 = self.get_arg(n1);
+                let x2 = self.get_arg(n2);
+
+                self.expr_eq(v1, v2) && self.expr_eq(x1, x2)
+            }
+            _ => false,
+        }
+    }
+
     pub fn single_node(n: ASTNode) -> Self {
         let mut ast = Self::new();
         let id = ast.add(n);
@@ -198,11 +223,9 @@ impl AST {
         new_rcs
     }
 
-    pub fn do_rc_subst_and_identical_rcs(&mut self, rc: &RCPair, rcs : &Vec<RCPair>) {
-        let str = self.to_string(rc.0);
-        self.do_rc_subst(rc);
+    pub fn do_rc_subst_and_identical_rcs(&mut self, rc0: &RCPair, rcs : &Vec<RCPair>) {
         for rc in rcs {
-            if self.to_string(rc.0) == str {
+            if self.expr_eq(rc0.0, rc.0) {
                 self.do_rc_subst(rc);
             }
         }
