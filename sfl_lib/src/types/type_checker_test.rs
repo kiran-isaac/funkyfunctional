@@ -110,5 +110,5 @@ fn inference_test(program : &str, type_str : &str) {
 #[test]
 fn infer() {
     inference_test("if true then (\\x :: Int. x) else (\\x . x)", "Int -> Int");
-    inference_test("\\b . if b then (\\x :: Int. x) else (\\x . x)", "Bool -> Int -> Int")
+    inference_test("\\b . if b then (\\x . x) else (\\x . 10)", "Bool -> Int -> Int")
 }
