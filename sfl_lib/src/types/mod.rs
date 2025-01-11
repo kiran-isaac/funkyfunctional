@@ -1,4 +1,7 @@
 mod type_checker;
+
+use std::collections::HashSet;
+use std::fmt::Display;
 pub use type_checker::*;
 
 #[cfg(test)]
@@ -81,6 +84,30 @@ impl Type {
         }
     }
 
+    fn substitute_existential(&self, var: usize, replacement: &Type) -> Self {
+        match self {
+            Type::Primitive(p) => Type::Primitive(*p),
+            Type::Function(t1, t2) => Type::Function(
+                Box::new(t1.substitute_existential(var, replacement)),
+                Box::new(t2.substitute_existential(var, replacement)),
+            ),
+            Type::Existential(n) => {
+                if *n == var {
+                    replacement.clone()
+                } else {
+                    Type::Existential(*n)
+                }
+            }
+            Type::Forall(var2, t2) => {
+                if *var2 == var {
+                    panic!("Duplicate forall")
+                }
+                Type::fa(vec![*var2], t2.substitute_existential(var, replacement))
+            }
+            _ => self.clone(),
+        }
+    }
+
     pub fn substitute_type_variable(&self, var: usize, replacement: &Type) -> Result<Self, String> {
         match self {
             Type::Primitive(p) => Ok(Type::Primitive(*p)),
@@ -95,7 +122,6 @@ impl Type {
                     Ok(Type::TypeVariable(*n))
                 }
             }
-            Type::Existential(_) => Ok(self.clone()),
             Type::Forall(var2, t2) => {
                 if *var2 == var {
                     panic!("Duplicate forall")
@@ -105,8 +131,84 @@ impl Type {
                     t2.substitute_type_variable(var, replacement)?,
                 ))
             }
-            Type::Unit => Ok(Type::Unit),
+            _ => Ok(self.clone()),
         }
+    }
+
+    fn get_tvs(&self) -> HashSet<usize> {
+        match &self {
+            Type::TypeVariable(n) => HashSet::from_iter(vec![*n]),
+            Type::Forall(_, t2) => t2.get_tvs(),
+            Type::Function(t1, t2) => {
+                let t1 = t1.get_tvs();
+                let t2 = t2.get_tvs();
+                t1.union(&t2).cloned().collect()
+            }
+            _ => HashSet::new(),
+        }
+    }
+
+    fn get_existentials(&self) -> HashSet<usize> {
+        match &self {
+            Type::Existential(n) => HashSet::from_iter(vec![*n]),
+            Type::Forall(_, t2) => t2.get_existentials(),
+            Type::Function(t1, t2) => {
+                let t1 = t1.get_existentials();
+                let t2 = t2.get_existentials();
+                t1.union(&t2).cloned().collect()
+            }
+            _ => HashSet::new(),
+        }
+    }
+
+    fn exist_to_tv(&self, max: usize) -> Self {
+        match self {
+            Type::Existential(n) => Type::TypeVariable(*n + max),
+            Type::Forall(v, t2) => Type::Forall(*v, t2.clone()),
+            Type::Function(t1, t2) => {
+                Type::Function(Box::new(t1.exist_to_tv(max)), Box::new(t2.exist_to_tv(max)))
+            }
+            _ => self.clone(),
+        }
+    }
+
+    fn change_tv(&self, old: usize, new: usize) -> Self {
+        match self {
+            Type::TypeVariable(n) => {
+                if *n == old {
+                    Type::TypeVariable(new)
+                } else {
+                    self.clone()
+                }
+            }
+            Type::Forall(v, t2) => {
+                let v = if *v == old {
+                    new
+                } else {
+                    *v
+                };
+                Type::Forall(v, Box::new(t2.change_tv(old, new)))
+            }
+            Type::Function(t1, t2) => {
+                Type::Function(Box::new(t1.change_tv(old, new)), Box::new(t2.change_tv(old, new)))
+            }
+            _ => self.clone(),
+        }
+    }
+
+    fn settle_tvs(&self) -> Self {
+        let mut new_self = self.clone();
+        for (new, old) in self.get_tvs().into_iter().enumerate() {
+            new_self = new_self.change_tv(old, new);
+        }
+        new_self
+    }
+
+    pub fn forall_ify(&self) -> Self {
+        let max_tv = self.max_type_var();
+        let existentials = self.get_existentials().into_iter().collect();
+        let new_self = self.exist_to_tv(max_tv);
+        Type::fa(existentials, new_self)
     }
 
     pub fn is_monotype(&self) -> bool {
@@ -227,9 +329,9 @@ impl Type {
     }
 }
 
-impl ToString for Type {
-    fn to_string(&self) -> String {
-        self.to_string_internal(false)
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string_internal(false))
     }
 }
 

@@ -100,3 +100,15 @@ fn type_check_control_flow_kws() {
     tc_test_should_pass("main :: Int\nmain = const2 2.0 20");
     tc_test_should_pass("main :: Int\nmain = id (id 20)");
 }
+
+fn inference_test(program : &str, type_str : &str) {
+    let ast = Parser::from_string(program.to_string()).parse_tl_expression().unwrap();
+    let t = infer_type(&ast, ast.root).unwrap();
+    assert_eq!(t.to_string(), type_str);
+}
+
+#[test]
+fn infer() {
+    inference_test("if true then (\\x :: Int. x) else (\\x . x)", "Int -> Int");
+    inference_test("\\b . if b then (\\x :: Int. x) else (\\x . x)", "Bool -> Int -> Int")
+}

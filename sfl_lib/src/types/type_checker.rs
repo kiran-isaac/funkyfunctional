@@ -162,7 +162,7 @@ impl Context {
                 ContextItem::Existential(e, Some(Type::Existential(e2))) => {
                     if *e2 == existential {
                         new_v.push(ContextItem::Existential(*e, Some(t.clone())));
-                        continue
+                        continue;
                     }
                 }
                 ContextItem::Existential(e, _) => {
@@ -222,7 +222,7 @@ impl Context {
         match t {
             Type::Existential(ex) => match self.get_existential(*ex) {
                 Some(o) => match o {
-                    Some(t2) => t2.clone(),
+                    Some(t2) => self.substitute(&t2.clone()),
                     None => t.clone(),
                 },
                 None => {
@@ -491,6 +491,12 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
                     Type::Existential(next_exst),
                 ));
 
+            let c = if let Some(t) = &ast.get(ast.get_abstr_var(expr)).type_assignment {
+                c.set_existential_definition(next_exst, t.clone())
+            } else {
+                c
+            };
+
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
@@ -502,7 +508,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
             )?;
 
             #[cfg(debug_assertions)]
-            let _c_str = format!("{:?}", &c);
+            let _c_str2 = format!("{:?}", &c);
             #[cfg(debug_assertions)]
             let _x = 1 + 1;
 
@@ -513,7 +519,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
             let c = c.get_before_assignment(abst_var);
 
             #[cfg(debug_assertions)]
-            let _c_str = format!("{:?}", &c);
+            let _c_str3 = format!("{:?}", &c);
 
             #[cfg(debug_assertions)]
             let _abst_type_str = format!("{}", &abst_type.to_string());
@@ -651,8 +657,7 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
 
         // Sub
         _ => {
-            let (synth_t, synth_c) = synthesize_type(c, ast, expr)?;
-            let c = synth_c;
+            let (synth_t, c) = synthesize_type(c, ast, expr)?;
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
@@ -716,4 +721,17 @@ pub fn typecheck_module(ast: &AST, module: usize) -> Result<LabelTable, TypeErro
     }
 
     Ok(lt)
+}
+
+pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
+    let lt = LabelTable::new();
+    let c = Context::from_labels(&lt);
+
+    match synthesize_type(c, ast, expr) {
+        Ok((t, c)) => {
+            println!("{:?}", c);
+            Ok(c.substitute(&t).forall_ify().settle_tvs())
+        }
+        Err(e) => Err(e),
+    }
 }
