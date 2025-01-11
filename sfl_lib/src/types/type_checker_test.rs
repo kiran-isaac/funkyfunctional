@@ -59,6 +59,7 @@ fn type_check_const_int_abst() {
 #[test]
 fn type_check_abst() {
     tc_test_should_pass("main :: Int\nmain = (\\x y z.x) 10 10 10");
+    tc_test_should_pass("main :: Int\nmain = (\\x y z a.x) 10 (\\x.x) 10 true");
     tc_test_should_pass("main :: Int -> Int\nmain = (\\x.x) (\\x.x)");
     tc_test_should_pass("main :: Int\nmain = (\\x.x) ((\\x.x) 10)");
     tc_test_should_fail("main :: Int\nmain = (\\x y. y) 10 true");
@@ -67,6 +68,11 @@ fn type_check_abst() {
     tc_test_should_pass("main :: Int -> Int\nmain = (\\x.x)");
 
     tc_test_should_pass("main :: Int -> Int\nmain = (\\x y. x) (\\x.x) (\\x.x)");
+}
+
+#[test]
+fn type_y_combinator() {
+    tc_test_should_fail("y :: Int -> Int -> Int\ny f = (\\x. f (x x)) (\\x. f (x x)) ");
 }
 
 #[test]

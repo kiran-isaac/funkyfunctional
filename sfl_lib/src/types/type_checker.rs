@@ -157,6 +157,14 @@ impl Context {
 
         for i in &self.vec {
             match i {
+                // If this is another context that references the one being substituted then
+                // Substitute this one too
+                ContextItem::Existential(e, Some(Type::Existential(e2))) => {
+                    if *e2 == existential {
+                        new_v.push(ContextItem::Existential(*e, Some(t.clone())));
+                        continue
+                    }
+                }
                 ContextItem::Existential(e, _) => {
                     if *e == existential {
                         new_v.push(ContextItem::Existential(*e, Some(t.clone())));
