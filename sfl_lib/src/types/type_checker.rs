@@ -729,7 +729,6 @@ pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
 
     match synthesize_type(c, ast, expr) {
         Ok((t, c)) => {
-            println!("{:?}", c);
             Ok(c.substitute(&t).forall_ify().settle_tvs())
         }
         Err(e) => Err(e),
