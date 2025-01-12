@@ -257,6 +257,13 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
     let _b_str = b.to_string();
 
     match (a, b) {
+        (Type::Existential(ex1), Type::Existential(ex2)) => {
+            if ex1 == ex2 {
+                Ok(c)
+            } else {
+                instantiate_l(c, *ex1, b)
+            }
+        }
         // <:InstantiateL
         (Type::Existential(ex), _) => {
             assert!(!b.contains_existential(*ex));
@@ -457,7 +464,7 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
 // "Γ ⊢ e ⇒ A ⊣ ∆: Under input context Γ, e synthesizes output type A, with output context ∆"
 fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context), TypeError> {
     #[cfg(debug_assertions)]
-    let _expr_str = ast.to_string_sugar(expr);
+    let _expr_str = ast.to_string_sugar(expr, false);
 
     #[cfg(debug_assertions)]
     let _c_str = format!("{:?}", &c);
@@ -559,7 +566,7 @@ fn synthesize_app_type(
     expr: usize,
 ) -> Result<(Type, Context), TypeError> {
     #[cfg(debug_assertions)]
-    let _expr_str = ast.to_string_sugar(expr);
+    let _expr_str = ast.to_string_sugar(expr, false);
 
     #[cfg(debug_assertions)]
     let _c_str = format!("{:?}", &c);
@@ -627,7 +634,7 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
     let node = ast.get(expr);
 
     #[cfg(debug_assertions)]
-    let _expr_str = ast.to_string_sugar(expr);
+    let _expr_str = ast.to_string_sugar(expr, false);
 
     #[cfg(debug_assertions)]
     let _c_str = format!("{:?}", &c);
@@ -708,7 +715,7 @@ pub fn typecheck_module(ast: &AST, module: usize) -> Result<LabelTable, TypeErro
         let assign = ast.get_assign_to(module, assign_var.clone()).unwrap();
 
         #[cfg(debug_assertions)]
-        let _assign_str = format!("{}", ast.to_string_sugar(assign));
+        let _assign_str = format!("{}", ast.to_string_sugar(assign, false));
 
         let assign_expr = ast.get_assign_exp(assign);
         let assign_type = ast.get(assign).type_assignment.clone().unwrap();

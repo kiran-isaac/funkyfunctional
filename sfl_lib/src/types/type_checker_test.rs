@@ -1,5 +1,5 @@
 use super::*;
-use crate::Parser;
+use crate::{find_redex_contraction_pairs, Parser};
 
 fn tc_test_should_pass(program: &str) {
     let ast = Parser::from_string(program.to_string())
@@ -109,6 +109,41 @@ fn inference_test(program : &str, type_str : &str) {
 
 #[test]
 fn infer() {
+    inference_test("\\x y . y ((\\z . z) x)) (\\z . z + 1) 10 ", "Bool -> Int -> Int");
+    // inference_test("\\b . if true then (\\x . x) else (\\x . x)", "Bool -> Int -> Int");
+
     inference_test("if true then (\\x :: Int. x) else (\\x . x)", "Int -> Int");
-    inference_test("\\b . if b then (\\x . x) else (\\x . 10)", "Bool -> Int -> Int")
+    inference_test("\\b . if b then (\\x . x) else (\\x . 10)", "Bool -> Int -> Int");
+}
+
+/// Test a program is well typed throughout evaluation
+fn full_well_typed_test(program : &str) -> Result<(), TypeError> {
+    let mut ast = Parser::from_string(program.to_string()).parse_module().unwrap();
+    let mut main_expr = ast.get_assign_exp(ast.get_main(ast.root));
+    let mut rcs = find_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &typecheck_module(&ast, ast.root)?);
+    while rcs.len() > 0 {
+        #[cfg(debug_assertions)]
+        let _module_str = ast.to_string_sugar(ast.root, true);
+
+        let filtered_rcs = ast.filter_identical_rcs(&rcs);
+        let laziest = ast.get_laziest_rc(main_expr, &filtered_rcs).unwrap();
+        ast.do_rc_subst_and_identical_rcs(&laziest, &filtered_rcs);
+
+        main_expr = ast.get_assign_exp(ast.get_main(ast.root));
+        rcs = find_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &typecheck_module(&ast, ast.root)?);
+    }
+    Ok(())
+}
+
+#[test]
+fn full_well_typed_tests() -> Result<(), TypeError> {
+    let program = r#"
+    fac :: Int -> Int
+    fac n = if n <= 1 then 1 else n * (fac (n - 1))
+
+    main :: Int
+    main = fac 5"#;
+    full_well_typed_test(program)?;
+
+    Ok(())
 }
