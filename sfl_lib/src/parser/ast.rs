@@ -604,8 +604,8 @@ impl AST {
                 format!("{}Abstraction: {}\n{}", ind, id.get_value(), exp)
             }
             ASTNodeType::Pair => {
-                let a = self.get_first(node);
-                let b = self.get_first(node);
+                let a = self.to_string_indent(self.get_first(node), indent + 2);
+                let b = self.to_string_indent(self.get_second(node), indent + 2);
                 format!("{}Pair: {}\n{}", ind, a, b)
             }
         }
@@ -732,8 +732,8 @@ impl AST {
                 res
             }
             ASTNodeType::Pair => {
-                let a = self.get_first(node);
-                let b = self.get_second(node);
+                let a = self.to_string_sugar(self.get_first(node), show_assigned_types);
+                let b = self.to_string_sugar(self.get_second(node), show_assigned_types);
                 format!("({}, {})", a, b)
             }
         }
@@ -803,8 +803,8 @@ impl AST {
                 res
             }
             ASTNodeType::Pair => {
-                let a = self.get_first(node);
-                let b = self.get_first(node);
+                let a = self.to_string_desugar_and_type(self.get_first(node));
+                let b = self.to_string_desugar_and_type(self.get_second(node));
                 format!("({}, {})", a, b)
             }
         }
