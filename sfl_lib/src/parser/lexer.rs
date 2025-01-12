@@ -249,7 +249,7 @@ impl Lexer {
         // If we hit other whitespace, skip it
         while self.i < self.file.len() && self.c().is_whitespace() {
             if self.c() == '\n' {
-                while self.c().is_whitespace() {
+                while self.c() == '\n' {
                     self.line += 1;
                     self.col = 0;
                     self.i += 1;

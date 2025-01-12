@@ -5,7 +5,7 @@ use super::{Type, TypeError};
 #[derive(Clone, PartialEq, Eq)]
 enum ContextItem {
     TypeVariable(usize),
-    TypeAssignment(String, Type),
+    TypeAssignment(String, Result<Type, TypeError>),
     Existential(usize, Option<Type>),
     Marker(usize),
 }
@@ -19,7 +19,10 @@ impl std::fmt::Debug for ContextItem {
                 None => write!(f, "{}", Type::Existential(*v).to_string()),
             },
             ContextItem::Marker(v) => write!(f, "|{}|", Type::Existential(*v).to_string()),
-            ContextItem::TypeAssignment(name, t) => write!(f, "{}:{}", name, t.to_string()),
+            ContextItem::TypeAssignment(name, tr) => match tr {
+                Ok(t) => write!(f, "{}:{}", name, t.to_string()),
+                Err(_) => write!(f, "{}:ERROR", name),
+            },
         }
     }
 }
@@ -52,7 +55,7 @@ impl Context {
         let mut vec = vec![];
 
         for (k, v) in labels.get_type_map() {
-            vec.push(ContextItem::TypeAssignment(k.clone(), v.clone()));
+            vec.push(ContextItem::TypeAssignment(k.clone(), Ok(v.clone())));
         }
 
         Self { vec }
@@ -78,6 +81,23 @@ impl Context {
 
         new.vec.push(item);
         new
+    }
+
+    fn remove_assignment(&self, name : &String) -> Self {
+        let mut new_v = vec![];
+
+        for i in &self.vec {
+            if let ContextItem::TypeAssignment(name2, _) = i {
+                if name == name2 {
+                    continue;
+                }
+            }
+
+            new_v.push(i.clone());
+
+        }
+
+        Self { vec: new_v }
     }
 
     fn get_before_item(&self, item: ContextItem) -> Self {
@@ -119,7 +139,7 @@ impl Context {
         new_s
     }
 
-    fn get_type_assignment(&self, var: &str) -> Option<Type> {
+    fn get_type_assignment(&self, var: &str) -> Option<Result<Type, TypeError>> {
         for i in &self.vec {
             match i {
                 ContextItem::TypeAssignment(v, t) => {
@@ -241,11 +261,11 @@ impl Context {
 
 fn type_error(msg: String, ast: &AST, expr: usize) -> TypeError {
     let n = ast.get(expr);
-    return TypeError {
+    TypeError {
         e: msg,
         col: n.col,
         line: n.line,
-    };
+    }
 }
 
 fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
@@ -479,7 +499,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
             #[cfg(debug_assertions)]
             let _var_str = var.clone();
             match c.get_type_assignment(&var) {
-                Some(t) => Ok((t, c)),
+                Some(t) => Ok((t?, c)),
                 None => Err(type_error("Unbound variable".to_string(), ast, expr)),
             }
         }
@@ -495,7 +515,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
                 .append(ContextItem::Existential(next_exst + 1, None))
                 .append(ContextItem::TypeAssignment(
                     abst_var.clone(),
-                    Type::Existential(next_exst),
+                    Ok(Type::Existential(next_exst)),
                 ));
 
             let c = if let Some(t) = &ast.get(ast.get_abstr_var(expr)).type_assignment {
@@ -656,7 +676,7 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
         (Type::Function(from, to), ASTNodeType::Abstraction) => {
             let var_name = ast.get(ast.get_abstr_var(expr)).get_value();
 
-            let new_ass = ContextItem::TypeAssignment(var_name.clone(), from.as_ref().clone());
+            let new_ass = ContextItem::TypeAssignment(var_name.clone(), Ok(from.as_ref().clone()));
             let c = c.append(new_ass.clone());
             let pred = check_type(c, to, ast, ast.get_abstr_exp(expr))?;
             Ok(pred.get_before_item(new_ass))
@@ -737,16 +757,20 @@ pub fn infer_or_check_assignment_types(ast: &mut AST, module: usize) -> Result<L
             Some(type_assignment) => {
                 c = c.assigns_only().append(ContextItem::TypeAssignment(
                     assign_var.clone(),
-                    type_assignment.clone(),
+                    Ok(type_assignment.clone()),
                 ));
                 c = check_type(c, &type_assignment, ast, assign_expr)?;
                 type_assignment.clone()
             }
             None => {
-                let (t, new_c) = infer_type_with_context(c.clone(), &ast, assign_expr)?;
-                c = new_c.assigns_only().append(ContextItem::TypeAssignment(
+                c = c.append(ContextItem::TypeAssignment(
                     assign_var.clone(),
-                    t.clone(),
+                    Err(type_error(format!("Cannot infer type of expression containing recursive call. Assign a type to label '{}'", &assign_var), ast, assign_expr)),
+                ));
+                let (t, new_c) = infer_type_with_context(c.clone(), &ast, assign_expr)?;
+                c = new_c.assigns_only().remove_assignment(assign_var).append(ContextItem::TypeAssignment(
+                    assign_var.clone(),
+                    Ok(t.clone()),
                 ));
                 ast.set_assignment_type(assign, t.clone());
                 t

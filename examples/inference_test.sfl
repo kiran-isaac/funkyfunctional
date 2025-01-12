@@ -2,4 +2,12 @@ inc x = x + 1
 
 dec x = x - 1
 
+max m n = if m >= n then m else n
+
+floor n = max n 0
+
 inc2 x = inc (inc (dec (inc x)))
+
+recurse = recurse
+
+main = \x . floor (inc2 10)

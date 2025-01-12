@@ -27,6 +27,7 @@ pub enum Type {
     Forall(usize, Box<Type>),
 }
 
+#[derive(Clone, PartialEq, Eq)]
 pub struct TypeError {
     pub e: String,
     pub line: usize,
@@ -82,30 +83,6 @@ impl Type {
             Type::Existential(e) => *e == ex,
             Type::Forall(_, t) => t.contains_existential(ex),
             Type::Unit => false,
-        }
-    }
-
-    fn substitute_existential(&self, var: usize, replacement: &Type) -> Self {
-        match self {
-            Type::Primitive(p) => Type::Primitive(*p),
-            Type::Function(t1, t2) => Type::Function(
-                Box::new(t1.substitute_existential(var, replacement)),
-                Box::new(t2.substitute_existential(var, replacement)),
-            ),
-            Type::Existential(n) => {
-                if *n == var {
-                    replacement.clone()
-                } else {
-                    Type::Existential(*n)
-                }
-            }
-            Type::Forall(var2, t2) => {
-                if *var2 == var {
-                    panic!("Duplicate forall")
-                }
-                Type::fa(vec![*var2], t2.substitute_existential(var, replacement))
-            }
-            _ => self.clone(),
         }
     }
 
