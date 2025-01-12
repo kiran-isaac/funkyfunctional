@@ -350,6 +350,32 @@ impl Parser {
         }
     }
 
+    fn parse_forall(&mut self, ast: &mut AST) -> Result<Type, ParserError> {
+        assert_eq!(self.peek(0)?.tt, TokenType::Forall);
+        self.advance();
+
+        let mut vars = vec![];
+        while self.peek(0)?.tt == TokenType::Id {
+            let v = self.peek(0)?.value;
+            if self.peek(0)?.is_infix_id() {
+                return Err(self.parse_error(format!("Invalid identifier in forall type declaration: {}", v)));
+            }
+
+            vars.push(v);
+        }
+
+        if vars.is_empty() {
+            return Err(self.parse_error("Invalid forall declaration, no variables".to_string()))
+        }
+
+        let tk = self.consume()?;
+        if tk.tt != TokenType::Dot {
+            return Err(self.parse_error(format!("Invalid forall declaration, expected dot after variables, got {:?}", tk)));
+        }
+
+        Ok(Type::fa(vars, self.parse_type_expression(ast)?))
+    }
+
     fn parse_type_expression_primary(&mut self, ast: &mut AST) -> Result<Type, ParserError> {
         let t = self.consume()?;
 
@@ -368,6 +394,7 @@ impl Parser {
                 self.advance();
                 Ok(inner)
             }
+            TokenType::Forall => self.parse_forall(ast),
             _ => Err(self.parse_error(format!("Unexpected token in type expression: {:?}", t))),
         }
     }

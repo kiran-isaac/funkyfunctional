@@ -4,7 +4,7 @@ use super::{Type, TypeError};
 
 #[derive(Clone, PartialEq, Eq)]
 enum ContextItem {
-    TypeVariable(usize),
+    TypeVariable(String),
     TypeAssignment(String, Result<Type, TypeError>),
     Existential(usize, Option<Type>),
     Marker(usize),
@@ -13,7 +13,7 @@ enum ContextItem {
 impl std::fmt::Debug for ContextItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ContextItem::TypeVariable(v) => write!(f, "{}", Type::TypeVariable(*v).to_string()),
+            ContextItem::TypeVariable(v) => write!(f, "{}", v),
             ContextItem::Existential(v, ass) => match ass {
                 Some(t) => write!(f, "{}:{}", Type::Existential(*v).to_string(), t.to_string()),
                 None => write!(f, "{}", Type::Existential(*v).to_string()),
@@ -253,7 +253,7 @@ impl Context {
                 Box::new(self.substitute(from.as_ref())),
                 Box::new(self.substitute(to.as_ref())),
             ),
-            Type::Forall(var, t) => Type::Forall(*var, Box::new(self.substitute(t.as_ref()))),
+            Type::Forall(var, t) => Type::Forall(var.clone(), Box::new(self.substitute(t.as_ref()))),
             _ => t.clone(),
         }
     }
@@ -336,16 +336,16 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            let new_body = t.substitute_type_variable(*var, &Type::Existential(exst))?;
+            let new_body = t.substitute_type_variable(var, &Type::Existential(exst))?;
             let pred = subtype(c, &new_body, b)?;
             Ok(pred.get_before_item(ContextItem::Marker(exst)))
         }
 
         // <:ForallR
         (_, Type::Forall(var, t)) => {
-            let c = c.append(ContextItem::TypeVariable(*var));
+            let c = c.append(ContextItem::TypeVariable(var.clone()));
             let pred = subtype(c, a, t.as_ref())?;
-            Ok(pred.get_before_item(ContextItem::TypeVariable(*var)))
+            Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
         }
 
         // <:->
@@ -399,9 +399,9 @@ fn instantiate_l(c: Context, exst: usize, b: &Type) -> Result<Context, String> {
 
         // InstLAllR
         Type::Forall(var, t) => {
-            let new_c = c.append(ContextItem::TypeVariable(*var));
+            let new_c = c.append(ContextItem::TypeVariable(var.clone()));
             let pred = instantiate_l(new_c, exst, t.as_ref())?;
-            Ok(pred.get_before_item(ContextItem::TypeVariable(*var)))
+            Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
         }
 
         _ => {
@@ -473,7 +473,7 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            let t = t.substitute_type_variable(*var, &Type::Existential(next_ext))?;
+            let t = t.substitute_type_variable(var, &Type::Existential(next_ext))?;
             let pred1 = instantiate_l(c, exst, &t)?;
             Ok(pred1.get_before_item(ContextItem::Marker(next_ext)))
         }
@@ -611,7 +611,7 @@ fn synthesize_app_type(
             ));
 
             let a_subst = match t.substitute_type_variable(
-                *var,
+                &var.clone(),
                 &Type::Existential(c.get_next_existential_identifier()),
             ) {
                 Ok(t) => t,
@@ -672,8 +672,8 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
 
         // Forall Introduction
         (Type::Forall(var, t), _) => {
-            let pred = check_type(c.append(ContextItem::TypeVariable(*var)), t, ast, expr)?;
-            Ok(pred.get_before_item(ContextItem::TypeVariable(*var)))
+            let pred = check_type(c.append(ContextItem::TypeVariable(var.clone())), t, ast, expr)?;
+            Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
         }
 
         // Arrow introduction
@@ -731,7 +731,7 @@ pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), 
 
 fn infer_type_with_context(c : Context, ast: &AST, expr: usize) -> Result<(Type, Context), TypeError> {
     let (t, c) = synthesize_type(c, ast, expr)?;
-    let t = c.substitute(&t).forall_ify().settle_tvs();
+    let t = c.substitute(&t).forall_ify();
     Ok((t, c))
 }
 

@@ -20,6 +20,7 @@ pub enum TokenType {
 
     DoubleColon,
     RArrow,
+    Forall,
 
     LParen,
     RParen,

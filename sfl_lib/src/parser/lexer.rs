@@ -120,6 +120,12 @@ impl Lexer {
                     value: str,
                 })
             }
+            "forall" => {
+                return Ok(Token {
+                    tt: TokenType::Forall,
+                    value: str,
+                })
+            }
             _ => {}
         }
 

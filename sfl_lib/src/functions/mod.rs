@@ -200,24 +200,24 @@ impl LabelTable {
         );
 
         let if_type = Type::Forall(
-            0,
+            "a".to_string(),
             Box::new(Type::Function(
                 Box::new(Type::Primitive(Primitive::Bool)),
                 Box::new(Type::Function(
-                    Box::new(Type::g(0)),
-                    Box::new(Type::Function(Box::new(Type::g(0)), Box::new(Type::g(0)))),
+                    Box::new(Type::tv("a".to_string())),
+                    Box::new(Type::Function(Box::new(Type::tv("a".to_string())), Box::new(Type::tv("a".to_string())))),
                 )),
             )),
         );
 
-        let id_type = Type::fa(vec![0], Type::f(Type::g(0), Type::g(0)));
+        let id_type = Type::fa(vec!["a".to_string()], Type::f(Type::tv("a".to_string()), Type::tv("a".to_string())));
         let const1_type = Type::fa(
-            vec![0, 1],
-            Type::f(Type::TypeVariable(0), Type::f(Type::g(1), Type::g(0))),
+            vec!["a".to_string(), "b".to_string()],
+            Type::f(Type::TypeVariable("a".to_string()), Type::f(Type::tv("b".to_string()), Type::tv("a".to_string()))),
         );
         let const2_type = Type::fa(
-            vec![0, 1],
-            Type::f(Type::TypeVariable(0), Type::f(Type::g(1), Type::g(1))),
+            vec!["a".to_string(), "b".to_string()],
+            Type::f(Type::TypeVariable("a".to_string()), Type::f(Type::tv("b".to_string()), Type::tv("b".to_string()))),
         );
 
         self.add_inbuilt("id".to_string(), 1, inbuilt_id, id_type);
