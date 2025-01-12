@@ -2,6 +2,7 @@ mod type_checker;
 
 use std::collections::HashSet;
 use std::fmt::Display;
+use std::hash::Hash;
 pub use type_checker::*;
 
 #[cfg(test)]
@@ -67,7 +68,7 @@ impl Type {
 
     pub fn fa(forall: Vec<usize>, t: Self) -> Self {
         let mut t = t;
-        for i in forall {
+        for i in forall.into_iter().rev() {
             t = Type::Forall(i, Box::new(t));
         }
         t
@@ -135,29 +136,43 @@ impl Type {
         }
     }
 
-    fn get_tvs(&self) -> HashSet<usize> {
-        match &self {
-            Type::TypeVariable(n) => HashSet::from_iter(vec![*n]),
-            Type::Forall(_, t2) => t2.get_tvs(),
-            Type::Function(t1, t2) => {
-                let t1 = t1.get_tvs();
-                let t2 = t2.get_tvs();
-                t1.union(&t2).cloned().collect()
+    fn remove_duplicates<T : Eq + Hash + Clone>(ls : &Vec<T>) -> Vec<T> {
+        let mut seen = HashSet::new();
+        let mut new_vec : Vec<T> = Vec::new();
+        for i in ls {
+            if !seen.contains(i) {
+                new_vec.push(i.clone());
+                seen.insert(i);
             }
-            _ => HashSet::new(),
+        }
+        new_vec
+    }
+
+    fn ordered_tvs(&self) -> Vec<usize> {
+        match &self {
+            Type::TypeVariable(n) => vec![*n],
+            Type::Forall(_, t2) => t2.ordered_tvs(),
+            Type::Function(t1, t2) => {
+                let mut t1 = t1.ordered_tvs();
+                let t2 = t2.ordered_tvs();
+                t1.extend(t2);
+                Self::remove_duplicates(&t1)
+            }
+            _ => vec![],
         }
     }
 
-    fn get_existentials(&self) -> HashSet<usize> {
+    fn ordered_existentials(&self) -> Vec<usize> {
         match &self {
-            Type::Existential(n) => HashSet::from_iter(vec![*n]),
-            Type::Forall(_, t2) => t2.get_existentials(),
+            Type::Existential(n) => vec![*n],
+            Type::Forall(_, t2) => t2.ordered_existentials(),
             Type::Function(t1, t2) => {
-                let t1 = t1.get_existentials();
-                let t2 = t2.get_existentials();
-                t1.union(&t2).cloned().collect()
+                let mut t1 = t1.ordered_existentials();
+                let t2 = t2.ordered_existentials();
+                t1.extend(t2);
+                Self::remove_duplicates(&t1)
             }
-            _ => HashSet::new(),
+            _ => vec![],
         }
     }
 
@@ -182,23 +197,20 @@ impl Type {
                 }
             }
             Type::Forall(v, t2) => {
-                let v = if *v == old {
-                    new
-                } else {
-                    *v
-                };
+                let v = if *v == old { new } else { *v };
                 Type::Forall(v, Box::new(t2.change_tv(old, new)))
             }
-            Type::Function(t1, t2) => {
-                Type::Function(Box::new(t1.change_tv(old, new)), Box::new(t2.change_tv(old, new)))
-            }
+            Type::Function(t1, t2) => Type::Function(
+                Box::new(t1.change_tv(old, new)),
+                Box::new(t2.change_tv(old, new)),
+            ),
             _ => self.clone(),
         }
     }
 
     fn settle_tvs(&self) -> Self {
         let mut new_self = self.clone();
-        for (new, old) in self.get_tvs().into_iter().enumerate() {
+        for (new, old) in self.ordered_tvs().into_iter().enumerate() {
             new_self = new_self.change_tv(old, new);
         }
         new_self
@@ -206,7 +218,7 @@ impl Type {
 
     pub fn forall_ify(&self) -> Self {
         let max_tv = self.max_type_var();
-        let existentials = self.get_existentials().into_iter().collect();
+        let existentials: Vec<usize> = self.ordered_existentials().into_iter().collect();
         let new_self = self.exist_to_tv(max_tv);
         Type::fa(existentials, new_self)
     }

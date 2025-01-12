@@ -2,7 +2,8 @@ use super::*;
 
 fn full_run_test(program: String) -> String {
     let mut ast = Parser::from_string(program).parse_module().unwrap();
-    let lt = typecheck_module(&ast, ast.root).unwrap();
+    let module = ast.root;
+    let lt = typecheck_module(&mut ast, module).unwrap();
     let mut exp = ast.get_assign_exp(ast.get_main(ast.root));
 
     let mut rcs = find_redex_contraction_pairs(&ast, Some(ast.root), exp, &lt);

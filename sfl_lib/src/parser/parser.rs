@@ -443,8 +443,7 @@ impl Parser {
 
         let id = ast.add_id(assid, line, col);
 
-        // Ignore if type assignment is not found
-        // This is for testing purposes, should be changed to enforce type assignment
+        // Ignore if type assignment is not found, so the typechecker will have to infer
         let type_assignment = match self.get_type_assignment(&name) {
             Ok(t) => Some(t),
             Err(_) => None,

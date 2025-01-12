@@ -373,6 +373,10 @@ impl AST {
         self.add(ASTNode::new_abstraction(id, exp, line, col))
     }
 
+    pub fn set_assignment_type(&mut self, assignment: usize, type_ : Type) {
+        self.vec[assignment].type_assignment = Some(type_);
+    }
+
     pub fn add_assignment(
         &mut self,
         id: usize,
@@ -640,6 +644,7 @@ impl AST {
             }
             ASTNodeType::Assignment => {
                 let id = self.get(self.get(node).children[0]);
+                let var_name = id.get_value();
                 let mut exp = self.to_string_sugar(self.get_assign_exp(node), show_assigned_types);
 
                 let mut fancy_syntax_abst_vars = "".to_string();
@@ -656,7 +661,7 @@ impl AST {
 
                 let type_str = if show_assigned_types {
                     if let Some(ass_type) = &self.get(node).type_assignment {
-                        ass_type.to_string() + "\n"
+                        var_name.clone() + " :: " + ass_type.to_string().as_str() + "\n"
                     } else {
                         "".to_string()
                     }
@@ -664,7 +669,13 @@ impl AST {
                     "".to_string()
                 };
 
-                format!("{}{}{} = {}", type_str, id.get_value(), fancy_syntax_abst_vars, exp)
+                format!(
+                    "{}{}{} = {}",
+                    type_str,
+                    id.get_value(),
+                    fancy_syntax_abst_vars,
+                    exp
+                )
             }
             ASTNodeType::Module => {
                 let mut s = String::new();
@@ -688,7 +699,7 @@ impl AST {
         }
     }
 
-    pub fn to_string_desugar(&self, node: usize) -> String {
+    pub fn to_string_desugar_and_type(&self, node: usize) -> String {
         let n = self.get(node);
         match n.t {
             ASTNodeType::Identifier => match &n.type_assignment {
@@ -702,7 +713,7 @@ impl AST {
                 let func = self.get_func(node);
                 let arg = self.get_arg(node);
 
-                let func_str = self.to_string_desugar(func);
+                let func_str = self.to_string_desugar_and_type(func);
 
                 // If the func is an abstraction, wrap it in parens
                 let func_str = match self.get(func).t {
@@ -710,7 +721,7 @@ impl AST {
                     _ => func_str,
                 };
 
-                let arg_str = self.to_string_desugar(arg);
+                let arg_str = self.to_string_desugar_and_type(arg);
                 // If the argument is an application, wrap it in parens
                 let arg_str = match self.get(arg).t {
                     ASTNodeType::Application | ASTNodeType::Abstraction => format!("({})", arg_str),
@@ -721,22 +732,29 @@ impl AST {
             }
             ASTNodeType::Assignment => {
                 let id = self.get(self.get(node).children[0]);
-                let exp = self.to_string_desugar(self.get_assign_exp(node));
+                let var_name = id.get_value();
+                let exp = self.to_string_desugar_and_type(self.get_assign_exp(node));
 
-                format!("{} = {}", id.get_value(), exp)
+                let type_str = if let Some(ass_type) = &self.get(node).type_assignment {
+                    var_name.clone() + " :: " + ass_type.to_string().as_str() + "\n"
+                } else {
+                    "".to_string()
+                };
+
+                format!("{}{} = {}", type_str, &var_name, exp)
             }
             ASTNodeType::Module => {
                 let mut s = String::new();
                 for c in &n.children {
-                    s.push_str(&self.to_string_desugar(*c));
+                    s.push_str(&self.to_string_desugar_and_type(*c));
                     s.push_str("\n");
                 }
 
                 s.trim().to_string()
             }
             ASTNodeType::Abstraction => {
-                let expr_str = self.to_string_desugar(n.children[1]);
-                let var_str = self.to_string_desugar(n.children[0]);
+                let expr_str = self.to_string_desugar_and_type(n.children[1]);
+                let var_str = self.to_string_desugar_and_type(n.children[0]);
 
                 let mut res = "\\".to_string();
                 res.push_str(&var_str);

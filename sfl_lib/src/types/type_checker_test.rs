@@ -2,17 +2,19 @@ use super::*;
 use crate::{find_redex_contraction_pairs, Parser};
 
 fn tc_test_should_pass(program: &str) {
-    let ast = Parser::from_string(program.to_string())
+    let mut ast = Parser::from_string(program.to_string())
         .parse_module()
         .unwrap();
-    typecheck_module(&ast, ast.root).unwrap();
+    let module = ast.root;
+    typecheck_module(&mut ast, module).unwrap();
 }
 
 fn tc_test_should_fail(program: &str) {
-    let ast = Parser::from_string(program.to_string())
+    let mut ast = Parser::from_string(program.to_string())
         .parse_module()
         .unwrap();
-    typecheck_module(&ast, ast.root).unwrap_err();
+    let module = ast.root;
+    typecheck_module(&mut ast, module).unwrap_err();
 }
 
 #[test]
@@ -101,26 +103,39 @@ fn type_check_control_flow_kws() {
     tc_test_should_pass("main :: Int\nmain = id (id 20)");
 }
 
-fn inference_test(program : &str, type_str : &str) {
-    let ast = Parser::from_string(program.to_string()).parse_tl_expression().unwrap();
+fn inference_test(program: &str, type_str: &str) {
+    let ast = Parser::from_string(program.to_string())
+        .parse_tl_expression()
+        .unwrap();
     let t = infer_type(&ast, ast.root).unwrap();
     assert_eq!(t.to_string(), type_str);
 }
 
 #[test]
 fn infer() {
-    inference_test("\\x y . y ((\\z . z) x)) (\\z . z + 1) 10 ", "Bool -> Int -> Int");
-    // inference_test("\\b . if true then (\\x . x) else (\\x . x)", "Bool -> Int -> Int");
+    inference_test("\\b . if true then (\\x . x) else (\\x . x)", "∀a. ∀b. a -> b -> b");
 
     inference_test("if true then (\\x :: Int. x) else (\\x . x)", "Int -> Int");
-    inference_test("\\b . if b then (\\x . x) else (\\x . 10)", "Bool -> Int -> Int");
+    inference_test(
+        "\\b . if b then (\\x . x) else (\\x . 10)",
+        "Bool -> Int -> Int",
+    );
 }
 
 /// Test a program is well typed throughout evaluation
-fn full_well_typed_test(program : &str) -> Result<(), TypeError> {
-    let mut ast = Parser::from_string(program.to_string()).parse_module().unwrap();
+fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
+    let mut ast = Parser::from_string(program.to_string())
+        .parse_module()
+        .unwrap();
     let mut main_expr = ast.get_assign_exp(ast.get_main(ast.root));
-    let mut rcs = find_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &typecheck_module(&ast, ast.root)?);
+    let module = ast.root;
+    let lt = &typecheck_module(&mut ast, module)?;
+    let mut rcs = find_redex_contraction_pairs(
+        &ast,
+        Some(ast.root),
+        main_expr,
+        lt,
+    );
     while rcs.len() > 0 {
         #[cfg(debug_assertions)]
         let _module_str = ast.to_string_sugar(ast.root, true);
@@ -130,7 +145,14 @@ fn full_well_typed_test(program : &str) -> Result<(), TypeError> {
         ast.do_rc_subst_and_identical_rcs(&laziest, &filtered_rcs);
 
         main_expr = ast.get_assign_exp(ast.get_main(ast.root));
-        rcs = find_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &typecheck_module(&ast, ast.root)?);
+        let module = ast.root;
+        let lt = &typecheck_module(&mut ast, module)?;
+        rcs = find_redex_contraction_pairs(
+            &ast,
+            Some(ast.root),
+            main_expr,
+            lt,
+        );
     }
     Ok(())
 }

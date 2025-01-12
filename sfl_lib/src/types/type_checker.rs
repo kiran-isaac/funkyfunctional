@@ -704,7 +704,22 @@ pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), 
         Err(e) => Err(e),
     }
 }
-pub fn typecheck_module(ast: &AST, module: usize) -> Result<LabelTable, TypeError> {
+
+fn infer_type_with_context(c : Context, ast: &AST, expr: usize) -> Result<(Type, Context), TypeError> {
+    match synthesize_type(c, ast, expr) {
+        Ok((t, c)) => Ok((c.substitute(&t).forall_ify().settle_tvs(), c)),
+        Err(e) => Err(e),
+    }
+}
+
+pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
+    let lt = LabelTable::new();
+    let c = Context::from_labels(&lt);
+
+    Ok(infer_type_with_context(c, ast, expr)?.0)
+}
+
+pub fn typecheck_module(ast: &mut AST, module: usize) -> Result<LabelTable, TypeError> {
     let mut lt = LabelTable::new();
     let mut c = Context::from_labels(&lt);
 
@@ -718,26 +733,26 @@ pub fn typecheck_module(ast: &AST, module: usize) -> Result<LabelTable, TypeErro
         let _assign_str = format!("{}", ast.to_string_sugar(assign, false));
 
         let assign_expr = ast.get_assign_exp(assign);
-        let assign_type = ast.get(assign).type_assignment.clone().unwrap();
-        c = c.assigns_only().append(ContextItem::TypeAssignment(
-            assign_var.clone(),
-            assign_type.clone(),
-        ));
-        c = check_type(c, &assign_type, ast, assign_expr)?;
-        lt.add(assign_var.clone(), assign_type.clone());
+
+        let type_of_assignment = match &ast.get(assign).type_assignment {
+            Some(type_assignment) => {
+                c = c.assigns_only().append(ContextItem::TypeAssignment(
+                    assign_var.clone(),
+                    type_assignment.clone(),
+                ));
+                c = check_type(c, &type_assignment, ast, assign_expr)?;
+                type_assignment.clone()
+            }
+            None => {
+                let (t, new_c) = infer_type_with_context(c.clone(), &ast, assign_expr)?;
+                c = new_c;
+                ast.set_assignment_type(assign, t.clone());
+                t
+            }
+        };
+
+        lt.add(assign_var.clone(), type_of_assignment.clone());
     }
 
     Ok(lt)
-}
-
-pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
-    let lt = LabelTable::new();
-    let c = Context::from_labels(&lt);
-
-    match synthesize_type(c, ast, expr) {
-        Ok((t, c)) => {
-            Ok(c.substitute(&t).forall_ify().settle_tvs())
-        }
-        Err(e) => Err(e),
-    }
 }
