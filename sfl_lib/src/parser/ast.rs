@@ -508,8 +508,8 @@ impl AST {
         names
     }
 
-    pub fn get_main(&self, module: usize) -> usize {
-        self.get_assign_to(module, "main".to_string()).unwrap()
+    pub fn get_main(&self, module: usize) -> Option<usize> {
+        self.get_assign_to(module, "main".to_string())
     }
 
     // Get assignment within module

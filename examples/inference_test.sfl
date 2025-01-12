@@ -1,0 +1,5 @@
+inc x = x + 1
+
+dec x = x - 1
+
+inc2 x = inc (inc (dec (inc x)))

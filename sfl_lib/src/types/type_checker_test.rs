@@ -6,7 +6,7 @@ fn tc_test_should_pass(program: &str) {
         .parse_module()
         .unwrap();
     let module = ast.root;
-    typecheck_module(&mut ast, module).unwrap();
+    infer_or_check_assignment_types(&mut ast, module).unwrap();
 }
 
 fn tc_test_should_fail(program: &str) {
@@ -14,7 +14,7 @@ fn tc_test_should_fail(program: &str) {
         .parse_module()
         .unwrap();
     let module = ast.root;
-    typecheck_module(&mut ast, module).unwrap_err();
+    infer_or_check_assignment_types(&mut ast, module).unwrap_err();
 }
 
 #[test]
@@ -127,9 +127,9 @@ fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
     let mut ast = Parser::from_string(program.to_string())
         .parse_module()
         .unwrap();
-    let mut main_expr = ast.get_assign_exp(ast.get_main(ast.root));
+    let mut main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
     let module = ast.root;
-    let lt = &typecheck_module(&mut ast, module)?;
+    let lt = &infer_or_check_assignment_types(&mut ast, module)?;
     let mut rcs = find_redex_contraction_pairs(
         &ast,
         Some(ast.root),
@@ -144,9 +144,9 @@ fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
         let laziest = ast.get_laziest_rc(main_expr, &filtered_rcs).unwrap();
         ast.do_rc_subst_and_identical_rcs(&laziest, &filtered_rcs);
 
-        main_expr = ast.get_assign_exp(ast.get_main(ast.root));
+        main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
         let module = ast.root;
-        let lt = &typecheck_module(&mut ast, module)?;
+        let lt = &infer_or_check_assignment_types(&mut ast, module)?;
         rcs = find_redex_contraction_pairs(
             &ast,
             Some(ast.root),

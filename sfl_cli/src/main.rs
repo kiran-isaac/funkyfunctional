@@ -1,4 +1,4 @@
-use sfl_lib::{self as lib, typecheck_module, LabelTable};
+use sfl_lib::{self as lib, infer_or_check_assignment_types, LabelTable};
 use std::{
     env, fs,
     io::{self, Write},
@@ -37,16 +37,15 @@ fn main() {
     }
     let mut ast = ast.unwrap();
 
-    println!(
-        "INPUT:\n\n{}\n{}",
-        ast.to_string_sugar(ast.root, true),
-        HORIZONTAL_SEPARATOR
-    );
-
     // Typecheck
     let lt = if typechecked {
         let module = ast.root;
-        typecheck_module(&mut ast, module).unwrap_or_else(|e| {
+        infer_or_check_assignment_types(&mut ast, module).unwrap_or_else(|e| {
+            println!(
+                "INPUT:\n\n{}\n{}",
+                ast.to_string_sugar(ast.root, true),
+                HORIZONTAL_SEPARATOR
+            );
             eprintln!("{:?}", e);
             std::process::exit(1)
         })
@@ -58,16 +57,22 @@ fn main() {
         }
     };
 
-    let mut expr = ast.get_assign_exp(ast.get_main(ast.root));
+    println!(
+        "INPUT:\n\n{}\n{}",
+        ast.to_string_sugar(ast.root, true),
+        HORIZONTAL_SEPARATOR
+    );
+
+    let mut expr = ast.get_assign_exp(match ast.get_main(ast.root) {
+        Some(v) => v,
+        None => {
+            eprintln!("Main not found");
+            std::process::exit(1);
+        },
+    });
 
     let mut rcs = lib::find_redex_contraction_pairs(&ast, Some(ast.root), expr, &lt);
     let mut rcs_filtered = ast.filter_identical_rcs(&rcs);
-
-    println!(
-        "\nDESUGARED AND TYPED:\n{}\n{}\n",
-        ast.to_string_desugar_and_type(ast.root),
-        HORIZONTAL_SEPARATOR
-    );
 
     println!("{}", ast.to_string_sugar(expr, false));
 
@@ -98,7 +103,13 @@ fn main() {
 
         ast.do_rc_subst_and_identical_rcs(choice, &rcs);
 
-        expr = ast.get_assign_exp(ast.get_main(ast.root));
+        expr = ast.get_assign_exp(match ast.get_main(ast.root) {
+            Some(v) => v,
+            None => {
+                eprintln!("Main not found");
+                std::process::exit(1);
+            },
+        });
 
         rcs = lib::find_redex_contraction_pairs(&ast, Some(ast.root), expr, &lt);
         rcs_filtered = ast.filter_identical_rcs(&rcs);

@@ -7,7 +7,7 @@ pub use find_redexes::find_redex_contraction_pairs;
 pub use functions::LabelTable;
 pub use parser::ast::{ASTNode, ASTNodeType, AST};
 pub use parser::Parser;
-pub use types::{typecheck_module, typecheck_tl_expr, Primitive, Type, TypeError};
+pub use types::{infer_or_check_assignment_types, typecheck_tl_expr, Primitive, Type, TypeError};
 
 #[cfg(test)]
 mod lib_test;
