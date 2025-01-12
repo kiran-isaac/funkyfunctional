@@ -111,7 +111,7 @@ fn inference_test(program: &str, type_str: &str) {
     assert_eq!(t.to_string(), type_str);
 }
 
-fn inference_should_fail(program: &str) {
+fn mod_inference_should_fail(program: &str) {
     let mut ast = Parser::from_string(program.to_string())
         .parse_module()
         .unwrap();
@@ -119,9 +119,18 @@ fn inference_should_fail(program: &str) {
     infer_or_check_assignment_types(&mut ast, module).unwrap_err();
 }
 
+fn expr_inference_should_fail(program: &str) {
+    let mut ast = Parser::from_string(program.to_string())
+        .parse_tl_expression()
+        .unwrap();
+    let expr = ast.root;
+    infer_type(&mut ast, expr).unwrap_err();
+}
+
 #[test]
 fn infer() {
-    inference_should_fail("recurse = recurse");
+    expr_inference_should_fail("\\x . x x");
+    mod_inference_should_fail("recurse = recurse");
 
     inference_test("\\b . if true then (\\x . x) else (\\x . x)", "∀a. ∀b. a -> b -> b");
 

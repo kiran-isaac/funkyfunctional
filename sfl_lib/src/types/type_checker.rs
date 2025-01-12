@@ -286,14 +286,22 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
         }
         // <:InstantiateL
         (Type::Existential(ex), _) => {
-            assert!(!b.contains_existential(*ex));
+            if b.contains_existential(*ex) {
+                let a = c.substitute(a);
+                let b = c.substitute(b);
+                return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", a, b))
+            }
 
             instantiate_l(c, *ex, b)
         }
 
         // <:InstantiateR
         (_, Type::Existential(ex)) => {
-            assert!(!a.contains_existential(*ex));
+            if a.contains_existential(*ex) {
+                let a = c.substitute(a);
+                let b = c.substitute(b);
+                return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", b, a))
+            }
 
             instantiate_r(c, *ex, a)
         }
@@ -311,7 +319,7 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
             if a == b {
                 Ok(c)
             } else {
-                Err(format!("{:?} is not a subtype of {:?}", a, b))
+                Err(format!("{} is not a subtype of {}", a, b))
             }
         }
 
@@ -500,7 +508,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
             let _var_str = var.clone();
             match c.get_type_assignment(&var) {
                 Some(t) => Ok((t?, c)),
-                None => Err(type_error("Unbound variable".to_string(), ast, expr)),
+                None => unreachable!("Unbound type variable")
             }
         }
 
@@ -608,11 +616,7 @@ fn synthesize_app_type(
             ) {
                 Ok(t) => t,
                 Err(s) => {
-                    return Err(type_error(
-                        format!("Failed to substitute in forall app: {}", s),
-                        ast,
-                        expr,
-                    ))
+                    panic!("Failed to substitute in forall app: {}", s)
                 }
             };
             synthesize_app_type(new_c, &a_subst, ast, expr)
@@ -707,7 +711,7 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
 
                     Ok(new_c)
                 }
-                Err(e) => Err(type_error(format!("Check sub error: {}", e), ast, expr)),
+                Err(e) => Err(type_error(format!("Cannot figure out how {} could be subtype of {}: {}", a.to_string(), b.to_string(), e), ast, expr)),
             }
         }
     }

@@ -456,7 +456,6 @@ impl Parser {
         // At the top level its just a set of assignments
         let mut ast = AST::new();
         let module = ast.add_module(Vec::new(), self.lexer.line, self.lexer.col);
-        let mut main_found = false;
 
         'assloop: loop {
             let t = self.peek(0)?;
@@ -466,18 +465,8 @@ impl Parser {
                     let next = self.peek(1)?;
                     match next.tt {
                         TokenType::Assignment | TokenType::Id => {
-                            if main_found {
-                                return Err(self.parse_error(
-                                    "Main should be the last assignment in the module".to_string(),
-                                ));
-                            }
-
                             let assignment = self.parse_assignment(&mut ast)?;
                             ast.add_to_module(module, assignment);
-
-                            if ast.get_assignee(assignment) == "main" {
-                                main_found = true;
-                            }
                         }
                         TokenType::DoubleColon => self.parse_type_assignment(&mut ast)?,
                         _ => {
