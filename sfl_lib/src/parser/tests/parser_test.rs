@@ -210,9 +210,10 @@ fn ite() -> Result<(), ParserError> {
 
 #[test]
 fn pair() -> Result<(), ParserError> {
-    let str = "pair :: a -> b -> (a -> b)\npair x y = (x, y)";
+    let str = "pair :: a -> b -> (a, b)\npair x y = (x, y)";
     let mut parser = Parser::from_string(str.to_string());
     let ast = parser.parse_module()?;
     let module = 0;
+    println!("{}", ast.to_string_sugar(module, true));
     Ok(())
 }

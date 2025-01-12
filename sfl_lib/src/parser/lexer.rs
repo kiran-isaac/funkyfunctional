@@ -346,10 +346,13 @@ impl Lexer {
                     _ => Err(self.error(format!("Unexpected char: {}", self.c()))),
                 }
             }
-            ',' => Ok(Token {
-                tt: TokenType::Comma,
-                value: ",".to_string(),
-            }),
+            ',' => {
+                self.advance();
+                Ok(Token {
+                    tt: TokenType::Comma,
+                    value: ",".to_string(),
+                })
+            },
             '\\' => {
                 self.advance();
                 Ok(Token {

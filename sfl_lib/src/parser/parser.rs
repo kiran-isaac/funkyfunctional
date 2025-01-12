@@ -205,7 +205,10 @@ impl Parser {
     }
 
     fn parse_expression(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
+        #[cfg(debug_assertions)]
         let mut left = self.parse_primary(ast)?;
+
+        let _t_queue = format!("{:?}", self.t_queue);
         loop {
             let line = self.lexer.line;
             let col = self.lexer.col;
@@ -227,6 +230,8 @@ impl Parser {
 
                 TokenType::Comma => {
                     self.advance();
+                    let right = self.parse_expression(ast)?;
+                    left = ast.add_pair(left, right, line, col);
                 }
 
                 TokenType::Lambda => {

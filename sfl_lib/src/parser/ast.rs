@@ -733,7 +733,7 @@ impl AST {
             }
             ASTNodeType::Pair => {
                 let a = self.get_first(node);
-                let b = self.get_first(node);
+                let b = self.get_second(node);
                 format!("({}, {})", a, b)
             }
         }

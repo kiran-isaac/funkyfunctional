@@ -130,20 +130,6 @@ impl Type {
         new_vec
     }
 
-    fn ordered_tvs(&self) -> Vec<String> {
-        match &self {
-            Type::TypeVariable(n) => vec![n.clone()],
-            Type::Forall(_, t2) => t2.ordered_tvs(),
-            Type::Function(t1, t2) => {
-                let mut t1 = t1.ordered_tvs();
-                let t2 = t2.ordered_tvs();
-                t1.extend(t2);
-                Self::remove_duplicates(&t1)
-            }
-            _ => vec![],
-        }
-    }
-
     fn ordered_existentials(&self) -> Vec<usize> {
         match &self {
             Type::Existential(n) => vec![*n],
