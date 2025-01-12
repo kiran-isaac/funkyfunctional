@@ -22,9 +22,9 @@ pub enum Type {
     Unit,
     Primitive(Primitive),
     Function(Box<Type>, Box<Type>),
-    TypeVariable(usize),
+    TypeVariable(String),
     Existential(usize),
-    Forall(usize, Box<Type>),
+    Forall(String, Box<Type>),
     Union(Box<Type>, Box<Type>),
 }
 
@@ -64,15 +64,15 @@ impl Type {
         Type::Function(Box::new(t1), Box::new(t2))
     }
 
+    pub fn tv(name: String) -> Type {
+        Type::TypeVariable(name)
+    }
+
     pub fn u(t1: Type, t2: Type) -> Type {
         Type::Union(Box::new(t1), Box::new(t2))
     }
 
-    pub fn tv(usize: usize) -> Type {
-        Type::TypeVariable(usize)
-    }
-
-    pub fn fa(forall: Vec<usize>, t: Self) -> Self {
+    pub fn fa(forall: Vec<String>, t: Self) -> Self {
         let mut t = t;
         for i in forall.into_iter().rev() {
             t = Type::Forall(i, Box::new(t));
@@ -91,7 +91,7 @@ impl Type {
         }
     }
 
-    pub fn substitute_type_variable(&self, var: usize, replacement: &Type) -> Result<Self, String> {
+    pub fn substitute_type_variable(&self, var: &String, replacement: &Type) -> Result<Self, String> {
         match self {
             Type::Primitive(p) => Ok(Type::Primitive(*p)),
             Type::Function(t1, t2) => Ok(Type::Function(
@@ -99,18 +99,18 @@ impl Type {
                 Box::new(t2.substitute_type_variable(var, replacement)?),
             )),
             Type::TypeVariable(n) => {
-                if *n == var {
+                if n == var {
                     Ok(replacement.clone())
                 } else {
-                    Ok(Type::TypeVariable(*n))
+                    Ok(Type::TypeVariable(n.clone()))
                 }
             }
             Type::Forall(var2, t2) => {
-                if *var2 == var {
+                if var2 == var {
                     panic!("Duplicate forall")
                 }
                 Ok(Type::fa(
-                    vec![*var2],
+                    vec![var2.clone()],
                     t2.substitute_type_variable(var, replacement)?,
                 ))
             }
@@ -130,9 +130,9 @@ impl Type {
         new_vec
     }
 
-    fn ordered_tvs(&self) -> Vec<usize> {
+    fn ordered_tvs(&self) -> Vec<String> {
         match &self {
-            Type::TypeVariable(n) => vec![*n],
+            Type::TypeVariable(n) => vec![n.clone()],
             Type::Forall(_, t2) => t2.ordered_tvs(),
             Type::Function(t1, t2) => {
                 let mut t1 = t1.ordered_tvs();
@@ -158,51 +158,42 @@ impl Type {
         }
     }
 
-    fn exist_to_tv(&self, max: usize) -> Self {
+    /// Convert all exists with id ext to TVs
+    fn exist_to_tv(&self, ext : usize, str : &String) -> Self {
         match self {
-            Type::Existential(n) => Type::TypeVariable(*n + max),
-            Type::Forall(v, t2) => Type::Forall(*v, t2.clone()),
-            Type::Function(t1, t2) => {
-                Type::Function(Box::new(t1.exist_to_tv(max)), Box::new(t2.exist_to_tv(max)))
-            }
-            _ => self.clone(),
-        }
-    }
-
-    fn change_tv(&self, old: usize, new: usize) -> Self {
-        match self {
-            Type::TypeVariable(n) => {
-                if *n == old {
-                    Type::TypeVariable(new)
+            Type::Existential(n) => {
+                if *n == ext {
+                    Type::TypeVariable(str.to_string())
                 } else {
                     self.clone()
                 }
+            },
+            Type::Forall(v, t2) => Type::Forall(v.clone(), Box::new(t2.exist_to_tv(ext, str))),
+            Type::Function(t1, t2) => {
+                let lhs = t1.exist_to_tv(ext, str);
+                let rhs = t2.exist_to_tv(ext, str);
+                Type::Function(Box::new(lhs), Box::new(rhs))
             }
-            Type::Forall(v, t2) => {
-                let v = if *v == old { new } else { *v };
-                Type::Forall(v, Box::new(t2.change_tv(old, new)))
-            }
-            Type::Function(t1, t2) => Type::Function(
-                Box::new(t1.change_tv(old, new)),
-                Box::new(t2.change_tv(old, new)),
-            ),
             _ => self.clone(),
         }
     }
 
-    fn settle_tvs(&self) -> Self {
-        let mut new_self = self.clone();
-        for (new, old) in self.ordered_tvs().into_iter().enumerate() {
-            new_self = new_self.change_tv(old, new);
-        }
-        new_self
-    }
-
     pub fn forall_ify(&self) -> Self {
-        let max_tv = self.max_type_var();
-        let existentials: Vec<usize> = self.ordered_existentials().into_iter().collect();
-        let new_self = self.exist_to_tv(max_tv);
-        Type::fa(existentials, new_self)
+        let mut tv_set = self.get_tvs_set();
+        let mut exsts = vec![];
+        let mut new_self= self.clone();
+        for (index, exst) in self.ordered_existentials().into_iter().enumerate() {
+            let mut str = Self::num_identifier_to_str(index);
+            let mut i = 0;
+            while tv_set.contains(&str) {
+                i += 1;
+                str = Self::num_identifier_to_str(index + i)
+            }
+            tv_set.insert(str.clone());
+            exsts.push(str.clone());
+            new_self = new_self.exist_to_tv(exst, &str);
+        }
+        Type::fa(exsts, new_self)
     }
 
     pub fn is_monotype(&self) -> bool {
@@ -237,29 +228,22 @@ impl Type {
         }
     }
 
-    fn max_type_var(&self) -> usize {
+    fn get_tvs_set(&self) -> HashSet<String> {
         match self {
-            Type::Function(t1, t2) => std::cmp::max(t1.max_type_var(), t2.max_type_var()),
-            Type::TypeVariable(n) => *n,
-            _ => 0,
+            Type::Function(t1, t2) => {
+                let mut t1 = t1.get_tvs_set();
+                let t2 = t2.get_tvs_set();
+                t1.extend(t2);
+                t1
+            },
+            Type::Forall(str1, t1) => {
+                let mut t1 = t1.get_tvs_set();
+                t1.insert(str1.clone());
+                t1
+            },
+            Type::TypeVariable(str) => HashSet::from_iter(vec![str.clone()]),
+            _ => HashSet::new(),
         }
-    }
-
-    fn add_to_type_vars(&self, increment: usize) -> Self {
-        match self {
-            Type::Function(t1, t2) => Type::Function(
-                Box::new(t1.add_to_type_vars(increment)),
-                Box::new(t2.add_to_type_vars(increment)),
-            ),
-            Type::TypeVariable(n) => Type::TypeVariable(n + increment),
-            t => t.clone(),
-        }
-    }
-
-    /// Make sure that t1 and t2 dont have overlapping type variables
-    pub fn ensure_different_type_params(t1: Type, t2: Type) -> (Type, Type) {
-        let t2 = t2.add_to_type_vars(t1.max_type_var() + 1);
-        (t1, t2)
     }
 
     pub fn get_arity(&self) -> usize {
@@ -267,6 +251,18 @@ impl Type {
             Type::Function(_, t) => 1 + t.get_arity(),
             _ => 0,
         }
+    }
+
+    fn num_identifier_to_str(n : usize) -> String {
+        let mut s = String::new();
+        let mut n = n;
+        s.insert(0, (b'a' + (n % 26) as u8) as char);
+        n /= 26;
+        while n > 0 {
+            s.insert(0, (b'a' + (n % 26 - 1) as u8) as char);
+            n /= 26;
+        }
+        s
     }
 
     fn to_string_internal(&self, full_braces: bool) -> String {
@@ -294,28 +290,18 @@ impl Type {
 
                 format!("{} -> {}", t1_string, t2_string)
             }
-            Type::TypeVariable(n) => {
-                let mut s = String::new();
-                let mut n = *n;
-                s.insert(0, (b'a' + (n % 26) as u8) as char);
-                n /= 26;
-                while n > 0 {
-                    s.insert(0, (b'a' + (n % 26 - 1) as u8) as char);
-                    n /= 26;
-                }
-                s
-            }
+            Type::TypeVariable(n) => n.clone(),
             Type::Existential(n) => {
                 format!(
                     "E{}",
-                    Type::TypeVariable(*n).to_string_internal(full_braces)
+                    Self::num_identifier_to_str(*n)
                 )
             }
             Type::Unit => "1".to_string(),
             Type::Forall(n, t) => {
                 format!(
                     "∀{}. {}",
-                    Type::tv(*n).to_string_internal(full_braces),
+                    n,
                     t.to_string_internal(full_braces)
                 )
             }
@@ -380,21 +366,19 @@ mod tests {
         );
         assert_eq!(t5.to_string(), "(Int -> Int) -> Float");
 
-        let t6 = Type::TypeVariable(0);
-        assert_eq!(t6.to_string(), "a");
+        let t6 = Type::Existential(0);
+        assert_eq!(t6.to_string(), "Ea");
 
-        println!("{:?}", t6);
+        let t6 = Type::Existential(26);
+        assert_eq!(t6.to_string(), "Eaa");
 
-        let t6 = Type::TypeVariable(26);
-        assert_eq!(t6.to_string(), "aa");
+        let t6 = Type::Existential(27);
+        assert_eq!(t6.to_string(), "Eab");
 
-        let t6 = Type::TypeVariable(27);
-        assert_eq!(t6.to_string(), "ab");
+        let t6 = Type::Existential(28);
+        assert_eq!(t6.to_string(), "Eac");
 
-        let t6 = Type::TypeVariable(28);
-        assert_eq!(t6.to_string(), "ac");
-
-        let t6 = Type::TypeVariable(26 * 2);
-        assert_eq!(t6.to_string(), "ba");
+        let t6 = Type::Existential(26 * 2);
+        assert_eq!(t6.to_string(), "Eba");
     }
 }
