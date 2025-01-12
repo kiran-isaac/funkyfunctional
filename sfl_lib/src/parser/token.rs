@@ -27,6 +27,7 @@ pub enum TokenType {
     Lambda,
 
     Dot,
+    Comma,
 
     Assignment,
 }

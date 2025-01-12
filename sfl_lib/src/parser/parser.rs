@@ -225,6 +225,10 @@ impl Parser {
                     return Ok(left);
                 }
 
+                TokenType::Comma => {
+                    self.advance();
+                }
+
                 TokenType::Lambda => {
                     self.advance();
                     self.parse_abstraction(ast)?;
@@ -332,11 +336,17 @@ impl Parser {
             let next = self.peek(0)?;
 
             match next.tt {
-                TokenType::RArrow => {
+                TokenType::RArrow | TokenType::LParen => {
                     self.advance();
                     let right = self.parse_type_expression(ast)?;
                     left = Type::Function(Box::new(left), Box::new(right));
                 }
+
+                TokenType::Comma => {
+                    self.advance();
+                    left = Type::u(left, self.parse_type_expression(ast)?);
+                }
+
                 TokenType::RParen
                 | TokenType::Newline
                 | TokenType::EOF

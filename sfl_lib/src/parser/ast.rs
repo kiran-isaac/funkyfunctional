@@ -8,12 +8,10 @@ use super::token::*;
 pub enum ASTNodeType {
     Identifier,
     Literal,
-
+    Pair,
     Application,
     Assignment,
-
     Abstraction,
-
     Module,
 }
 
@@ -80,6 +78,19 @@ impl ASTNode {
             t: ASTNodeType::Identifier,
             info: Some(tk),
             children: vec![],
+            line,
+            col,
+            type_assignment: None,
+            wait_for_args: false,
+            fancy_assign_abst_syntax: false,
+        }
+    }
+
+    fn new_pair(a : usize, b : usize, line : usize, col : usize) -> Self {
+        ASTNode {
+            t : ASTNodeType::Pair,
+            info: None,
+            children : vec![a, b],
             line,
             col,
             type_assignment: None,
@@ -338,6 +349,11 @@ impl AST {
                 }
                 self.add_module(assigns, n.line, n.col)
             }
+            ASTNodeType::Pair => {
+                let a = self.append(other, n.children[0]);
+                let b = self.append(other, n.children[1]);
+                self.add_pair(a, b, n.line, n.col)
+            }
         }
     }
 
@@ -367,6 +383,10 @@ impl AST {
 
     pub fn add_app(&mut self, f: usize, x: usize, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_app(f, x, line, col))
+    }
+
+    pub fn add_pair(&mut self, a : usize, b : usize, line: usize, col: usize) -> usize {
+        self.add(ASTNode::new_pair(a, b, line, col))
     }
 
     pub fn add_abstraction(&mut self, id: usize, exp: usize, line: usize, col: usize) -> usize {
@@ -400,6 +420,16 @@ impl AST {
     #[inline(always)]
     pub fn get(&self, i: usize) -> &ASTNode {
         &self.vec[i]
+    }
+
+    pub fn get_first(&self, p : usize) -> usize {
+        assert_eq!(self.get(p).t, ASTNodeType::Pair);
+        self.get(p).children[0]
+    }
+
+    pub fn get_second(&self, p : usize) -> usize {
+        assert_eq!(self.get(p).t, ASTNodeType::Pair);
+        self.get(p).children[1]
     }
 
     pub fn get_abstr_var(&self, abst: usize) -> usize {
@@ -529,7 +559,7 @@ impl AST {
     }
 
     pub fn get_assigns_map(&self, module: usize) -> HashMap<String, usize> {
-        assert!(self.vec[module].t == ASTNodeType::Module);
+        assert_eq!(self.vec[module].t, ASTNodeType::Module);
         let mut assigns = HashMap::new();
 
         for a in &self.vec[module].children {
@@ -572,6 +602,11 @@ impl AST {
                 let id = self.get(n.children[0]);
                 let exp = self.to_string_indent(n.children[1], indent + 2);
                 format!("{}Abstraction: {}\n{}", ind, id.get_value(), exp)
+            }
+            ASTNodeType::Pair => {
+                let a = self.get_first(node);
+                let b = self.get_first(node);
+                format!("{}Pair: {}\n{}", ind, a, b)
             }
         }
     }
@@ -696,6 +731,11 @@ impl AST {
                 res.push_str(&expr_str);
                 res
             }
+            ASTNodeType::Pair => {
+                let a = self.get_first(node);
+                let b = self.get_first(node);
+                format!("({}, {})", a, b)
+            }
         }
     }
 
@@ -761,6 +801,11 @@ impl AST {
                 res.push_str(" . ");
                 res.push_str(&expr_str);
                 res
+            }
+            ASTNodeType::Pair => {
+                let a = self.get_first(node);
+                let b = self.get_first(node);
+                format!("({}, {})", a, b)
             }
         }
     }

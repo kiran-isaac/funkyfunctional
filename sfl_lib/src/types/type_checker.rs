@@ -323,6 +323,15 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
             }
         }
 
+        (Type::Union(ut1_1, ut1_2), a) | (a, Type::Union(ut1_1, ut1_2)) => {
+            let (ut2_1, ut2_2) = match a {
+                Type::Union(a, b) => (a, b),
+                _ => return Err(format!("Type {} is not a subtype of union {}", a, Type::Union(ut1_1.clone(), ut1_1.clone())))
+            };
+            let ut_1_st = subtype(c, ut1_1, ut2_1)?;
+            subtype(ut_1_st, ut1_2, ut2_2)
+        }
+
         // <:Unit
         (Type::Unit, Type::Unit) => Ok(c),
 

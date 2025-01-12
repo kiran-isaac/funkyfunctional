@@ -6,6 +6,7 @@ use inbuilt_control_flow::*;
 use crate::*;
 mod inbuilt_arith;
 mod inbuilt_control_flow;
+mod product;
 
 #[cfg(test)]
 mod test;
@@ -204,20 +205,20 @@ impl LabelTable {
             Box::new(Type::Function(
                 Box::new(Type::Primitive(Primitive::Bool)),
                 Box::new(Type::Function(
-                    Box::new(Type::g(0)),
-                    Box::new(Type::Function(Box::new(Type::g(0)), Box::new(Type::g(0)))),
+                    Box::new(Type::tv(0)),
+                    Box::new(Type::Function(Box::new(Type::tv(0)), Box::new(Type::tv(0)))),
                 )),
             )),
         );
 
-        let id_type = Type::fa(vec![0], Type::f(Type::g(0), Type::g(0)));
+        let id_type = Type::fa(vec![0], Type::f(Type::tv(0), Type::tv(0)));
         let const1_type = Type::fa(
             vec![0, 1],
-            Type::f(Type::TypeVariable(0), Type::f(Type::g(1), Type::g(0))),
+            Type::f(Type::TypeVariable(0), Type::f(Type::tv(1), Type::tv(0))),
         );
         let const2_type = Type::fa(
             vec![0, 1],
-            Type::f(Type::TypeVariable(0), Type::f(Type::g(1), Type::g(1))),
+            Type::f(Type::TypeVariable(0), Type::f(Type::tv(1), Type::tv(1))),
         );
 
         self.add_inbuilt("id".to_string(), 1, inbuilt_id, id_type);

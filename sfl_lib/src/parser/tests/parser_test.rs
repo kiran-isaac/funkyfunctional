@@ -180,7 +180,7 @@ fn type_assignment_right_assoc() -> Result<(), ParserError> {
 }
 
 #[test]
-fn ite_1() -> Result<(), ParserError> {
+fn ite() -> Result<(), ParserError> {
     let str = "x = if true then 1 else 2";
     let mut parser = Parser::from_string(str.to_string());
 
@@ -196,5 +196,14 @@ fn ite_1() -> Result<(), ParserError> {
     let module = 0;
     assert_eq!(ast.to_string_sugar(module, false), str);
 
+    Ok(())
+}
+
+#[test]
+fn pair() -> Result<(), ParserError> {
+    let str = "pair :: a -> b -> (a -> b)\npair x y = (x, y)";
+    let mut parser = Parser::from_string(str.to_string());
+    let ast = parser.parse_module()?;
+    let module = 0;
     Ok(())
 }

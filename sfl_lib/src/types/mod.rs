@@ -25,6 +25,7 @@ pub enum Type {
     TypeVariable(usize),
     Existential(usize),
     Forall(usize, Box<Type>),
+    Union(Box<Type>, Box<Type>),
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -63,7 +64,11 @@ impl Type {
         Type::Function(Box::new(t1), Box::new(t2))
     }
 
-    pub fn g(usize: usize) -> Type {
+    pub fn u(t1: Type, t2: Type) -> Type {
+        Type::Union(Box::new(t1), Box::new(t2))
+    }
+
+    pub fn tv(usize: usize) -> Type {
         Type::TypeVariable(usize)
     }
 
@@ -78,7 +83,7 @@ impl Type {
     pub fn contains_existential(&self, ex: usize) -> bool {
         match self {
             Type::Primitive(_) => false,
-            Type::Function(t1, t2) => t1.contains_existential(ex) || t2.contains_existential(ex),
+            Type::Function(t1, t2) | Type::Union(t1, t2) => t1.contains_existential(ex) || t2.contains_existential(ex),
             Type::TypeVariable(_) => false,
             Type::Existential(e) => *e == ex,
             Type::Forall(_, t) => t.contains_existential(ex),
@@ -310,9 +315,12 @@ impl Type {
             Type::Forall(n, t) => {
                 format!(
                     "∀{}. {}",
-                    Type::g(*n).to_string_internal(full_braces),
+                    Type::tv(*n).to_string_internal(full_braces),
                     t.to_string_internal(full_braces)
                 )
+            }
+            Type::Union(t1, t2) => {
+                format!("({}, {})", t1.to_string_internal(full_braces), t2.to_string_internal(full_braces))
             }
         }
     }
