@@ -155,7 +155,16 @@ fn type_assignment() -> Result<(), ParserError> {
 
     let type_assignment = ast.get(assign).type_assignment.clone();
     assert!(type_assignment.is_some());
-    assert!(type_assignment.unwrap().to_string() == "Int".to_string());
+    assert_eq!(type_assignment.unwrap().to_string(), "Int".to_string());
+
+    let str = "id2 :: forall var . var -> var\nid2 = \\x.x";
+    let mut parser = Parser::from_string(str.to_string());
+    let ast = parser.parse_module()?;
+    let module = ast.root;
+    let assign = ast.get_assign_to(module, "id2".to_string()).unwrap();
+    let type_assignment = ast.get(assign).type_assignment.clone();
+    assert!(type_assignment.is_some());
+    assert_eq!(type_assignment.unwrap().to_string(), "∀var. var -> var".to_string());
 
     Ok(())
 }
