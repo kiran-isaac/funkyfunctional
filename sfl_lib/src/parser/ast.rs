@@ -203,6 +203,14 @@ impl AST {
 
                 self.expr_eq(v1, v2) && self.expr_eq(x1, x2)
             }
+            (ASTNodeType::Pair, ASTNodeType::Pair) => {
+                let x1 = self.get_first(n1);
+                let x2 = self.get_first(n2);
+                let y1 = self.get_second(n1);
+                let y2 = self.get_second(n2);
+
+                self.expr_eq(x1, y1) && self.expr_eq(x2, y2)
+            }
             _ => false,
         }
     }
