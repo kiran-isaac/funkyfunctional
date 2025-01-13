@@ -97,7 +97,9 @@ fn type_check_const_abst() {
 #[test]
 fn type_check_pair() {
     tc_test_should_pass("pair :: a -> b -> (a, b)\npair x y = (x, y)");
-    inference_test("\\x y. (x, y)", "∀a. ∀b. a -> b -> (a, b)")
+    inference_test("\\x y. (x, y)", "∀a. ∀b. a -> b -> (a, b)");
+    inference_test("\\x y z. (x, (y, z))", "∀a. ∀b. ∀c. a -> b -> c -> (a, (b, c))");
+    inference_test("\\a b c d. ((a, b), (c, d))", "∀a. ∀b. ∀c. ∀d. a -> b -> c -> d -> ((a, b), (c, d))");
 }
 
 #[test]
