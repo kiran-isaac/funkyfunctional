@@ -1,7 +1,3 @@
-use std::collections::HashMap;
-
-use ast::AST;
-
 use crate::parser::*;
 
 #[test]
@@ -45,7 +41,7 @@ fn assign_2() -> Result<(), ParserError> {
     assert!(ast.get(ast.get_func(y_z)).get_value() == "y");
     assert!(ast.get(ast.get_arg(y_z)).get_value() == "z");
 
-    println!("{}", ast.to_string(module));
+    println!("{}", ast.to_string_sugar(module, false));
 
     Ok(())
 }
@@ -67,7 +63,7 @@ fn multi_assign() -> Result<(), ParserError> {
     let ass3 = ast.get_assign_to(module, "z".to_string()).unwrap();
     assert!(ast.get(ast.get_assign_exp(ass3)).get_value() == "7");
 
-    assert!(ast.to_string(module) == "x = 5\ny = 6\nz = 7".to_string());
+    assert!(ast.to_string_sugar(module, false) == "x = 5\ny = 6\nz = 7".to_string());
 
     Ok(())
 }
@@ -91,30 +87,59 @@ fn bound() -> Result<(), ParserError> {
     Ok(())
 }
 
+fn unchanged_parse_output_str_test(program_str: &str) -> Result<(), ParserError> {
+    let mut parser = Parser::from_string(program_str.to_string());
+    let ast = parser.parse_module()?;
+    assert_eq!(program_str, ast.to_string_sugar(ast.root, false));
+    Ok(())
+}
+
+#[test]
+fn infix_expr() -> Result<(), ParserError> {
+    unchanged_parse_output_str_test("x = 1 + 1")?;
+    unchanged_parse_output_str_test("x = 1 - 1")?;
+    unchanged_parse_output_str_test("x = 1 * 1")?;
+    unchanged_parse_output_str_test("x = 1 / 1")?;
+    unchanged_parse_output_str_test("x = 1 == 1")?;
+    unchanged_parse_output_str_test("x = 1 > 1")?;
+    unchanged_parse_output_str_test("x = 1 < 1")?;
+    unchanged_parse_output_str_test("x = 1 >= 1")?;
+    unchanged_parse_output_str_test("x = 1 <= 1")?;
+
+    Ok(())
+}
+
+#[test]
+fn fancy_abst_syntax_test() -> Result<(), ParserError> {
+    let program = "inc x = x + 1";
+    unchanged_parse_output_str_test(program)?;
+    Ok(())
+}
+
 #[test]
 fn abstraction() -> Result<(), ParserError> {
-    let str = "x = \\y . add y 5";
+    let str = "x = \\y :: Int. add y 5";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?;
-    let module = 0;
-    assert!(ast.to_string(module) == "x = \\y . add y 5".to_string());
+    let _ = parser.parse_module()?;
 
-    // Should error because abstractions only allowed at top level of assignment expr
-    let unbound_str = "x = (\\y . add y 5) 1";
+    // Should error because y is not bound
+    let unbound_str = "x = (\\y . add y 5) y";
     let mut parser = Parser::from_string(unbound_str.to_string());
     assert!(parser.parse_module().is_err());
 
     // Should be same for both
-    let multi_abstr = "x = \\y z . add y 5";
-    let multi_abstr2 = "x = \\y . \\z . add y 5";
+    let multi_abstr = "x = \\y :: Int z :: Int . add y 5";
+    let multi_abstr2 = "x = \\y :: Int . \\z :: Int . add y 5";
     let ast = Parser::from_string(multi_abstr.to_string()).parse_module()?;
     let ast2 = Parser::from_string(multi_abstr2.to_string()).parse_module()?;
-    assert_eq!(ast.to_string(ast.root), ast2.to_string(ast2.root));
+    assert_eq!(
+        ast.to_string_sugar(ast.root, false),
+        ast2.to_string_sugar(ast2.root, false)
+    );
 
-    let ignore_directive = "x = \\_ . 1.5";
+    let ignore_directive = "x = \\_ :: Int . 1.5";
     Parser::from_string(ignore_directive.to_string()).parse_module()?;
-    
 
     Ok(())
 }
@@ -130,7 +155,16 @@ fn type_assignment() -> Result<(), ParserError> {
 
     let type_assignment = ast.get(assign).type_assignment.clone();
     assert!(type_assignment.is_some());
-    assert!(type_assignment.unwrap().to_string() == "Int".to_string());
+    assert_eq!(type_assignment.unwrap().to_string(), "Int".to_string());
+
+    let str = "id2 :: forall var . var -> var\nid2 = \\x.x";
+    let mut parser = Parser::from_string(str.to_string());
+    let ast = parser.parse_module()?;
+    let module = ast.root;
+    let assign = ast.get_assign_to(module, "id2".to_string()).unwrap();
+    let type_assignment = ast.get(assign).type_assignment.clone();
+    assert!(type_assignment.is_some());
+    assert_eq!(type_assignment.unwrap().to_string(), "∀var. var -> var".to_string());
 
     Ok(())
 }
@@ -151,5 +185,35 @@ fn type_assignment_right_assoc() -> Result<(), ParserError> {
         "(Int -> Int) -> ((Int -> Float) -> Int)"
     );
 
+    Ok(())
+}
+
+#[test]
+fn ite() -> Result<(), ParserError> {
+    let str = "x = if true then 1 else 2";
+    let mut parser = Parser::from_string(str.to_string());
+
+    let ast = parser.parse_module()?;
+    let module = 0;
+
+    assert_eq!(ast.to_string_sugar(module, false), str);
+
+    let str = "x = \\_ :: Int . add (if true then 1 else 2) (if true then 2 else 3)";
+    let mut parser = Parser::from_string(str.to_string());
+
+    let ast = parser.parse_module()?;
+    let module = 0;
+    assert_eq!(ast.to_string_sugar(module, false), str);
+
+    Ok(())
+}
+
+#[test]
+fn pair() -> Result<(), ParserError> {
+    let str = "pair :: a -> b -> (a, b)\npair x y = (x, y)";
+    let mut parser = Parser::from_string(str.to_string());
+    let ast = parser.parse_module()?;
+    let module = 0;
+    assert_eq!(ast.to_string_sugar(module, true), str);
     Ok(())
 }

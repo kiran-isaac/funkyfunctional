@@ -22,10 +22,5 @@ fn type_literals() -> Result<(), TypeError> {
     let ast = p.parse_tl_expression().unwrap();
     assert!(ast.get_type(0)? == Type::Primitive(Primitive::Float64));
 
-    let str = "'a'";
-    let mut p = Parser::from_string(str.to_string());
-    let ast = p.parse_tl_expression().unwrap();
-    assert!(ast.get_type(0)? == Type::Primitive(Primitive::Char));
-
     Ok(())
 }

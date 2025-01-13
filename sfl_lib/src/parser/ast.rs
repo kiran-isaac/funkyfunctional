@@ -1,6 +1,6 @@
+use crate::{find_redexes::RCPair, types::TypeError, Primitive, Type};
+use std::collections::HashSet;
 use std::{collections::HashMap, fmt::Debug, vec};
-
-use crate::{types::TypeError, Primitive, Type};
 
 use super::token::*;
 
@@ -8,12 +8,10 @@ use super::token::*;
 pub enum ASTNodeType {
     Identifier,
     Literal,
-
+    Pair,
     Application,
     Assignment,
-
     Abstraction,
-
     Module,
 }
 
@@ -31,6 +29,8 @@ pub struct ASTNode {
     pub line: usize,
     pub col: usize,
     pub type_assignment: Option<Type>,
+    pub wait_for_args: bool,
+    pub fancy_assign_abst_syntax: bool,
 }
 
 impl ASTNode {
@@ -40,7 +40,6 @@ impl ASTNode {
                 Some(tk) => match tk.tt {
                     TokenType::IntLit => Type::Primitive(Primitive::Int64),
                     TokenType::FloatLit => Type::Primitive(Primitive::Float64),
-                    TokenType::CharLit => Type::Primitive(Primitive::Char),
                     TokenType::BoolLit => Type::Primitive(Primitive::Bool),
                     TokenType::StringLit => unimplemented!("String literal type"),
                     _ => unreachable!("Literal node with bad token"),
@@ -52,6 +51,7 @@ impl ASTNode {
     }
 
     /// Get the string value of the identifier or literal
+    #[inline(always)]
     pub fn get_value(&self) -> String {
         assert!(self.t == ASTNodeType::Identifier || self.t == ASTNodeType::Literal);
         match &self.info {
@@ -60,7 +60,7 @@ impl ASTNode {
         }
     }
 
-    pub fn new_lit(tk: Token, line: usize, col: usize) -> Self {
+    fn new_lit(tk: Token, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Literal,
             info: Some(tk),
@@ -68,10 +68,12 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
+            fancy_assign_abst_syntax: false,
         }
     }
 
-    pub fn new_id(tk: Token, line: usize, col: usize) -> Self {
+    fn new_id(tk: Token, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Identifier,
             info: Some(tk),
@@ -79,10 +81,25 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
+            fancy_assign_abst_syntax: false,
         }
     }
 
-    pub fn new_app(f: usize, x: usize, line: usize, col: usize) -> Self {
+    fn new_pair(a : usize, b : usize, line : usize, col : usize) -> Self {
+        ASTNode {
+            t : ASTNodeType::Pair,
+            info: None,
+            children : vec![a, b],
+            line,
+            col,
+            type_assignment: None,
+            wait_for_args: false,
+            fancy_assign_abst_syntax: false,
+        }
+    }
+
+    fn new_app(f: usize, x: usize, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Application,
             info: None,
@@ -90,10 +107,12 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
+            fancy_assign_abst_syntax: false,
         }
     }
 
-    pub fn new_abstraction(id: usize, exp: usize, line: usize, col: usize) -> Self {
+    fn new_abstraction(id: usize, exp: usize, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Abstraction,
             info: None,
@@ -101,10 +120,12 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
+            fancy_assign_abst_syntax: false,
         }
     }
 
-    pub fn new_assignment(id: usize, exp: usize, line: usize, col: usize, t: Option<Type>) -> Self {
+    fn new_assignment(id: usize, exp: usize, line: usize, col: usize, t: Option<Type>) -> Self {
         ASTNode {
             t: ASTNodeType::Assignment,
             info: None,
@@ -112,10 +133,12 @@ impl ASTNode {
             line,
             col,
             type_assignment: t,
+            wait_for_args: false,
+            fancy_assign_abst_syntax: false,
         }
     }
 
-    pub fn new_module(assigns: Vec<usize>, line: usize, col: usize) -> Self {
+    fn new_module(assigns: Vec<usize>, line: usize, col: usize) -> Self {
         ASTNode {
             t: ASTNodeType::Module,
             info: None,
@@ -123,7 +146,13 @@ impl ASTNode {
             line,
             col,
             type_assignment: None,
+            wait_for_args: false,
+            fancy_assign_abst_syntax: false,
         }
+    }
+
+    fn wait_for_args(&mut self) {
+        self.wait_for_args = true;
     }
 }
 
@@ -135,9 +164,55 @@ impl AST {
         }
     }
 
+    pub fn wait_for_args(&mut self, node: usize) {
+        self.vec[node].wait_for_args();
+        let expr = self.get_abstr_exp(node);
+        if self.get(expr).t == ASTNodeType::Abstraction {
+            self.wait_for_args(expr);
+        }
+    }
+
+    pub fn fancy_assign_abst_syntax(&mut self, node: usize) {
+        self.vec[node].fancy_assign_abst_syntax = true;
+    }
+
     pub fn add(&mut self, n: ASTNode) -> usize {
         self.vec.push(n);
         self.vec.len() - 1
+    }
+
+    pub fn expr_eq(&mut self, n1: usize, n2: usize) -> bool {
+        match (&self.get(n1).t, &self.get(n2).t) {
+            (ASTNodeType::Identifier, ASTNodeType::Identifier)
+            | (ASTNodeType::Literal, ASTNodeType::Literal) => {
+                self.get(n1).get_value() == self.get(n2).get_value()
+            }
+            (ASTNodeType::Application, ASTNodeType::Application) => {
+                let f1 = self.get_func(n1);
+                let f2 = self.get_func(n2);
+                let x1 = self.get_arg(n1);
+                let x2 = self.get_arg(n2);
+
+                self.expr_eq(f1, f2) && self.expr_eq(x1, x2)
+            }
+            (ASTNodeType::Abstraction, ASTNodeType::Abstraction) => {
+                let v1 = self.get_abstr_var(n1);
+                let v2 = self.get_abstr_var(n2);
+                let x1 = self.get_abstr_exp(n1);
+                let x2 = self.get_abstr_exp(n2);
+
+                self.expr_eq(v1, v2) && self.expr_eq(x1, x2)
+            }
+            (ASTNodeType::Pair, ASTNodeType::Pair) => {
+                let x1 = self.get_first(n1);
+                let x2 = self.get_first(n2);
+                let y1 = self.get_second(n1);
+                let y2 = self.get_second(n2);
+
+                self.expr_eq(x1, y1) && self.expr_eq(x2, y2)
+            }
+            _ => false,
+        }
     }
 
     pub fn single_node(n: ASTNode) -> Self {
@@ -159,9 +234,81 @@ impl AST {
         ast
     }
 
-    pub fn replace_from_other_root(&mut self, other: &AST, old: usize) {
+    pub fn do_rc_subst(&mut self, rc: &RCPair) {
+        let other = &rc.1;
+        let old = rc.0;
         let new = self.append(other, other.root);
         self.replace_references_to_node(old, new);
+    }
+
+    pub fn filter_identical_rcs(&self, rcs: &Vec<RCPair>) -> Vec<RCPair> {
+        let mut stringset = HashSet::new();
+        let mut new_rcs = vec![];
+        for rc in rcs {
+            let str = self.to_string_sugar(rc.0, false);
+            if !stringset.contains(&str) {
+                new_rcs.push(rc.clone());
+            }
+            stringset.insert(str);
+        }
+        new_rcs
+    }
+
+    pub fn do_rc_subst_and_identical_rcs(&mut self, rc0: &RCPair, rcs: &Vec<RCPair>) {
+        for rc in rcs {
+            if self.expr_eq(rc0.0, rc.0) {
+                self.do_rc_subst(rc);
+            }
+        }
+    }
+
+    fn get_laziest_rc_recurse(
+        &self,
+        expr: usize,
+        rc_map: &HashMap<usize, &RCPair>,
+    ) -> Option<RCPair> {
+        if rc_map.contains_key(&expr) {
+            return Some(rc_map[&expr].clone());
+        }
+
+        #[cfg(debug_assertions)]
+        let _expr_str = self.to_string_sugar(expr, false);
+        #[cfg(debug_assertions)]
+        let _rcs_strs = {
+            let mut _rcs_strs = vec![];
+            for rc in rc_map.values() {
+                _rcs_strs.push(self.to_string_sugar(rc.0, false));
+            }
+            _rcs_strs
+        };
+
+        match self.get(expr).t {
+            ASTNodeType::Application => {
+                let f = self.get_func(expr);
+                let x = self.get_arg(expr);
+
+                if let Some(rc) = self.get_laziest_rc_recurse(f, &rc_map) {
+                    return Some(rc);
+                }
+
+                self.get_laziest_rc_recurse(x, &rc_map)
+            }
+            _ => None,
+        }
+    }
+
+    pub fn get_laziest_rc(&self, expr: usize, rcs: &Vec<RCPair>) -> Option<RCPair> {
+        // Convert to map for O(1) lookup of whether a node is an RC
+        let mut rc_map: HashMap<usize, &RCPair> = HashMap::new();
+        for rc in rcs {
+            rc_map.insert(rc.0, &rc);
+        }
+
+        if rcs.is_empty() {
+            None
+        } else {
+            self.get_laziest_rc_recurse(expr, &rc_map)
+        }
     }
 
     pub fn replace(&mut self, old: usize, new: usize) {
@@ -210,6 +357,11 @@ impl AST {
                 }
                 self.add_module(assigns, n.line, n.col)
             }
+            ASTNodeType::Pair => {
+                let a = self.append(other, n.children[0]);
+                let b = self.append(other, n.children[1]);
+                self.add_pair(a, b, n.line, n.col)
+            }
         }
     }
 
@@ -221,6 +373,18 @@ impl AST {
         self.add(ASTNode::new_id(tk, line, col))
     }
 
+    pub fn add_typed_id(
+        &mut self,
+        tk: Token,
+        line: usize,
+        col: usize,
+        assigned_type: Type,
+    ) -> usize {
+        let node = self.add(ASTNode::new_id(tk, line, col));
+        self.vec[node].type_assignment = Some(assigned_type);
+        node
+    }
+
     pub fn add_lit(&mut self, tk: Token, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_lit(tk, line, col))
     }
@@ -229,8 +393,16 @@ impl AST {
         self.add(ASTNode::new_app(f, x, line, col))
     }
 
+    pub fn add_pair(&mut self, a : usize, b : usize, line: usize, col: usize) -> usize {
+        self.add(ASTNode::new_pair(a, b, line, col))
+    }
+
     pub fn add_abstraction(&mut self, id: usize, exp: usize, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_abstraction(id, exp, line, col))
+    }
+
+    pub fn set_assignment_type(&mut self, assignment: usize, type_ : Type) {
+        self.vec[assignment].type_assignment = Some(type_);
     }
 
     pub fn add_assignment(
@@ -253,8 +425,19 @@ impl AST {
         self.vec[module].children.push(assign);
     }
 
+    #[inline(always)]
     pub fn get(&self, i: usize) -> &ASTNode {
         &self.vec[i]
+    }
+
+    pub fn get_first(&self, p : usize) -> usize {
+        assert_eq!(self.get(p).t, ASTNodeType::Pair);
+        self.get(p).children[0]
+    }
+
+    pub fn get_second(&self, p : usize) -> usize {
+        assert_eq!(self.get(p).t, ASTNodeType::Pair);
+        self.get(p).children[1]
     }
 
     pub fn get_abstr_var(&self, abst: usize) -> usize {
@@ -300,6 +483,36 @@ impl AST {
         self.get_all_instances_of_var_in_exp(self.get_abstr_exp(abst), &var_name)
     }
 
+    pub fn do_multiple_abst_substs(&self, abst: usize, substs: Vec<usize>) -> Self {
+        assert!(substs.len() > 0);
+
+        let mut abst_ast = self.do_abst_subst(abst, *substs.last().unwrap());
+        let substs = &substs[..substs.len() - 1];
+        for subst in substs {
+            let subst = abst_ast.append(self, *subst);
+            abst_ast = abst_ast.do_abst_subst(abst_ast.root, subst);
+        }
+
+        abst_ast
+    }
+
+    pub fn do_abst_subst(&self, abst: usize, subst: usize) -> Self {
+        assert!(self.get(abst).t == ASTNodeType::Abstraction);
+        // All usages of the abstracted variable
+        let var_name = self.get(self.get_abstr_var(abst)).get_value();
+        let mut cloned_abst_expr = self.clone_node(self.get_abstr_exp(abst));
+
+        let usages =
+            cloned_abst_expr.get_all_instances_of_var_in_exp(cloned_abst_expr.root, &var_name);
+        let arg_id = cloned_abst_expr.append(&self, subst);
+
+        for usage in usages {
+            cloned_abst_expr.replace(usage, arg_id);
+        }
+
+        cloned_abst_expr
+    }
+
     pub fn get_func(&self, app: usize) -> usize {
         assert!(self.vec[app].t == ASTNodeType::Application);
         self.vec[app].children[0]
@@ -333,8 +546,8 @@ impl AST {
         names
     }
 
-    pub fn get_main(&self, module: usize) -> usize {
-        self.get_assign_to(module, "main".to_string()).unwrap()
+    pub fn get_main(&self, module: usize) -> Option<usize> {
+        self.get_assign_to(module, "main".to_string())
     }
 
     // Get assignment within module
@@ -354,7 +567,7 @@ impl AST {
     }
 
     pub fn get_assigns_map(&self, module: usize) -> HashMap<String, usize> {
-        assert!(self.vec[module].t == ASTNodeType::Module);
+        assert_eq!(self.vec[module].t, ASTNodeType::Module);
         let mut assigns = HashMap::new();
 
         for a in &self.vec[module].children {
@@ -398,23 +611,59 @@ impl AST {
                 let exp = self.to_string_indent(n.children[1], indent + 2);
                 format!("{}Abstraction: {}\n{}", ind, id.get_value(), exp)
             }
+            ASTNodeType::Pair => {
+                let a = self.to_string_indent(self.get_first(node), indent + 2);
+                let b = self.to_string_indent(self.get_second(node), indent + 2);
+                format!("{}Pair: {}\n{}", ind, a, b)
+            }
         }
     }
 
-    pub fn to_string(&self, node: usize) -> String {
+    pub fn to_string_sugar(&self, node: usize, show_assigned_types: bool) -> String {
         let n = self.get(node);
         match n.t {
-            ASTNodeType::Identifier => {
-                format!("{}", n.get_value())
-            }
+            ASTNodeType::Identifier => match &n.type_assignment {
+                Some(t) => format!("{} :: {}", n.get_value(), t.to_string()),
+                None => n.get_value(),
+            },
             ASTNodeType::Literal => {
                 format!("{}", n.get_value())
             }
             ASTNodeType::Application => {
+                let mut func = node;
+                let mut args = vec![];
+                for _ in 0..3 {
+                    match self.get(func).t {
+                        ASTNodeType::Application => {
+                            args.push(self.get_arg(func));
+                            func = self.get_func(func);
+                        }
+                        _ => {
+                            break;
+                        }
+                    }
+                }
+
+                if args.len() == 3 {
+                    match self.get(func).t {
+                        ASTNodeType::Identifier => {
+                            if self.get(func).get_value() == "if" {
+                                return format!(
+                                    "if {} then {} else {}",
+                                    self.to_string_sugar(args[2], show_assigned_types),
+                                    self.to_string_sugar(args[1], show_assigned_types),
+                                    self.to_string_sugar(args[0], show_assigned_types)
+                                );
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
                 let func = self.get_func(node);
                 let arg = self.get_arg(node);
 
-                let func_str = self.to_string(func);
+                let func_str = self.to_string_sugar(func, show_assigned_types);
 
                 // If the func is an abstraction, wrap it in parens
                 let func_str = match self.get(func).t {
@@ -422,7 +671,105 @@ impl AST {
                     _ => func_str,
                 };
 
-                let arg_str = self.to_string(arg);
+                let arg_str = self.to_string_sugar(arg, show_assigned_types);
+                // If the argument is an application, wrap it in parens
+                let arg_str = match self.get(arg).t {
+                    ASTNodeType::Application | ASTNodeType::Abstraction => format!("({})", arg_str),
+                    _ => arg_str,
+                };
+
+                if let Some(tk) = &self.get(func).info {
+                    if tk.is_infix_id() {
+                        return format!("{} {}", arg_str, func_str);
+                    }
+                }
+                format!("{} {}", func_str, arg_str)
+            }
+            ASTNodeType::Assignment => {
+                let id = self.get(self.get(node).children[0]);
+                let var_name = id.get_value();
+                let mut exp = self.to_string_sugar(self.get_assign_exp(node), show_assigned_types);
+
+                let mut fancy_syntax_abst_vars = "".to_string();
+                let mut ass_abst = self.get_assign_exp(node);
+
+                while self.get(ass_abst).fancy_assign_abst_syntax {
+                    assert_eq!(self.get(ass_abst).t, ASTNodeType::Abstraction);
+                    fancy_syntax_abst_vars += " ";
+                    fancy_syntax_abst_vars +=
+                        self.get(self.get_abstr_var(ass_abst)).get_value().as_str();
+                    exp = self.to_string_sugar(self.get_abstr_exp(ass_abst), show_assigned_types);
+                    ass_abst = self.get_abstr_exp(ass_abst);
+                }
+
+                let type_str = if show_assigned_types {
+                    if let Some(ass_type) = &self.get(node).type_assignment {
+                        var_name.clone() + " :: " + ass_type.to_string().as_str() + "\n"
+                    } else {
+                        "".to_string()
+                    }
+                } else {
+                    "".to_string()
+                };
+
+                format!(
+                    "{}{}{} = {}",
+                    type_str,
+                    id.get_value(),
+                    fancy_syntax_abst_vars,
+                    exp
+                )
+            }
+            ASTNodeType::Module => {
+                let mut s = String::new();
+                for c in &n.children {
+                    s.push_str(&self.to_string_sugar(*c, show_assigned_types));
+                    s.push_str("\n");
+                }
+
+                s.trim().to_string()
+            }
+            ASTNodeType::Abstraction => {
+                let expr_str = self.to_string_sugar(n.children[1], show_assigned_types);
+                let var_str = self.to_string_sugar(n.children[0], show_assigned_types);
+
+                let mut res = "\\".to_string();
+                res.push_str(&var_str);
+                res.push_str(" . ");
+                res.push_str(&expr_str);
+                res
+            }
+            ASTNodeType::Pair => {
+                let a = self.to_string_sugar(self.get_first(node), show_assigned_types);
+                let b = self.to_string_sugar(self.get_second(node), show_assigned_types);
+                format!("({}, {})", a, b)
+            }
+        }
+    }
+
+    pub fn to_string_desugar_and_type(&self, node: usize) -> String {
+        let n = self.get(node);
+        match n.t {
+            ASTNodeType::Identifier => match &n.type_assignment {
+                Some(t) => format!("{} :: {}", n.get_value(), t.to_string()),
+                None => n.get_value(),
+            },
+            ASTNodeType::Literal => {
+                format!("{}", n.get_value())
+            }
+            ASTNodeType::Application => {
+                let func = self.get_func(node);
+                let arg = self.get_arg(node);
+
+                let func_str = self.to_string_desugar_and_type(func);
+
+                // If the func is an abstraction, wrap it in parens
+                let func_str = match self.get(func).t {
+                    ASTNodeType::Abstraction => format!("({})", func_str),
+                    _ => func_str,
+                };
+
+                let arg_str = self.to_string_desugar_and_type(arg);
                 // If the argument is an application, wrap it in parens
                 let arg_str = match self.get(arg).t {
                     ASTNodeType::Application | ASTNodeType::Abstraction => format!("({})", arg_str),
@@ -433,22 +780,40 @@ impl AST {
             }
             ASTNodeType::Assignment => {
                 let id = self.get(self.get(node).children[0]);
-                let exp = self.to_string(self.get_assign_exp(node));
-                format!("{} = {}", id.get_value(), exp)
+                let var_name = id.get_value();
+                let exp = self.to_string_desugar_and_type(self.get_assign_exp(node));
+
+                let type_str = if let Some(ass_type) = &self.get(node).type_assignment {
+                    var_name.clone() + " :: " + ass_type.to_string().as_str() + "\n"
+                } else {
+                    "".to_string()
+                };
+
+                format!("{}{} = {}", type_str, &var_name, exp)
             }
             ASTNodeType::Module => {
                 let mut s = String::new();
                 for c in &n.children {
-                    s.push_str(&self.to_string(*c));
+                    s.push_str(&self.to_string_desugar_and_type(*c));
                     s.push_str("\n");
                 }
 
                 s.trim().to_string()
             }
             ASTNodeType::Abstraction => {
-                let id = self.get(n.children[0]);
-                let exp = self.to_string(n.children[1]);
-                format!("\\{} . {}", id.get_value(), exp)
+                let expr_str = self.to_string_desugar_and_type(n.children[1]);
+                let var_str = self.to_string_desugar_and_type(n.children[0]);
+
+                let mut res = "\\".to_string();
+                res.push_str(&var_str);
+                res.push_str(" . ");
+                res.push_str(&expr_str);
+                res
+            }
+            ASTNodeType::Pair => {
+                let a = self.to_string_desugar_and_type(self.get_first(node));
+                let b = self.to_string_desugar_and_type(self.get_second(node));
+                format!("({}, {})", a, b)
             }
         }
     }
@@ -476,6 +841,6 @@ impl AST {
 
 impl Debug for AST {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string(self.root))
+        write!(f, "{}", self.to_string_sugar(self.root, false))
     }
 }

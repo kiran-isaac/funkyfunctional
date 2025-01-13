@@ -2,7 +2,7 @@ use super::ast::AST;
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
-use crate::{Primitive, Type};
+use crate::{ASTNodeType, Primitive, Type};
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
 use std::fs::File;
@@ -26,7 +26,9 @@ impl Debug for ParserError {
         write!(
             f,
             "Parser Error at [{}:{}]: {}",
-            self.line, self.col, self.e
+            self.line + 1,
+            self.col + 1,
+            self.e
         )
     }
 }
@@ -84,11 +86,11 @@ impl Parser {
 
         if alias_id == 0 {
             self.bound.add_binding(name.clone());
-            return name;
+            name
         } else {
             let alias = format!("{}{}", alias_id, name);
             self.bound.add_binding(alias.clone());
-            return alias;
+            alias
         }
     }
 
@@ -105,6 +107,7 @@ impl Parser {
     }
 
     // Add tk to queue
+    #[inline(always)]
     fn queue_tk(&mut self) -> Result<(), ParserError> {
         let t = self.lexer.get_token()?;
         self.t_queue.push_back(t);
@@ -113,6 +116,7 @@ impl Parser {
     }
 
     // Roll queue forwards
+    #[inline(always)]
     fn advance(&mut self) {
         self.t_queue.pop_front();
     }
@@ -136,9 +140,9 @@ impl Parser {
     fn parse_abstraction(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
         match self.peek(0)?.tt {
             TokenType::Id => {
-                let id = self.consume()?;
+                let id_tk = self.consume()?;
 
-                let varname = id.value.clone();
+                let varname = id_tk.value.clone();
                 if varname != "_" {
                     if self.bound.is_bound(&varname) {
                         return Err(self.parse_error(format!(
@@ -148,16 +152,36 @@ impl Parser {
                     }
                     self.bind(varname.clone());
                 }
+                self.advance();
                 let line = self.lexer.line;
                 let col = self.lexer.col;
-                let id = ast.add_id(id, line, col);
+
+                let id = match self.peek(0) {
+                    Ok(t) => match t.tt {
+                        TokenType::DoubleColon => {
+                            self.advance();
+                            let var_type = self.parse_type_expression(ast)?;
+                            #[cfg(debug_assertions)]
+                            let _type_str = var_type.to_string();
+                            ast.add_typed_id(id_tk, line, col, var_type)
+                        }
+                        _ => ast.add_id(id_tk, line, col),
+                    },
+                    Err(e) => return Err(e),
+                };
+
                 match self.peek(0)?.tt {
                     TokenType::Dot => {
                         self.advance();
                         let expr = match self.peek(0)?.tt {
                             TokenType::Lambda => {
                                 self.advance();
-                                self.parse_abstraction(ast)?
+                                let inner_abst = self.parse_abstraction(ast)?;
+
+                                // If we have a lambda inside a lambda, we need to wait for all
+                                // arguments to be applied before we can substitute
+                                ast.wait_for_args(inner_abst);
+                                inner_abst
                             }
                             _ => self.parse_expression(ast)?,
                         };
@@ -174,15 +198,20 @@ impl Parser {
                     _ => Err(self.parse_error("Expected dot after lambda id".to_string())),
                 }
             }
-            _ => Err(self.parse_error("Expected identifier (or ignore directive '_') after lambda".to_string())),
+            _ => Err(self.parse_error(
+                "Expected identifier (or ignore directive '_') after lambda".to_string(),
+            )),
         }
     }
 
     fn parse_expression(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
-        let line = self.lexer.line;
-        let col = self.lexer.col;
+        #[cfg(debug_assertions)]
         let mut left = self.parse_primary(ast)?;
+
+        let _t_queue = format!("{:?}", self.t_queue);
         loop {
+            let line = self.lexer.line;
+            let col = self.lexer.col;
             match &self.peek(0)?.tt {
                 // If paren, apply to paren
                 TokenType::LParen => {
@@ -191,8 +220,18 @@ impl Parser {
                     self.advance();
                     left = ast.add_app(left, right, line, col);
                 }
-                TokenType::RParen | TokenType::EOF | TokenType::Newline => {
+                TokenType::RParen
+                | TokenType::EOF
+                | TokenType::Newline
+                | TokenType::Then
+                | TokenType::Else => {
                     return Ok(left);
+                }
+
+                TokenType::Comma => {
+                    self.advance();
+                    let right = self.parse_expression(ast)?;
+                    left = ast.add_pair(left, right, line, col);
                 }
 
                 TokenType::Lambda => {
@@ -200,14 +239,30 @@ impl Parser {
                     self.parse_abstraction(ast)?;
                 }
 
-                // If Primary
-                TokenType::Id
-                | TokenType::FloatLit
+                TokenType::If => {
+                    self.advance();
+                    let ite = self.parse_ite(ast)?;
+                    left = ast.add_app(left, ite, line, col);
+                }
+
+                TokenType::FloatLit
                 | TokenType::CharLit
                 | TokenType::IntLit
                 | TokenType::BoolLit => {
                     let right = self.parse_primary(ast)?;
                     left = ast.add_app(left, right, line, col);
+                }
+
+                TokenType::Id => {
+                    if self.peek(0)?.is_infix_id() {
+                        let id_node = self.parse_primary(ast)?;
+                        let right = self.parse_expression(ast)?;
+                        left = ast.add_app(id_node, left, line, col);
+                        left = ast.add_app(left, right, line, col);
+                    } else {
+                        let id_node = self.parse_primary(ast)?;
+                        left = ast.add_app(left, id_node, line, col);
+                    }
                 }
 
                 _ => {
@@ -234,12 +289,13 @@ impl Parser {
             TokenType::IntLit | TokenType::FloatLit | TokenType::BoolLit | TokenType::CharLit => {
                 Ok(ast.add_lit(t, line, col))
             }
+            TokenType::If => Ok(self.parse_ite(ast)?),
             // Removed support for lambda except at the top level
             // for now, untill i figure out type inference
-            // TokenType::Lambda => {
-            //     self.advance();
-            //     self.parse_abstraction(ast)
-            // }
+            TokenType::Lambda => {
+                self.advance();
+                self.parse_abstraction(ast)
+            }
             TokenType::LParen => {
                 let exp = self.parse_expression(ast)?;
                 self.advance();
@@ -249,21 +305,58 @@ impl Parser {
         }
     }
 
+    fn parse_ite(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
+        let if_id_node = ast.add_id(
+            Token {
+                tt: TokenType::If,
+                value: "if".to_string(),
+            },
+            self.lexer.line,
+            self.lexer.col - 2,
+        );
+
+        let condition = self.parse_expression(ast)?;
+
+        let app1 = ast.add_app(if_id_node, condition, self.lexer.line, self.lexer.col);
+
+        let then_tk = self.consume()?;
+        assert!(then_tk.tt == TokenType::Then);
+
+        let then_exp = self.parse_expression(ast)?;
+        let app2 = ast.add_app(app1, then_exp, self.lexer.line, self.lexer.col);
+
+        let else_tk = self.consume()?;
+        assert!(else_tk.tt == TokenType::Else);
+
+        let else_exp = self.parse_expression(ast)?;
+        let app3 = ast.add_app(app2, else_exp, self.lexer.line, self.lexer.col);
+
+        Ok(app3)
+    }
+
     fn parse_type_expression(&mut self, ast: &mut AST) -> Result<Type, ParserError> {
         let mut left = self.parse_type_expression_primary(ast)?;
 
         loop {
             let next = self.peek(0)?;
-            let left_string = left.to_string();
 
             match next.tt {
-                TokenType::RArrow => {
+                TokenType::RArrow | TokenType::LParen => {
                     self.advance();
                     let right = self.parse_type_expression(ast)?;
-                    let right_string = right.to_string();
                     left = Type::Function(Box::new(left), Box::new(right));
                 }
-                TokenType::RParen | TokenType::Newline | TokenType::EOF => return Ok(left),
+
+                TokenType::Comma => {
+                    self.advance();
+                    left = Type::pr(left, self.parse_type_expression(ast)?);
+                }
+
+                TokenType::RParen
+                | TokenType::Newline
+                | TokenType::EOF
+                | TokenType::Id
+                | TokenType::Dot => return Ok(left),
                 _ => {
                     return Err(self
                         .parse_error(format!("Unexpected token in type expression: {:?}", next)))
@@ -272,24 +365,48 @@ impl Parser {
         }
     }
 
+    fn parse_forall(&mut self, ast: &mut AST) -> Result<Type, ParserError> {
+        let mut vars = vec![];
+        while self.peek(0)?.tt == TokenType::Id {
+            let v = self.peek(0)?.value;
+            if self.peek(0)?.is_infix_id() {
+                return Err(self.parse_error(format!("Invalid identifier in forall type declaration: {}", v)));
+            }
+            self.advance();
+            vars.push(v);
+        }
+
+        if vars.is_empty() {
+            return Err(self.parse_error("Invalid forall declaration, no variables".to_string()))
+        }
+
+        let tk = self.consume()?;
+        if tk.tt != TokenType::Dot {
+            return Err(self.parse_error(format!("Invalid forall declaration, expected dot after variables, got {:?}", tk)));
+        }
+
+        Ok(Type::fa(vars, self.parse_type_expression(ast)?))
+    }
+
     fn parse_type_expression_primary(&mut self, ast: &mut AST) -> Result<Type, ParserError> {
         let t = self.consume()?;
 
         match t.tt {
-            TokenType::TypeId => {
+            TokenType::TypeId | TokenType::Id => {
                 let id = t.value;
                 match id.as_str() {
                     "Int" => Ok(Type::Primitive(Primitive::Int64)),
                     "Float" => Ok(Type::Primitive(Primitive::Float64)),
-                    _ => unimplemented!("Only Int and Float are supported"),
+                    "Bool" => Ok(Type::Primitive(Primitive::Bool)),
+                    _ => Ok(Type::TypeVariable(id))
                 }
             }
             TokenType::LParen => {
                 let inner = self.parse_type_expression(ast)?;
-                let inner_string = inner.to_string();
                 self.advance();
                 Ok(inner)
             }
+            TokenType::Forall => self.parse_forall(ast),
             _ => Err(self.parse_error(format!("Unexpected token in type expression: {:?}", t))),
         }
     }
@@ -317,11 +434,19 @@ impl Parser {
 
     fn parse_assignment(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
         assert_eq!(self.peek(0)?.tt, TokenType::Id);
-        assert_eq!(self.peek(1)?.tt, TokenType::Assignment);
 
         let assid = self.peek(0)?;
         let name = assid.value.clone();
+
+        let mut abst_vars = vec![];
+
         self.advance();
+        while self.peek(0)?.tt == TokenType::Id {
+            abst_vars.push(self.peek(0)?.clone());
+            self.advance();
+        }
+
+        assert_eq!(self.peek(0)?.tt, TokenType::Assignment);
         self.advance();
 
         if self.bound.is_bound(&assid.value) {
@@ -332,18 +457,32 @@ impl Parser {
         let col = self.lexer.col;
 
         self.bind(assid.value.clone());
-        let exp = match self.peek(0)?.tt {
-            TokenType::Lambda => {
-                self.advance();
-                self.parse_abstraction(ast)?
+
+        for var in &abst_vars {
+            self.bind(var.value.clone());
+        }
+
+        let mut exp = self.parse_expression(ast)?;
+
+        for var in abst_vars.into_iter().rev() {
+            self.unbind(var.value.clone());
+            let var = ast.add_id(var, line, col);
+            exp = ast.add_abstraction(var, exp, line, col);
+            ast.fancy_assign_abst_syntax(exp);
+        }
+
+        // If the expression is an abstraction, wait for all args before
+        // substitution
+        match ast.get(exp).t {
+            ASTNodeType::Abstraction => {
+                ast.wait_for_args(exp);
             }
-            _ => self.parse_expression(ast)?,
-        };
+            _ => {}
+        }
 
         let id = ast.add_id(assid, line, col);
 
-        // Ignore if type assignment is not found
-        // This is for testing purposes, should be changed to enforce type assignment
+        // Ignore if type assignment is not found, so the typechecker will have to infer
         let type_assignment = match self.get_type_assignment(&name) {
             Ok(t) => Some(t),
             Err(_) => None,
@@ -356,36 +495,28 @@ impl Parser {
         // At the top level its just a set of assignments
         let mut ast = AST::new();
         let module = ast.add_module(Vec::new(), self.lexer.line, self.lexer.col);
-        let mut main_found = false;
 
         'assloop: loop {
             let t = self.peek(0)?;
 
             match t.tt {
-                TokenType::Id => match self.peek(1)?.tt {
-                    TokenType::Assignment => {
-                        if main_found {
-                            return Err(self.parse_error(
-                                "Main should be the last assignment in the module".to_string(),
-                            ));
+                TokenType::Id => {
+                    let next = self.peek(1)?;
+                    match next.tt {
+                        TokenType::Assignment | TokenType::Id => {
+                            let assignment = self.parse_assignment(&mut ast)?;
+                            ast.add_to_module(module, assignment);
                         }
-
-                        let assignment = self.parse_assignment(&mut ast)?;
-                        ast.add_to_module(module, assignment);
-
-                        if ast.get_assignee(assignment) == "main" {
-                            main_found = true;
+                        TokenType::DoubleColon => self.parse_type_assignment(&mut ast)?,
+                        _ => {
+                            return Err(self.parse_error(format!(
+                                "Unexpected Token: {:?}. Expected assignment operator: {:?}",
+                                t,
+                                TokenType::Assignment
+                            )))
                         }
                     }
-                    TokenType::DoubleColon => self.parse_type_assignment(&mut ast)?,
-                    _ => {
-                        return Err(self.parse_error(format!(
-                            "Unexpected Token: {:?}. Expected assignment operator: {:?}",
-                            t,
-                            TokenType::Assignment
-                        )))
-                    }
-                },
+                }
                 TokenType::Newline => {
                     self.advance();
                 }

@@ -8,6 +8,10 @@ pub enum TokenType {
     Id,
     TypeId,
 
+    If,
+    Then,
+    Else,
+
     IntLit,
     FloatLit,
     StringLit,
@@ -16,6 +20,7 @@ pub enum TokenType {
 
     DoubleColon,
     RArrow,
+    Forall,
 
     LParen,
     RParen,
@@ -23,6 +28,7 @@ pub enum TokenType {
     Lambda,
 
     Dot,
+    Comma,
 
     Assignment,
 }
@@ -42,6 +48,18 @@ impl Debug for Token {
             | TokenType::FloatLit
             | TokenType::Id => write!(f, "{:?}: {}", self.tt, self.value),
             _ => write!(f, "{:?}", self.tt),
+        }
+    }
+}
+
+impl Token {
+    pub fn is_infix_id(&self) -> bool {
+        if self.tt != TokenType::Id {
+            return false;
+        }
+        match self.value.chars().next().unwrap() {
+            'a'..='z' | 'A'..='Z' | '_' => false,
+            _ => true,
         }
     }
 }

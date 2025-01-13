@@ -1,0 +1,13 @@
+inc x = x + 1
+
+dec x = x - 1
+
+max m n = if m >= n then m else n
+
+floor n = max n 0
+
+inc2 x = inc (inc (dec (inc x)))
+
+main = \x . floor (inc2 10)
+
+x y = y y
