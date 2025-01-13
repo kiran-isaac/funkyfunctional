@@ -45,6 +45,10 @@ fn check_for_ready_call(
                 };
                 let name = ast.get(f).get_value();
 
+                if name == "second" {
+                    let _y = 1 + 1;
+                }
+
                 return if labels_of_arity.contains_key(&name) {
                     let label = labels_of_arity.get(&name).unwrap();
                     if label.is_inbuilt() {
@@ -60,30 +64,20 @@ fn check_for_ready_call(
                         }
                     } else {
                         if !(ast.get(f).wait_for_args && literals_only) {
-                            // Check the args are of the correct form for the type assignments
-                            #[cfg(debug_assertions)]
-                            let _t_str = label.label_type.to_string();
+                            let assign = *am.get(&name).unwrap();
 
-                            let flat_t = label.label_type.flatten();
-                            #[cfg(debug_assertions)]
-                            let _flat_t_str = format!("{:?}", label.label_type.flatten());
-
-                            assert!(argv.len() < flat_t.len());
+                            let assign_exp = ast.get_assign_exp(assign);
+                            let n_args = ast.get_n_abstr_vars(assign_exp, argv.len());
+                            assert_eq!(argv.len(), n_args.len());
 
                             for i in 0..argv.len() {
-                                match (&argv[i].t, &flat_t[i]) {
-                                    // Only consider pair as reduction candidate if it is actually a pair
-                                    (ASTNodeType::Pair, Type::Product(_, _)) => {
-                                        #[cfg(debug_assertions)]
-                                        let _x = 1;
-                                    }
-                                    (_, Type::Product(_, _)) => {return None}
-                                    _ => {},
+                                match (&argv[i].t, &ast.get(n_args[i]).t) {
+                                    (ASTNodeType::Pair, ASTNodeType::Pair) => {},
+                                    (_, ASTNodeType::Pair) => return None,
+                                    _ => {}
                                 }
                             }
 
-                            let assign = *am.get(&name).unwrap();
-                            let assign_exp = ast.get_assign_exp(assign);
                             Some(ast.do_multiple_abst_substs(assign_exp, argv_ids))
                         } else {
                             None

@@ -262,6 +262,7 @@ impl Type {
     pub fn get_arity(&self) -> usize {
         match self {
             Type::Function(_, t) => 1 + t.get_arity(),
+            Type::Forall(_, t) => t.get_arity(),
             _ => 0,
         }
     }

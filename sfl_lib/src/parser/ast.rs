@@ -205,11 +205,11 @@ impl AST {
             }
             (ASTNodeType::Pair, ASTNodeType::Pair) => {
                 let x1 = self.get_first(n1);
-                let x2 = self.get_first(n2);
                 let y1 = self.get_second(n1);
+                let x2 = self.get_first(n2);
                 let y2 = self.get_second(n2);
 
-                self.expr_eq(x1, y1) && self.expr_eq(x2, y2)
+                self.expr_eq(x1, x2) && self.expr_eq(y1, y2)
             }
             _ => false,
         }
@@ -238,6 +238,11 @@ impl AST {
         let other = &rc.1;
         let old = rc.0;
         let new = self.append(other, other.root);
+
+        #[cfg(debug_assertions)]
+        let _old_str = self.to_string_sugar(old, false);
+        #[cfg(debug_assertions)]
+        let _new_str = self.to_string_sugar(new, false);
         self.replace_references_to_node(old, new);
     }
 
@@ -255,7 +260,11 @@ impl AST {
     }
 
     pub fn do_rc_subst_and_identical_rcs(&mut self, rc0: &RCPair, rcs: &Vec<RCPair>) {
+        let _rc0_0_str = self.to_string_sugar(rc0.0, false);
+        let _rc1_0_str = rc0.1.to_string_sugar(rc0.1.root, false);
         for rc in rcs {
+            let _this_rc = self.to_string_sugar(rc.0, false);
+            let _this_rc_1 = rc.1.to_string_sugar(rc.1.root, false);
             if self.expr_eq(rc0.0, rc.0) {
                 self.do_rc_subst(rc);
             }
@@ -530,8 +539,10 @@ impl AST {
                 }
             }
             ASTNodeType::Pair => {
-                self.replace(self.get_first(var), subst);
-                self.replace(self.get_second(var), subst);
+                let subst_first = self.get_first(subst);
+                let subst_second = self.get_second(subst);
+                self.replace_var_usages(self.get_first(var), subst_first);
+                self.replace_var_usages(self.get_second(var), subst_second);
             }
             _ => unreachable!("WTF HOW DID THIS HAPPEN"),
         }
@@ -544,7 +555,9 @@ impl AST {
         let subst_id = cloned_abst_expr.append(&self, subst);
 
         cloned_abst_expr.replace_var_usages(new_abstr_var, subst_id);
+        let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
         cloned_abst_expr.root = cloned_abst_expr.get_abstr_expr(cloned_abst_expr.root);
+        let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
         cloned_abst_expr
     }
 
