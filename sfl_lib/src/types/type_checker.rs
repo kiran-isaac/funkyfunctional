@@ -182,34 +182,29 @@ impl Context {
 
         for i in &self.vec {
             match i {
-                // If this is another context that references the one being substituted then
+                // If this is another existential that references the one being substituted then
                 // Substitute this one too
-                ContextItem::Existential(e, Some(t)) => {
-                    match t {
-                        Type::Existential(e2) => {
-                            if *e2 == existential {
-                                new_v.push(ContextItem::Existential(*e, Some(t.clone())));
-                                continue;
-                            }
+                ContextItem::Existential(e, Some(Type::Existential(e2))) => {
+                    if *e2 == existential {
+                        new_v.push(ContextItem::Existential(*e, Some(t.clone())));
+                        continue;
+                    }
+                }
+                // If this is an existential with a product that refers to the one being set, set the
+                // types within the product too
+                ContextItem::Existential(_, Some(Type::Product(t1, t2))) => {
+                    let mut t1 = t1.as_ref().clone();
+                    if let Type::Existential(e1) = t1 {
+                        if e1 == existential {
+                            t1 = t.clone();
                         }
-                        Type::Product(t1, t2) => {
-                            let mut t1 = t1.as_ref().clone();
-                            if let Type::Existential(e1) = t1 {
-                                if e1 == existential {
-                                    t1 = t.clone();
-                                }
-                            }
+                    }
 
-                            let mut t2 = t2.as_ref().clone();
-                            if let Type::Existential(e2) = t2 {
-                                if e2 == existential {
-                                    t2 = t.clone();
-                                }
-                            }
-
-                            new_v.push(ContextItem::Existential(*e, Some(Type::pr(t1, t2))));
+                    let mut t2 = t2.as_ref().clone();
+                    if let Type::Existential(e2) = t2 {
+                        if e2 == existential {
+                            t2 = t.clone();
                         }
-                        _ => {}
                     }
                 }
                 ContextItem::Existential(e, _) => {

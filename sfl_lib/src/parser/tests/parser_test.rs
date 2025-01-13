@@ -214,6 +214,6 @@ fn pair() -> Result<(), ParserError> {
     let mut parser = Parser::from_string(str.to_string());
     let ast = parser.parse_module()?;
     let module = 0;
-    println!("{}", ast.to_string_sugar(module, true));
+    assert_eq!(ast.to_string_sugar(module, true), str);
     Ok(())
 }

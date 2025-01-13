@@ -86,11 +86,11 @@ impl Parser {
 
         if alias_id == 0 {
             self.bound.add_binding(name.clone());
-            return name;
+            name
         } else {
             let alias = format!("{}{}", alias_id, name);
             self.bound.add_binding(alias.clone());
-            return alias;
+            alias
         }
     }
 
@@ -349,7 +349,7 @@ impl Parser {
 
                 TokenType::Comma => {
                     self.advance();
-                    left = Type::u(left, self.parse_type_expression(ast)?);
+                    left = Type::pr(left, self.parse_type_expression(ast)?);
                 }
 
                 TokenType::RParen
@@ -464,7 +464,7 @@ impl Parser {
 
         let mut exp = self.parse_expression(ast)?;
 
-        for var in abst_vars {
+        for var in abst_vars.into_iter().rev() {
             self.unbind(var.value.clone());
             let var = ast.add_id(var, line, col);
             exp = ast.add_abstraction(var, exp, line, col);

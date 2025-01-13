@@ -25,7 +25,7 @@ pub enum Type {
     TypeVariable(String),
     Existential(usize),
     Forall(String, Box<Type>),
-    Union(Box<Type>, Box<Type>),
+    Product(Box<Type>, Box<Type>),
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -68,8 +68,8 @@ impl Type {
         Type::TypeVariable(name)
     }
 
-    pub fn u(t1: Type, t2: Type) -> Type {
-        Type::Union(Box::new(t1), Box::new(t2))
+    pub fn pr(t1: Type, t2: Type) -> Type {
+        Type::Product(Box::new(t1), Box::new(t2))
     }
 
     pub fn fa(forall: Vec<String>, t: Self) -> Self {
@@ -83,7 +83,7 @@ impl Type {
     pub fn contains_existential(&self, ex: usize) -> bool {
         match self {
             Type::Primitive(_) => false,
-            Type::Function(t1, t2) | Type::Union(t1, t2) => t1.contains_existential(ex) || t2.contains_existential(ex),
+            Type::Function(t1, t2) | Type::Product(t1, t2) => t1.contains_existential(ex) || t2.contains_existential(ex),
             Type::TypeVariable(_) => false,
             Type::Existential(e) => *e == ex,
             Type::Forall(_, t) => t.contains_existential(ex),
@@ -134,7 +134,7 @@ impl Type {
         match &self {
             Type::Existential(n) => vec![*n],
             Type::Forall(_, t2) => t2.ordered_existentials(),
-            Type::Function(t1, t2) => {
+            Type::Function(t1, t2) | Type::Product(t1, t2) => {
                 let mut t1 = t1.ordered_existentials();
                 let t2 = t2.ordered_existentials();
                 t1.extend(t2);
@@ -159,6 +159,11 @@ impl Type {
                 let lhs = t1.exist_to_tv(ext, str);
                 let rhs = t2.exist_to_tv(ext, str);
                 Type::Function(Box::new(lhs), Box::new(rhs))
+            }
+            Type::Product(t1, t2) => {
+                let lhs = t1.exist_to_tv(ext, str);
+                let rhs = t2.exist_to_tv(ext, str);
+                Type::Product(Box::new(lhs), Box::new(rhs))
             }
             _ => self.clone(),
         }
@@ -185,6 +190,7 @@ impl Type {
     pub fn is_monotype(&self) -> bool {
         match self {
             Type::Function(t1, t2) => t1.is_monotype() && t2.is_monotype(),
+            Type::Product(t1, t2) => t1.is_monotype() && t2.is_monotype(),
             Self::Forall(_, _) => false,
             _ => true,
         }
@@ -291,7 +297,7 @@ impl Type {
                     t.to_string_internal(full_braces)
                 )
             }
-            Type::Union(t1, t2) => {
+            Type::Product(t1, t2) => {
                 format!("({}, {})", t1.to_string_internal(full_braces), t2.to_string_internal(full_braces))
             }
         }

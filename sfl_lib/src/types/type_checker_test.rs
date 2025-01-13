@@ -95,6 +95,12 @@ fn type_check_const_abst() {
 }
 
 #[test]
+fn type_check_pair() {
+    tc_test_should_pass("pair :: a -> b -> (a, b)\npair x y = (x, y)");
+    inference_test("\\x y. (x, y)", "∀a. ∀b. a -> b -> (a, b)")
+}
+
+#[test]
 fn type_check_control_flow_kws() {
     tc_test_should_pass("main :: Float\nmain = const1 2.0 20");
     tc_test_should_fail("main :: Int\nmain = const1 2.0");
