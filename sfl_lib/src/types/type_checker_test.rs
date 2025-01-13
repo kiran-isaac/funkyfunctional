@@ -96,6 +96,18 @@ fn type_check_const_abst() {
 
 #[test]
 fn type_check_pair() {
+    tc_test_should_pass("triple_first :: (a, (b, c)) -> a\ntriple_first (x, (y, z)) = x");
+    tc_test_should_pass("triple_second :: (a, (b, c)) -> b\ntriple_second  (x, (y, z)) = y");
+    tc_test_should_pass("triple_third :: (a, (b, c)) -> c\ntriple_third  (x, (y, z)) = z");
+    inference_test("\\(x, (_, _)) . x", "∀a. ∀b. ∀c. (a, (b, c)) -> a");
+    inference_test("\\(_, (x, _)) . x", "∀a. ∀b. ∀c. (a, (b, c)) -> b");
+    inference_test("\\(_, (_, x)) . x", "∀a. ∀b. ∀c. (a, (b, c)) -> c");
+
+    tc_test_should_pass("first :: (a, b) -> a\nfirst (x, y) = x");
+    tc_test_should_pass("second :: (a, b) -> b\nsecond (x, y) = y");
+    inference_test("\\(_, y) . y", "∀a. ∀b. (a, b) -> b");
+    inference_test("\\(x, _) . x", "∀a. ∀b. (a, b) -> a");
+
     tc_test_should_pass("pair :: a -> b -> (a, b)\npair x y = (x, y)");
     inference_test("\\x y. (x, y)", "∀a. ∀b. a -> b -> (a, b)");
     inference_test(

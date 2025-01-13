@@ -3,7 +3,6 @@ use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
 use crate::{ASTNodeType, Primitive, Type};
-use std::any::Any;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
 use std::fs::File;
@@ -17,7 +16,7 @@ pub struct Parser {
 }
 
 pub struct ParserError {
-    e: String,
+    pub e: String,
     line: usize,
     col: usize,
 }
@@ -74,18 +73,23 @@ impl Parser {
         self.bound.add_binding(name);
     }
 
-    pub fn bind_node(&mut self, ast: &mut AST, node: usize) {
+    pub fn bind_node(&mut self, ast: &mut AST, node: usize) -> Result<(), ParserError> {
         let n = ast.get(node);
         match n.t {
             ASTNodeType::Identifier => {
                 let str = n.get_value().clone();
+                if self.bound.is_bound(str.as_str()) {
+                    return Err(self.parse_error(format!("Variable {} is already bound, and cannot be rebound for abstraction", str)));
+                }
                 if str != "_" {
                     self.bind(str);
                 }
+                Ok(())
             }
             ASTNodeType::Pair => {
-                self.bind_node(ast, ast.get_first(node));
-                self.bind_node(ast, ast.get_second(node));
+                self.bind_node(ast, ast.get_first(node))?;
+                self.bind_node(ast, ast.get_second(node))?;
+                Ok(())
             }
             _ => panic!("cant bind node"),
         }
@@ -105,27 +109,6 @@ impl Parser {
                 self.unbind_node(ast, ast.get_second(node));
             }
             _ => panic!("cant bind node"),
-        }
-    }
-
-    /// Used when it doesnt matter that something is already
-    /// bound, like when we are binding a local variable in
-    /// a lambda
-    /// This will create an alias for the bound variable
-    /// and return the alias
-    pub fn bind_local(&mut self, name: String) -> String {
-        let mut alias_id = 0;
-        while self.bound.is_bound(name.as_str()) {
-            alias_id += 1;
-        }
-
-        if alias_id == 0 {
-            self.bound.add_binding(name.clone());
-            name
-        } else {
-            let alias = format!("{}{}", alias_id, name);
-            self.bound.add_binding(alias.clone());
-            alias
         }
     }
 
@@ -180,7 +163,7 @@ impl Parser {
             let t = self.peek(0)?;
             match (t.tt, is_assign) {
                 (TokenType::Id | TokenType::LParen, _) => {
-                    args.push(self.parse_lambda_var(ast)?);
+                    args.push(self.parse_abstr_var(ast)?);
                 }
                 (TokenType::Dot, false) => break,
                 (TokenType::Assignment, true) => break,
@@ -198,8 +181,12 @@ impl Parser {
         }
 
         for arg in &args {
-            self.bind_node(ast, *arg);
+            match self.bind_node(ast, *arg) {
+                Ok(()) => {}
+                Err(e) => return Err(e),
+            }
         }
+
         let mut expr = self.parse_expression(ast)?;
 
         let mut absts_vec = vec![];
@@ -211,12 +198,12 @@ impl Parser {
         Ok((expr, absts_vec))
     }
 
-    fn parse_lambda_var(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
-        let left = self.parse_lambda_var_primary(ast)?;
+    fn parse_abstr_var(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
+        let left = self.parse_abstr_var_primary(ast)?;
         match self.peek(0)?.tt {
             TokenType::Comma => {
                 self.advance();
-                let right = self.parse_lambda_var(ast)?;
+                let right = self.parse_abstr_var(ast)?;
                 Ok(ast.add_pair(left, right, self.lexer.line, self.lexer.col))
             }
             TokenType::DoubleColon => {
@@ -233,26 +220,12 @@ impl Parser {
         }
     }
 
-    fn parse_lambda_var_primary(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
+    fn parse_abstr_var_primary(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
         let t = self.consume()?;
         match t.tt {
             TokenType::Id => Ok(ast.add_id(t, self.lexer.line, self.lexer.col)),
-            TokenType::LParen => self.parse_lambda_var(ast),
+            TokenType::LParen => self.parse_abstr_var(ast),
             _ => Err(self.parse_error("Expected identifier (or '(') after lambda".to_string())),
-        }
-    }
-
-    fn parse_id(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
-        let t = self.peek(0)?;
-        match t.tt {
-            TokenType::Id => {
-                let id_name = t.value.clone();
-                if !self.bound.is_bound(&id_name) {
-                    return Err(self.parse_error(format!("Unbound identifier: {}", id_name)));
-                }
-                Ok(ast.add_id(t, self.lexer.line, self.lexer.col))
-            }
-            _ => Err(self.parse_error(format!("Expected ID, got {}", t.value))),
         }
     }
 
@@ -495,6 +468,12 @@ impl Parser {
 
         let assid = self.peek(0)?;
         let name = assid.value.clone();
+
+        if self.bound.is_bound(name.as_str()) {
+            return Err(self.parse_error(format!("Variable already assigned: {}", name)));
+        }
+
+        self.bind(name.clone());
 
         self.advance();
 
