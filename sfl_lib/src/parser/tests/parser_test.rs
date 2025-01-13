@@ -87,24 +87,24 @@ fn bound() -> Result<(), ParserError> {
     Ok(())
 }
 
-fn unchanged_parse_output_str_test(program_str: &str) -> Result<(), ParserError> {
+fn unchanged_parse_output_str_test(program_str: &str, types: bool) -> Result<(), ParserError> {
     let mut parser = Parser::from_string(program_str.to_string());
     let ast = parser.parse_module()?;
-    assert_eq!(program_str, ast.to_string_sugar(ast.root, false));
+    assert_eq!(program_str, ast.to_string_sugar(ast.root, types));
     Ok(())
 }
 
 #[test]
 fn infix_expr() -> Result<(), ParserError> {
-    unchanged_parse_output_str_test("x = 1 + 1")?;
-    unchanged_parse_output_str_test("x = 1 - 1")?;
-    unchanged_parse_output_str_test("x = 1 * 1")?;
-    unchanged_parse_output_str_test("x = 1 / 1")?;
-    unchanged_parse_output_str_test("x = 1 == 1")?;
-    unchanged_parse_output_str_test("x = 1 > 1")?;
-    unchanged_parse_output_str_test("x = 1 < 1")?;
-    unchanged_parse_output_str_test("x = 1 >= 1")?;
-    unchanged_parse_output_str_test("x = 1 <= 1")?;
+    unchanged_parse_output_str_test("x = 1 + 1", false)?;
+    unchanged_parse_output_str_test("x = 1 - 1", false)?;
+    unchanged_parse_output_str_test("x = 1 * 1", false)?;
+    unchanged_parse_output_str_test("x = 1 / 1", false)?;
+    unchanged_parse_output_str_test("x = 1 == 1", false)?;
+    unchanged_parse_output_str_test("x = 1 > 1", false)?;
+    unchanged_parse_output_str_test("x = 1 < 1", false)?;
+    unchanged_parse_output_str_test("x = 1 >= 1", false)?;
+    unchanged_parse_output_str_test("x = 1 <= 1", false)?;
 
     Ok(())
 }
@@ -112,7 +112,7 @@ fn infix_expr() -> Result<(), ParserError> {
 #[test]
 fn fancy_abst_syntax_test() -> Result<(), ParserError> {
     let program = "inc x = x + 1";
-    unchanged_parse_output_str_test(program)?;
+    unchanged_parse_output_str_test(program, false)?;
     Ok(())
 }
 
@@ -164,7 +164,10 @@ fn type_assignment() -> Result<(), ParserError> {
     let assign = ast.get_assign_to(module, "id2".to_string()).unwrap();
     let type_assignment = ast.get(assign).type_assignment.clone();
     assert!(type_assignment.is_some());
-    assert_eq!(type_assignment.unwrap().to_string(), "∀var. var -> var".to_string());
+    assert_eq!(
+        type_assignment.unwrap().to_string(),
+        "∀var. var -> var".to_string()
+    );
 
     Ok(())
 }
@@ -210,6 +213,16 @@ fn ite() -> Result<(), ParserError> {
 
 #[test]
 fn pair() -> Result<(), ParserError> {
+    unchanged_parse_output_str_test("pair x y = (x, y)", false)?;
+    unchanged_parse_output_str_test("fst (x, y) = x", false)?;
+    unchanged_parse_output_str_test("snd (x, y) = y", false)?;
+    unchanged_parse_output_str_test("third (x, (y, z)) = z", false)?;
+
+    unchanged_parse_output_str_test("pair :: a -> b -> (a, b)\npair x y = (x, y)", true)?;
+    unchanged_parse_output_str_test("fst :: (a, b) -> a\nfst (x, y) = x", true)?;
+    unchanged_parse_output_str_test("snd :: (a, b) -> b\nsnd (x, y) = y", true)?;
+    unchanged_parse_output_str_test("third :: (a, (b, c)) -> c\nthird (_, (_, z)) = z", true)?;
+
     let str = "pair :: a -> b -> (a, b)\npair x y = (x, y)";
     let mut parser = Parser::from_string(str.to_string());
     let ast = parser.parse_module()?;

@@ -16,7 +16,7 @@ pub struct Parser {
 }
 
 pub struct ParserError {
-    e: String,
+    pub e: String,
     line: usize,
     col: usize,
 }
@@ -73,24 +73,42 @@ impl Parser {
         self.bound.add_binding(name);
     }
 
-    /// Used when it doesnt matter that something is already
-    /// bound, like when we are binding a local variable in
-    /// a lambda
-    /// This will create an alias for the bound variable
-    /// and return the alias
-    pub fn bind_local(&mut self, name: String) -> String {
-        let mut alias_id = 0;
-        while self.bound.is_bound(name.as_str()) {
-            alias_id += 1;
+    pub fn bind_node(&mut self, ast: &mut AST, node: usize) -> Result<(), ParserError> {
+        let n = ast.get(node);
+        match n.t {
+            ASTNodeType::Identifier => {
+                let str = n.get_value().clone();
+                if self.bound.is_bound(str.as_str()) {
+                    return Err(self.parse_error(format!("Variable {} is already bound, and cannot be rebound for abstraction", str)));
+                }
+                if str != "_" {
+                    self.bind(str);
+                }
+                Ok(())
+            }
+            ASTNodeType::Pair => {
+                self.bind_node(ast, ast.get_first(node))?;
+                self.bind_node(ast, ast.get_second(node))?;
+                Ok(())
+            }
+            _ => panic!("cant bind node"),
         }
+    }
 
-        if alias_id == 0 {
-            self.bound.add_binding(name.clone());
-            name
-        } else {
-            let alias = format!("{}{}", alias_id, name);
-            self.bound.add_binding(alias.clone());
-            alias
+    pub fn unbind_node(&mut self, ast: &mut AST, node: usize) {
+        let n = ast.get(node);
+        match n.t {
+            ASTNodeType::Identifier => {
+                let str = n.get_value().clone();
+                if str != "_" {
+                    self.unbind(str);
+                }
+            }
+            ASTNodeType::Pair => {
+                self.unbind_node(ast, ast.get_first(node));
+                self.unbind_node(ast, ast.get_second(node));
+            }
+            _ => panic!("cant bind node"),
         }
     }
 
@@ -137,70 +155,77 @@ impl Parser {
         peek_result
     }
 
-    fn parse_abstraction(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
-        match self.peek(0)?.tt {
-            TokenType::Id => {
-                let id_tk = self.consume()?;
+    // Parse potentially multiple abstraction, return the abstr node and all the absts as a vector
+    fn parse_abstraction(&mut self, ast: &mut AST, is_assign : bool) -> Result<(usize, Vec<usize>), ParserError> {
+        let mut args = vec![];
 
-                let varname = id_tk.value.clone();
-                if varname != "_" {
-                    if self.bound.is_bound(&varname) {
-                        return Err(self.parse_error(format!(
-                            "Identifier already bound, so cannot be bound for lambda: {}",
-                            varname
-                        )));
-                    }
-                    self.bind(varname.clone());
+        loop {
+            let t = self.peek(0)?;
+            match (t.tt, is_assign) {
+                (TokenType::Id | TokenType::LParen, _) => {
+                    args.push(self.parse_abstr_var(ast)?);
                 }
-                self.advance();
-                let line = self.lexer.line;
-                let col = self.lexer.col;
-
-                let id = match self.peek(0) {
-                    Ok(t) => match t.tt {
-                        TokenType::DoubleColon => {
-                            self.advance();
-                            let var_type = self.parse_type_expression(ast)?;
-                            #[cfg(debug_assertions)]
-                            let _type_str = var_type.to_string();
-                            ast.add_typed_id(id_tk, line, col, var_type)
-                        }
-                        _ => ast.add_id(id_tk, line, col),
-                    },
-                    Err(e) => return Err(e),
-                };
-
-                match self.peek(0)?.tt {
-                    TokenType::Dot => {
-                        self.advance();
-                        let expr = match self.peek(0)?.tt {
-                            TokenType::Lambda => {
-                                self.advance();
-                                let inner_abst = self.parse_abstraction(ast)?;
-
-                                // If we have a lambda inside a lambda, we need to wait for all
-                                // arguments to be applied before we can substitute
-                                ast.wait_for_args(inner_abst);
-                                inner_abst
-                            }
-                            _ => self.parse_expression(ast)?,
-                        };
-                        if varname != "_" {
-                            self.unbind(varname);
-                        }
-                        Ok(ast.add_abstraction(id, expr, line, col))
-                    }
-                    TokenType::Id => {
-                        let abst2 = self.parse_abstraction(ast)?;
-                        self.unbind(varname);
-                        Ok(ast.add_abstraction(id, abst2, line, col))
-                    }
-                    _ => Err(self.parse_error("Expected dot after lambda id".to_string())),
+                (TokenType::Dot, false) => break,
+                (TokenType::Assignment, true) => break,
+                _ => {
+                    return Err(self
+                        .parse_error(format!("Unexpected token in lambda argument: {}", t.value)))
                 }
             }
-            _ => Err(self.parse_error(
-                "Expected identifier (or ignore directive '_') after lambda".to_string(),
-            )),
+        }
+
+        if is_assign {
+            assert_eq!(self.consume()?.tt, TokenType::Assignment);
+        } else {
+            assert_eq!(self.consume()?.tt, TokenType::Dot);
+        }
+
+        for arg in &args {
+            match self.bind_node(ast, *arg) {
+                Ok(()) => {}
+                Err(e) => return Err(e),
+            }
+        }
+
+        let mut expr = self.parse_expression(ast)?;
+
+        let mut absts_vec = vec![];
+        for &&arg in &args.iter().rev().collect::<Vec<&usize>>() {
+            expr = ast.add_abstraction(arg, expr, self.lexer.line, self.lexer.col);
+            absts_vec.push(expr);
+            self.unbind_node(ast, arg);
+        }
+        Ok((expr, absts_vec))
+    }
+
+    fn parse_abstr_var(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
+        let left = self.parse_abstr_var_primary(ast)?;
+        match self.peek(0)?.tt {
+            TokenType::Comma => {
+                self.advance();
+                let right = self.parse_abstr_var(ast)?;
+                Ok(ast.add_pair(left, right, self.lexer.line, self.lexer.col))
+            }
+            TokenType::DoubleColon => {
+                self.advance();
+                let type_ = self.parse_type_expression(ast)?;
+                ast.set_type(left, type_);
+                Ok(left)
+            }
+            TokenType::RParen => {
+                self.advance();
+                Ok(left)
+            }
+            _ => Ok(left),
+        }
+    }
+
+    fn parse_abstr_var_primary(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
+        let t = self.consume()?;
+        match t.tt {
+            TokenType::Id => Ok(ast.add_id(t, self.lexer.line, self.lexer.col)),
+            TokenType::LParen => self.parse_abstr_var(ast),
+            _ => Err(self.parse_error("Expected identifier (or '(') after lambda".to_string())),
         }
     }
 
@@ -236,7 +261,7 @@ impl Parser {
 
                 TokenType::Lambda => {
                     self.advance();
-                    self.parse_abstraction(ast)?;
+                    self.parse_abstraction(ast, false)?.0;
                 }
 
                 TokenType::If => {
@@ -294,7 +319,7 @@ impl Parser {
             // for now, untill i figure out type inference
             TokenType::Lambda => {
                 self.advance();
-                self.parse_abstraction(ast)
+                Ok(self.parse_abstraction(ast, false)?.0)
             }
             TokenType::LParen => {
                 let exp = self.parse_expression(ast)?;
@@ -370,19 +395,25 @@ impl Parser {
         while self.peek(0)?.tt == TokenType::Id {
             let v = self.peek(0)?.value;
             if self.peek(0)?.is_infix_id() {
-                return Err(self.parse_error(format!("Invalid identifier in forall type declaration: {}", v)));
+                return Err(self.parse_error(format!(
+                    "Invalid identifier in forall type declaration: {}",
+                    v
+                )));
             }
             self.advance();
             vars.push(v);
         }
 
         if vars.is_empty() {
-            return Err(self.parse_error("Invalid forall declaration, no variables".to_string()))
+            return Err(self.parse_error("Invalid forall declaration, no variables".to_string()));
         }
 
         let tk = self.consume()?;
         if tk.tt != TokenType::Dot {
-            return Err(self.parse_error(format!("Invalid forall declaration, expected dot after variables, got {:?}", tk)));
+            return Err(self.parse_error(format!(
+                "Invalid forall declaration, expected dot after variables, got {:?}",
+                tk
+            )));
         }
 
         Ok(Type::fa(vars, self.parse_type_expression(ast)?))
@@ -398,7 +429,7 @@ impl Parser {
                     "Int" => Ok(Type::Primitive(Primitive::Int64)),
                     "Float" => Ok(Type::Primitive(Primitive::Float64)),
                     "Bool" => Ok(Type::Primitive(Primitive::Bool)),
-                    _ => Ok(Type::TypeVariable(id))
+                    _ => Ok(Type::TypeVariable(id)),
                 }
             }
             TokenType::LParen => {
@@ -438,49 +469,32 @@ impl Parser {
         let assid = self.peek(0)?;
         let name = assid.value.clone();
 
-        let mut abst_vars = vec![];
+        if self.bound.is_bound(name.as_str()) {
+            return Err(self.parse_error(format!("Variable already assigned: {}", name)));
+        }
+
+        self.bind(name.clone());
 
         self.advance();
-        while self.peek(0)?.tt == TokenType::Id {
-            abst_vars.push(self.peek(0)?.clone());
-            self.advance();
-        }
 
-        assert_eq!(self.peek(0)?.tt, TokenType::Assignment);
-        self.advance();
-
-        if self.bound.is_bound(&assid.value) {
-            return Err(self.parse_error(format!("Identifier already bound: {}", assid.value)));
-        }
-
-        let line = self.lexer.line;
-        let col = self.lexer.col;
-
-        self.bind(assid.value.clone());
-
-        for var in &abst_vars {
-            self.bind(var.value.clone());
-        }
-
-        let mut exp = self.parse_expression(ast)?;
-
-        for var in abst_vars.into_iter().rev() {
-            self.unbind(var.value.clone());
-            let var = ast.add_id(var, line, col);
-            exp = ast.add_abstraction(var, exp, line, col);
-            ast.fancy_assign_abst_syntax(exp);
-        }
-
-        // If the expression is an abstraction, wait for all args before
-        // substitution
-        match ast.get(exp).t {
-            ASTNodeType::Abstraction => {
-                ast.wait_for_args(exp);
+        let t = self.peek(0)?;
+        let expr = match t.tt {
+            TokenType::Assignment => {
+                self.advance();
+                self.parse_expression(ast)?
             }
-            _ => {}
-        }
+            TokenType::Id | TokenType::LParen => {
+                let (expr, abst_vars) = self.parse_abstraction(ast, true)?;
+                for var in abst_vars.into_iter().rev() {
+                    ast.fancy_assign_abst_syntax(var);
+                    ast.wait_for_args(var);
+                }
+                expr
+            }
+            _ => return Err(self.parse_error(format!("Unexpected token in assignment: {}", t.value)))
+        };
 
-        let id = ast.add_id(assid, line, col);
+        let id = ast.add_id(assid, self.lexer.line, self.lexer.col);
 
         // Ignore if type assignment is not found, so the typechecker will have to infer
         let type_assignment = match self.get_type_assignment(&name) {
@@ -488,7 +502,7 @@ impl Parser {
             Err(_) => None,
         };
 
-        Ok(ast.add_assignment(id, exp, line, col, type_assignment))
+        Ok(ast.add_assignment(id, expr, self.lexer.line, self.lexer.col, type_assignment))
     }
 
     pub fn parse_module(&mut self) -> Result<AST, ParserError> {
@@ -503,16 +517,15 @@ impl Parser {
                 TokenType::Id => {
                     let next = self.peek(1)?;
                     match next.tt {
-                        TokenType::Assignment | TokenType::Id => {
+                        TokenType::Assignment | TokenType::Id | TokenType::LParen => {
                             let assignment = self.parse_assignment(&mut ast)?;
                             ast.add_to_module(module, assignment);
                         }
                         TokenType::DoubleColon => self.parse_type_assignment(&mut ast)?,
                         _ => {
                             return Err(self.parse_error(format!(
-                                "Unexpected Token: {:?}. Expected assignment operator: {:?}",
-                                t,
-                                TokenType::Assignment
+                                "Unexpected Token: {:?}. Expected assignment operator: =",
+                                next.value
                             )))
                         }
                     }

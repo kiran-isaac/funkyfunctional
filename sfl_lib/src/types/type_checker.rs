@@ -30,6 +30,8 @@ impl std::fmt::Debug for ContextItem {
 #[derive(Clone)]
 struct Context {
     vec: Vec<ContextItem>,
+    next_exid: usize,
+    next_placeholder_assignvar_i: usize,
 }
 
 impl std::fmt::Debug for Context {
@@ -58,7 +60,7 @@ impl Context {
             vec.push(ContextItem::TypeAssignment(k.clone(), Ok(v.clone())));
         }
 
-        Self { vec }
+        Self { vec, next_exid: 0, next_placeholder_assignvar_i: 0 }
     }
 
     fn assigns_only(&self) -> Self {
@@ -73,17 +75,29 @@ impl Context {
             }
         }
 
-        Self { vec: new_v }
+        Self { vec: new_v, next_exid: self.next_exid, next_placeholder_assignvar_i: self.next_placeholder_assignvar_i }
     }
 
     fn append(&self, item: ContextItem) -> Self {
         let mut new = self.clone();
 
+        match &item {
+            ContextItem::TypeAssignment(name, _) => {
+                if name.starts_with("_") {
+                    new.next_placeholder_assignvar_i += 1;
+                }
+            }
+            ContextItem::Existential(e, _) => {
+                new.next_exid = std::cmp::max(*e, new.next_exid);
+            }
+            _ => {}
+        }
+
         new.vec.push(item);
         new
     }
 
-    fn remove_assignment(&self, name : &String) -> Self {
+    fn remove_assignment(&self, name: &String) -> Self {
         let mut new_v = vec![];
 
         for i in &self.vec {
@@ -94,10 +108,9 @@ impl Context {
             }
 
             new_v.push(i.clone());
-
         }
 
-        Self { vec: new_v }
+        Self { vec: new_v, next_exid: self.next_exid, next_placeholder_assignvar_i: self.next_placeholder_assignvar_i  }
     }
 
     fn get_before_item(&self, item: ContextItem) -> Self {
@@ -111,9 +124,8 @@ impl Context {
             new_v.push(i.clone());
         }
 
-        Self { vec: new_v }
+        Self { vec: new_v, next_exid: self.next_exid, next_placeholder_assignvar_i: self.next_placeholder_assignvar_i  }
     }
-
     fn get_before_assignment(&self, str: String) -> Self {
         #[cfg(debug_assertions)]
         let _c_str = format!("{:?}", &self);
@@ -132,7 +144,7 @@ impl Context {
             new_v.push(i.clone());
         }
 
-        let new_s = Self { vec: new_v };
+        let new_s = Self { vec: new_v, next_exid: self.next_exid, next_placeholder_assignvar_i: self.next_placeholder_assignvar_i };
 
         #[cfg(debug_assertions)]
         let _new_s_str = format!("{:?}", &new_s);
@@ -156,23 +168,31 @@ impl Context {
 
     fn add_before_existential(&self, existential: usize, item: ContextItem) -> Self {
         let mut new_v = vec![];
+        let mut next_placeholder_assignvar_i = self.next_placeholder_assignvar_i;
+        let mut next_exid = self.next_exid;
 
         for i in &self.vec {
             match i {
+                ContextItem::TypeAssignment(name, _) => {
+                    if name.starts_with("_") {
+                        next_placeholder_assignvar_i += 1;
+                    }
+                }
                 ContextItem::Existential(e, _) => {
                     if *e == existential {
                         new_v.push(item.clone());
                     }
+                    next_exid = std::cmp::max(*e, next_exid);
                 }
                 _ => {}
             }
             new_v.push(i.clone());
         }
 
-        Self { vec: new_v }
+        Self { vec: new_v, next_exid, next_placeholder_assignvar_i  }
     }
 
-    fn set_existential_definition(&self, existential: usize, t: Type) -> Self {
+    fn set_existential_definition(&self, existential_being_set: usize, t: Type) -> Self {
         #[cfg(debug_assertions)]
         let _c_str = format!("{:?}", &self);
         #[cfg(debug_assertions)]
@@ -185,7 +205,7 @@ impl Context {
                 // If this is another existential that references the one being substituted then
                 // Substitute this one too
                 ContextItem::Existential(e, Some(Type::Existential(e2))) => {
-                    if *e2 == existential {
+                    if *e2 == existential_being_set {
                         new_v.push(ContextItem::Existential(*e, Some(t.clone())));
                         continue;
                     }
@@ -195,20 +215,20 @@ impl Context {
                 ContextItem::Existential(_, Some(Type::Product(t1, t2))) => {
                     let mut t1 = t1.as_ref().clone();
                     if let Type::Existential(e1) = t1 {
-                        if e1 == existential {
+                        if e1 == existential_being_set {
                             t1 = t.clone();
                         }
                     }
 
                     let mut t2 = t2.as_ref().clone();
                     if let Type::Existential(e2) = t2 {
-                        if e2 == existential {
+                        if e2 == existential_being_set {
                             t2 = t.clone();
                         }
                     }
                 }
                 ContextItem::Existential(e, _) => {
-                    if *e == existential {
+                    if *e == existential_being_set {
                         new_v.push(ContextItem::Existential(*e, Some(t.clone())));
                         continue;
                     }
@@ -221,22 +241,15 @@ impl Context {
         #[cfg(debug_assertions)]
         let _new_v_str = format!("{:?}", new_v);
 
-        Self { vec: new_v }
+        Self { vec: new_v, next_exid: self.next_exid, next_placeholder_assignvar_i: self.next_placeholder_assignvar_i  }
     }
 
     fn get_next_existential_identifier(&self) -> usize {
-        let mut max = 0;
+        self.next_exid + 1
+    }
 
-        for i in &self.vec {
-            match i {
-                ContextItem::Existential(n, _) => {
-                    max = std::cmp::max(*n, max);
-                }
-                _ => {}
-            }
-        }
-
-        max + 1
+    fn get_next_placeholder_assignvar(&self) -> String {
+        "_".to_string() + &self.next_placeholder_assignvar_i.to_string()
     }
 
     // Stupid name
@@ -278,7 +291,9 @@ impl Context {
             Type::Product(t1, t2) => {
                 Type::Product(Box::new(self.substitute(t1)), Box::new(self.substitute(t2)))
             }
-            Type::Forall(var, t) => Type::Forall(var.clone(), Box::new(self.substitute(t.as_ref()))),
+            Type::Forall(var, t) => {
+                Type::Forall(var.clone(), Box::new(self.substitute(t.as_ref())))
+            }
             _ => t.clone(),
         }
     }
@@ -314,7 +329,7 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
             if b.contains_existential(*ex) {
                 let a = c.substitute(a);
                 let b = c.substitute(b);
-                return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", a, b))
+                return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", a, b));
             }
 
             instantiate_l(c, *ex, b)
@@ -325,7 +340,7 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
             if a.contains_existential(*ex) {
                 let a = c.substitute(a);
                 let b = c.substitute(b);
-                return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", b, a))
+                return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", b, a));
             }
 
             instantiate_r(c, *ex, a)
@@ -351,7 +366,13 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
         (Type::Product(ut1_1, ut1_2), a) | (a, Type::Product(ut1_1, ut1_2)) => {
             let (ut2_1, ut2_2) = match a {
                 Type::Product(a, b) => (a, b),
-                _ => return Err(format!("Type {} is not a subtype of union {}", a, Type::Product(ut1_1.clone(), ut1_1.clone())))
+                _ => {
+                    return Err(format!(
+                        "Type {} is not a subtype of union {}",
+                        a,
+                        Type::Product(ut1_1.clone(), ut1_1.clone())
+                    ))
+                }
             };
             let ut_1_st = subtype(c, ut1_1, ut2_1)?;
             subtype(ut_1_st, ut1_2, ut2_2)
@@ -542,7 +563,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
             let _var_str = var.clone();
             match c.get_type_assignment(&var) {
                 Some(t) => Ok((t?, c)),
-                None => unreachable!("Unbound type variable")
+                None => unreachable!("Unbound type variable"),
             }
         }
 
@@ -563,20 +584,17 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
         // ->I=>
         ASTNodeType::Abstraction => {
             let next_exst = c.get_next_existential_identifier();
-            let abst_var = ast.get(ast.get_abstr_var(expr)).get_value();
             let c = c
                 .append(ContextItem::Existential(next_exst, None))
-                .append(ContextItem::Existential(next_exst + 1, None))
-                .append(ContextItem::TypeAssignment(
-                    abst_var.clone(),
-                    Ok(Type::Existential(next_exst)),
-                ));
+                .append(ContextItem::Existential(next_exst + 1, None));
 
             let c = if let Some(t) = &ast.get(ast.get_abstr_var(expr)).type_assignment {
                 c.set_existential_definition(next_exst, t.clone())
             } else {
                 c
             };
+
+            let (c, before) = recurse_add_to_context(c, &Type::Existential(next_exst), ast, ast.get_abstr_var((expr)))?;
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
@@ -585,7 +603,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
                 c,
                 &Type::Existential(next_exst + 1),
                 ast,
-                ast.get_abstr_exp(expr),
+                ast.get_abstr_expr(expr),
             )?;
 
             #[cfg(debug_assertions)]
@@ -597,7 +615,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
                 Type::Existential(next_exst),
                 Type::Existential(next_exst + 1),
             );
-            let c = c.get_before_assignment(abst_var);
+            let c = c.get_before_assignment(before);
 
             #[cfg(debug_assertions)]
             let _c_str3 = format!("{:?}", &c);
@@ -699,6 +717,56 @@ fn synthesize_app_type(
     }
 }
 
+fn recurse_add_to_context(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<(Context, String), TypeError>  {
+    let pn = ast.get(expr);
+    #[cfg(debug_assertions)]
+    let _c_str = format!("{:?}", &c);
+    #[cfg(debug_assertions)]
+    let _expr_str = format!("{}", ast.to_string_sugar(expr, false));
+    #[cfg(debug_assertions)]
+    let _expected_str = format!("{}", &expected.to_string());
+
+    match (expected, &pn.t) {
+        (_, ASTNodeType::Identifier) => {
+            let mut var_name = ast.get(expr).get_value();
+            if var_name.starts_with("_") {
+                var_name = c.get_next_placeholder_assignvar();
+            }
+            let new_ass = ContextItem::TypeAssignment(var_name.clone(), Ok(expected.clone()));
+            Ok((c.append(new_ass.clone()), var_name))
+        }
+        (Type::Product(pt1, pt2), ASTNodeType::Pair) => {
+            let pv1 = ast.get_first(expr);
+            let pv2 = ast.get_second(expr);
+            let (c, before) = recurse_add_to_context(c, pt1, &ast, pv1)?;
+            let (c, _) = recurse_add_to_context(c, pt2, &ast, pv2)?;
+            Ok((c, before))
+        }
+        (Type::Existential(e), ASTNodeType::Pair) => {
+            let pv1 = ast.get_first(expr);
+            let pv2 = ast.get_second(expr);
+            let pt1 = c.get_next_existential_identifier();
+            let pt2 = c.get_next_existential_identifier() + 1;
+
+            let c = c.add_before_existential(*e, ContextItem::Existential(pt2, None));
+            let c = c.add_before_existential(*e, ContextItem::Existential(pt1, None));
+
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
+
+            let (c, before)  = recurse_add_to_context(c, &Type::Existential(pt1), &ast, pv1)?;
+            let (c, _) = recurse_add_to_context(c, &Type::Existential(pt2), &ast, pv2)?;
+
+            #[cfg(debug_assertions)]
+            let _c_str2 = format!("{:?}", &c);
+
+            let c= c.set_existential_definition(*e, Type::pr(Type::Existential(pt1),Type::Existential(pt2)));
+            Ok((c, before))
+        }
+        _ => Err(type_error("recurse add issue".to_string(), ast, expr)),
+    }
+}
+
 // "Γ ⊢ e ⇐ A ⊣ ∆: Under input context Γ, e checks against input type A, with output context ∆"
 fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Context, TypeError> {
     let node = ast.get(expr);
@@ -718,18 +786,23 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
 
         // Forall Introduction
         (Type::Forall(var, t), _) => {
-            let pred = check_type(c.append(ContextItem::TypeVariable(var.clone())), t, ast, expr)?;
+            let pred = check_type(
+                c.append(ContextItem::TypeVariable(var.clone())),
+                t,
+                ast,
+                expr,
+            )?;
             Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
         }
 
         // Arrow introduction
         (Type::Function(from, to), ASTNodeType::Abstraction) => {
-            let var_name = ast.get(ast.get_abstr_var(expr)).get_value();
+            let var = ast.get_abstr_var(expr);
 
-            let new_ass = ContextItem::TypeAssignment(var_name.clone(), Ok(from.as_ref().clone()));
-            let c = c.append(new_ass.clone());
-            let pred = check_type(c, to, ast, ast.get_abstr_exp(expr))?;
-            Ok(pred.get_before_item(new_ass))
+            let (c, before) = recurse_add_to_context(c, from, &ast, var)?;
+
+            let pred = check_type(c, to, ast, ast.get_abstr_expr(expr))?;
+            Ok(pred.get_before_assignment(before))
         }
 
         (Type::Product(pt1, pt2), ASTNodeType::Pair) => {
@@ -764,7 +837,16 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
 
                     Ok(new_c)
                 }
-                Err(e) => Err(type_error(format!("Cannot figure out how {} could be subtype of {}: {}", a.to_string(), b.to_string(), e), ast, expr)),
+                Err(e) => Err(type_error(
+                    format!(
+                        "Cannot figure out how {} could be subtype of {}: {}",
+                        a.to_string(),
+                        b.to_string(),
+                        e
+                    ),
+                    ast,
+                    expr,
+                )),
             }
         }
     }
@@ -782,10 +864,14 @@ pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), 
     }
 }
 
-fn infer_type_with_context(c : Context, ast: &AST, expr: usize) -> Result<(Type, Context), TypeError> {
+fn infer_type_with_context(
+    c: Context,
+    ast: &AST,
+    expr: usize,
+) -> Result<(Type, Context), TypeError> {
     let (t, c) = synthesize_type(c, ast, expr)?;
 
-    let t = c.substitute(&t).forall_ify();
+    let t = c.substitute(&t);
     Ok((t, c))
 }
 
@@ -796,7 +882,10 @@ pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
     Ok(infer_type_with_context(c, ast, expr)?.0)
 }
 
-pub fn infer_or_check_assignment_types(ast: &mut AST, module: usize) -> Result<LabelTable, TypeError> {
+pub fn infer_or_check_assignment_types(
+    ast: &mut AST,
+    module: usize,
+) -> Result<LabelTable, TypeError> {
     let mut lt = LabelTable::new();
     let mut c = Context::from_labels(&lt);
 
@@ -813,7 +902,7 @@ pub fn infer_or_check_assignment_types(ast: &mut AST, module: usize) -> Result<L
 
         let type_of_assignment = match &ast.get(assign).type_assignment {
             Some(type_assignment) => {
-                c = c.assigns_only().append(ContextItem::TypeAssignment(
+                c = c.append(ContextItem::TypeAssignment(
                     assign_var.clone(),
                     Ok(type_assignment.clone()),
                 ));
@@ -826,10 +915,10 @@ pub fn infer_or_check_assignment_types(ast: &mut AST, module: usize) -> Result<L
                     Err(type_error(format!("Cannot infer type of expression containing recursive call. Assign a type to label '{}'", &assign_var), ast, assign_expr)),
                 ));
                 let (t, new_c) = infer_type_with_context(c.clone(), &ast, assign_expr)?;
-                c = new_c.assigns_only().remove_assignment(assign_var).append(ContextItem::TypeAssignment(
-                    assign_var.clone(),
-                    Ok(t.clone()),
-                ));
+                let t = t.forall_ify();
+                c = new_c.assigns_only().remove_assignment(assign_var).append(
+                    ContextItem::TypeAssignment(assign_var.clone(), Ok(t.clone())),
+                );
                 ast.set_assignment_type(assign, t.clone());
                 t
             }

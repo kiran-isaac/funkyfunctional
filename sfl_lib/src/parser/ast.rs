@@ -86,11 +86,11 @@ impl ASTNode {
         }
     }
 
-    fn new_pair(a : usize, b : usize, line : usize, col : usize) -> Self {
+    fn new_pair(a: usize, b: usize, line: usize, col: usize) -> Self {
         ASTNode {
-            t : ASTNodeType::Pair,
+            t: ASTNodeType::Pair,
             info: None,
-            children : vec![a, b],
+            children: vec![a, b],
             line,
             col,
             type_assignment: None,
@@ -166,14 +166,14 @@ impl AST {
 
     pub fn wait_for_args(&mut self, node: usize) {
         self.vec[node].wait_for_args();
-        let expr = self.get_abstr_exp(node);
-        if self.get(expr).t == ASTNodeType::Abstraction {
-            self.wait_for_args(expr);
-        }
     }
 
     pub fn fancy_assign_abst_syntax(&mut self, node: usize) {
         self.vec[node].fancy_assign_abst_syntax = true;
+    }
+
+    pub fn set_type(&mut self, node: usize, t: Type) {
+        self.vec[node].type_assignment = Some(t);
     }
 
     pub fn add(&mut self, n: ASTNode) -> usize {
@@ -198,18 +198,18 @@ impl AST {
             (ASTNodeType::Abstraction, ASTNodeType::Abstraction) => {
                 let v1 = self.get_abstr_var(n1);
                 let v2 = self.get_abstr_var(n2);
-                let x1 = self.get_abstr_exp(n1);
-                let x2 = self.get_abstr_exp(n2);
+                let x1 = self.get_abstr_expr(n1);
+                let x2 = self.get_abstr_expr(n2);
 
                 self.expr_eq(v1, v2) && self.expr_eq(x1, x2)
             }
             (ASTNodeType::Pair, ASTNodeType::Pair) => {
                 let x1 = self.get_first(n1);
-                let x2 = self.get_first(n2);
                 let y1 = self.get_second(n1);
+                let x2 = self.get_first(n2);
                 let y2 = self.get_second(n2);
 
-                self.expr_eq(x1, y1) && self.expr_eq(x2, y2)
+                self.expr_eq(x1, x2) && self.expr_eq(y1, y2)
             }
             _ => false,
         }
@@ -238,6 +238,11 @@ impl AST {
         let other = &rc.1;
         let old = rc.0;
         let new = self.append(other, other.root);
+
+        #[cfg(debug_assertions)]
+        let _old_str = self.to_string_sugar(old, false);
+        #[cfg(debug_assertions)]
+        let _new_str = self.to_string_sugar(new, false);
         self.replace_references_to_node(old, new);
     }
 
@@ -255,7 +260,11 @@ impl AST {
     }
 
     pub fn do_rc_subst_and_identical_rcs(&mut self, rc0: &RCPair, rcs: &Vec<RCPair>) {
+        let _rc0_0_str = self.to_string_sugar(rc0.0, false);
+        let _rc1_0_str = rc0.1.to_string_sugar(rc0.1.root, false);
         for rc in rcs {
+            let _this_rc = self.to_string_sugar(rc.0, false);
+            let _this_rc_1 = rc.1.to_string_sugar(rc.1.root, false);
             if self.expr_eq(rc0.0, rc.0) {
                 self.do_rc_subst(rc);
             }
@@ -283,9 +292,9 @@ impl AST {
         };
 
         match self.get(expr).t {
-            ASTNodeType::Application => {
-                let f = self.get_func(expr);
-                let x = self.get_arg(expr);
+            ASTNodeType::Application | ASTNodeType::Pair => {
+                let f = self.get(expr).children[0];
+                let x = self.get(expr).children[1];
 
                 if let Some(rc) = self.get_laziest_rc_recurse(f, &rc_map) {
                     return Some(rc);
@@ -347,7 +356,7 @@ impl AST {
             }
             ASTNodeType::Abstraction => {
                 let var = self.append(other, n.children[0]);
-                let exp = self.append(other, other.get_abstr_exp(node));
+                let exp = self.append(other, other.get_abstr_expr(node));
                 self.add_abstraction(var, exp, n.line, n.col)
             }
             ASTNodeType::Module => {
@@ -393,7 +402,7 @@ impl AST {
         self.add(ASTNode::new_app(f, x, line, col))
     }
 
-    pub fn add_pair(&mut self, a : usize, b : usize, line: usize, col: usize) -> usize {
+    pub fn add_pair(&mut self, a: usize, b: usize, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_pair(a, b, line, col))
     }
 
@@ -401,7 +410,7 @@ impl AST {
         self.add(ASTNode::new_abstraction(id, exp, line, col))
     }
 
-    pub fn set_assignment_type(&mut self, assignment: usize, type_ : Type) {
+    pub fn set_assignment_type(&mut self, assignment: usize, type_: Type) {
         self.vec[assignment].type_assignment = Some(type_);
     }
 
@@ -421,7 +430,7 @@ impl AST {
     }
 
     pub fn add_to_module(&mut self, module: usize, assign: usize) {
-        assert!(self.vec[module].t == ASTNodeType::Module);
+        assert_eq!(self.vec[module].t, ASTNodeType::Module);
         self.vec[module].children.push(assign);
     }
 
@@ -430,23 +439,23 @@ impl AST {
         &self.vec[i]
     }
 
-    pub fn get_first(&self, p : usize) -> usize {
+    pub fn get_first(&self, p: usize) -> usize {
         assert_eq!(self.get(p).t, ASTNodeType::Pair);
         self.get(p).children[0]
     }
 
-    pub fn get_second(&self, p : usize) -> usize {
+    pub fn get_second(&self, p: usize) -> usize {
         assert_eq!(self.get(p).t, ASTNodeType::Pair);
         self.get(p).children[1]
     }
 
     pub fn get_abstr_var(&self, abst: usize) -> usize {
-        assert!(self.vec[abst].t == ASTNodeType::Abstraction);
+        assert_eq!(self.vec[abst].t, ASTNodeType::Abstraction);
         self.vec[abst].children[0]
     }
 
-    pub fn get_abstr_exp(&self, abst: usize) -> usize {
-        assert!(self.vec[abst].t == ASTNodeType::Abstraction);
+    pub fn get_abstr_expr(&self, abst: usize) -> usize {
+        assert_eq!(self.vec[abst].t, ASTNodeType::Abstraction);
         self.vec[abst].children[1]
     }
 
@@ -472,7 +481,13 @@ impl AST {
                 let abst_var = self.get_abstr_var(exp);
                 assert_ne!(&self.get(abst_var).get_value(), var);
 
-                self.get_all_instances_of_var_in_exp(self.get_abstr_exp(exp), var)
+                self.get_all_instances_of_var_in_exp(self.get_abstr_expr(exp), var)
+            }
+            ASTNodeType::Pair => {
+                let mut left = self.get_all_instances_of_var_in_exp(self.get_first(exp), &var);
+                let right = self.get_all_instances_of_var_in_exp(self.get_second(exp), &var);
+                left.extend(right);
+                left
             }
             _ => unreachable!("Cannot find var instances in non exp"),
         }
@@ -480,7 +495,18 @@ impl AST {
 
     pub fn get_abst_var_usages(&self, abst: usize) -> Vec<usize> {
         let var_name = self.get(self.get_abstr_var(abst)).get_value();
-        self.get_all_instances_of_var_in_exp(self.get_abstr_exp(abst), &var_name)
+        self.get_all_instances_of_var_in_exp(self.get_abstr_expr(abst), &var_name)
+    }
+
+    pub fn get_n_abstr_vars(&self, abstr : usize, n: usize) -> Vec<usize> {
+        if n <= 0 {
+            vec![]
+        } else {
+            let var = self.get_abstr_var(abstr);
+            let mut expr = self.get_n_abstr_vars(abstr, n - 1);
+            expr.insert(0, var);
+            expr
+        }
     }
 
     pub fn do_multiple_abst_substs(&self, abst: usize, substs: Vec<usize>) -> Self {
@@ -496,20 +522,42 @@ impl AST {
         abst_ast
     }
 
-    pub fn do_abst_subst(&self, abst: usize, subst: usize) -> Self {
-        assert!(self.get(abst).t == ASTNodeType::Abstraction);
-        // All usages of the abstracted variable
-        let var_name = self.get(self.get_abstr_var(abst)).get_value();
-        let mut cloned_abst_expr = self.clone_node(self.get_abstr_exp(abst));
+    fn replace_var_usages(&mut self, var: usize, subst: usize) {
+        #[cfg(debug_assertions)]
+        let _var_str = self.to_string_sugar(var, false);
+        #[cfg(debug_assertions)]
+        let _subst_str = self.to_string_sugar(subst, false);
 
-        let usages =
-            cloned_abst_expr.get_all_instances_of_var_in_exp(cloned_abst_expr.root, &var_name);
-        let arg_id = cloned_abst_expr.append(&self, subst);
-
-        for usage in usages {
-            cloned_abst_expr.replace(usage, arg_id);
+        let var_n = self.get(var);
+        match var_n.t {
+            ASTNodeType::Identifier => {
+                let var_name = self.get(var).get_value();
+                let usages =
+                    self.get_all_instances_of_var_in_exp(self.get_abstr_expr(self.root), &var_name);
+                for usage in usages {
+                    self.replace(usage, subst);
+                }
+            }
+            ASTNodeType::Pair => {
+                let subst_first = self.get_first(subst);
+                let subst_second = self.get_second(subst);
+                self.replace_var_usages(self.get_first(var), subst_first);
+                self.replace_var_usages(self.get_second(var), subst_second);
+            }
+            _ => unreachable!("WTF HOW DID THIS HAPPEN"),
         }
+    }
 
+    pub fn do_abst_subst(&self, abstr: usize, subst: usize) -> Self {
+        assert_eq!(self.get(abstr).t, ASTNodeType::Abstraction);
+        let mut cloned_abst_expr = self.clone_node(abstr);
+        let new_abstr_var = cloned_abst_expr.get_abstr_var(cloned_abst_expr.root);
+        let subst_id = cloned_abst_expr.append(&self, subst);
+
+        cloned_abst_expr.replace_var_usages(new_abstr_var, subst_id);
+        let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
+        cloned_abst_expr.root = cloned_abst_expr.get_abstr_expr(cloned_abst_expr.root);
+        let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
         cloned_abst_expr
     }
 
@@ -552,7 +600,7 @@ impl AST {
 
     // Get assignment within module
     pub fn get_assign_to(&self, module: usize, name: String) -> Option<usize> {
-        assert!(self.vec[module].t == ASTNodeType::Module);
+        assert_eq!(self.vec[module].t, ASTNodeType::Module);
 
         let assigns = &self.vec[module].children;
         for a in assigns {
@@ -696,10 +744,9 @@ impl AST {
                 while self.get(ass_abst).fancy_assign_abst_syntax {
                     assert_eq!(self.get(ass_abst).t, ASTNodeType::Abstraction);
                     fancy_syntax_abst_vars += " ";
-                    fancy_syntax_abst_vars +=
-                        self.get(self.get_abstr_var(ass_abst)).get_value().as_str();
-                    exp = self.to_string_sugar(self.get_abstr_exp(ass_abst), show_assigned_types);
-                    ass_abst = self.get_abstr_exp(ass_abst);
+                    fancy_syntax_abst_vars += self.to_string_sugar(self.get_abstr_var(ass_abst), show_assigned_types).as_str();
+                    exp = self.to_string_sugar(self.get_abstr_expr(ass_abst), show_assigned_types);
+                    ass_abst = self.get_abstr_expr(ass_abst);
                 }
 
                 let type_str = if show_assigned_types {
