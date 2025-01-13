@@ -25,7 +25,7 @@ pub struct AST {
 pub struct ASTNode {
     pub t: ASTNodeType,
     info: Option<Token>,
-    children: Vec<usize>,
+    pub children: Vec<usize>,
     pub line: usize,
     pub col: usize,
     pub type_assignment: Option<Type>,
