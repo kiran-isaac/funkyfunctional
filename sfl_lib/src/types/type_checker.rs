@@ -173,16 +173,43 @@ impl Context {
     }
 
     fn set_existential_definition(&self, existential: usize, t: Type) -> Self {
+        #[cfg(debug_assertions)]
+        let _c_str = format!("{:?}", &self);
+        #[cfg(debug_assertions)]
+        let _t_str = format!("{:?}", &t);
+
         let mut new_v = vec![];
 
         for i in &self.vec {
             match i {
                 // If this is another context that references the one being substituted then
                 // Substitute this one too
-                ContextItem::Existential(e, Some(Type::Existential(e2))) => {
-                    if *e2 == existential {
-                        new_v.push(ContextItem::Existential(*e, Some(t.clone())));
-                        continue;
+                ContextItem::Existential(e, Some(t)) => {
+                    match t {
+                        Type::Existential(e2) => {
+                            if *e2 == existential {
+                                new_v.push(ContextItem::Existential(*e, Some(t.clone())));
+                                continue;
+                            }
+                        }
+                        Type::Product(t1, t2) => {
+                            let mut t1 = t1.as_ref().clone();
+                            if let Type::Existential(e1) = t1 {
+                                if e1 == existential {
+                                    t1 = t.clone();
+                                }
+                            }
+
+                            let mut t2 = t2.as_ref().clone();
+                            if let Type::Existential(e2) = t2 {
+                                if e2 == existential {
+                                    t2 = t.clone();
+                                }
+                            }
+
+                            new_v.push(ContextItem::Existential(*e, Some(Type::pr(t1, t2))));
+                        }
+                        _ => {}
                     }
                 }
                 ContextItem::Existential(e, _) => {
@@ -253,6 +280,9 @@ impl Context {
                 Box::new(self.substitute(from.as_ref())),
                 Box::new(self.substitute(to.as_ref())),
             ),
+            Type::Product(t1, t2) => {
+                Type::Product(Box::new(self.substitute(t1)), Box::new(self.substitute(t2)))
+            }
             Type::Forall(var, t) => Type::Forall(var.clone(), Box::new(self.substitute(t.as_ref()))),
             _ => t.clone(),
         }
@@ -323,10 +353,10 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
             }
         }
 
-        (Type::Union(ut1_1, ut1_2), a) | (a, Type::Union(ut1_1, ut1_2)) => {
+        (Type::Product(ut1_1, ut1_2), a) | (a, Type::Product(ut1_1, ut1_2)) => {
             let (ut2_1, ut2_2) = match a {
-                Type::Union(a, b) => (a, b),
-                _ => return Err(format!("Type {} is not a subtype of union {}", a, Type::Union(ut1_1.clone(), ut1_1.clone())))
+                Type::Product(a, b) => (a, b),
+                _ => return Err(format!("Type {} is not a subtype of union {}", a, Type::Product(ut1_1.clone(), ut1_1.clone())))
             };
             let ut_1_st = subtype(c, ut1_1, ut2_1)?;
             subtype(ut_1_st, ut1_2, ut2_2)
@@ -521,6 +551,18 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
             }
         }
 
+        ASTNodeType::Pair => {
+            let expr1 = ast.get_first(expr);
+            let expr2 = ast.get_second(expr);
+            let (expr1t, c) = synthesize_type(c, ast, expr1)?;
+            let (expr2t, c) = synthesize_type(c, ast, expr2)?;
+
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
+
+            Ok((Type::pr(expr1t, expr2t), c))
+        }
+
         ASTNodeType::Literal => Ok((node.get_lit_type(), c)),
 
         // ->I=>
@@ -695,6 +737,13 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
             Ok(pred.get_before_item(new_ass))
         }
 
+        (Type::Product(pt1, pt2), ASTNodeType::Pair) => {
+            let pair1 = check_type(c, pt1, ast, ast.get_first(expr))?;
+            let pair2 = check_type(pair1, pt2, ast, ast.get_second(expr))?;
+
+            Ok(pair2)
+        }
+
         // Sub
         _ => {
             let (synth_t, c) = synthesize_type(c, ast, expr)?;
@@ -740,6 +789,7 @@ pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), 
 
 fn infer_type_with_context(c : Context, ast: &AST, expr: usize) -> Result<(Type, Context), TypeError> {
     let (t, c) = synthesize_type(c, ast, expr)?;
+
     let t = c.substitute(&t).forall_ify();
     Ok((t, c))
 }
