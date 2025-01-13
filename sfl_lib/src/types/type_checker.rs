@@ -83,7 +83,7 @@ impl Context {
         new
     }
 
-    fn remove_assignment(&self, name : &String) -> Self {
+    fn remove_assignment(&self, name: &String) -> Self {
         let mut new_v = vec![];
 
         for i in &self.vec {
@@ -94,7 +94,6 @@ impl Context {
             }
 
             new_v.push(i.clone());
-
         }
 
         Self { vec: new_v }
@@ -278,7 +277,9 @@ impl Context {
             Type::Product(t1, t2) => {
                 Type::Product(Box::new(self.substitute(t1)), Box::new(self.substitute(t2)))
             }
-            Type::Forall(var, t) => Type::Forall(var.clone(), Box::new(self.substitute(t.as_ref()))),
+            Type::Forall(var, t) => {
+                Type::Forall(var.clone(), Box::new(self.substitute(t.as_ref())))
+            }
             _ => t.clone(),
         }
     }
@@ -314,7 +315,7 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
             if b.contains_existential(*ex) {
                 let a = c.substitute(a);
                 let b = c.substitute(b);
-                return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", a, b))
+                return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", a, b));
             }
 
             instantiate_l(c, *ex, b)
@@ -325,7 +326,7 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
             if a.contains_existential(*ex) {
                 let a = c.substitute(a);
                 let b = c.substitute(b);
-                return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", b, a))
+                return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", b, a));
             }
 
             instantiate_r(c, *ex, a)
@@ -351,7 +352,13 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
         (Type::Product(ut1_1, ut1_2), a) | (a, Type::Product(ut1_1, ut1_2)) => {
             let (ut2_1, ut2_2) = match a {
                 Type::Product(a, b) => (a, b),
-                _ => return Err(format!("Type {} is not a subtype of union {}", a, Type::Product(ut1_1.clone(), ut1_1.clone())))
+                _ => {
+                    return Err(format!(
+                        "Type {} is not a subtype of union {}",
+                        a,
+                        Type::Product(ut1_1.clone(), ut1_1.clone())
+                    ))
+                }
             };
             let ut_1_st = subtype(c, ut1_1, ut2_1)?;
             subtype(ut_1_st, ut1_2, ut2_2)
@@ -542,7 +549,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
             let _var_str = var.clone();
             match c.get_type_assignment(&var) {
                 Some(t) => Ok((t?, c)),
-                None => unreachable!("Unbound type variable")
+                None => unreachable!("Unbound type variable"),
             }
         }
 
@@ -718,7 +725,12 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
 
         // Forall Introduction
         (Type::Forall(var, t), _) => {
-            let pred = check_type(c.append(ContextItem::TypeVariable(var.clone())), t, ast, expr)?;
+            let pred = check_type(
+                c.append(ContextItem::TypeVariable(var.clone())),
+                t,
+                ast,
+                expr,
+            )?;
             Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
         }
 
@@ -764,7 +776,16 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
 
                     Ok(new_c)
                 }
-                Err(e) => Err(type_error(format!("Cannot figure out how {} could be subtype of {}: {}", a.to_string(), b.to_string(), e), ast, expr)),
+                Err(e) => Err(type_error(
+                    format!(
+                        "Cannot figure out how {} could be subtype of {}: {}",
+                        a.to_string(),
+                        b.to_string(),
+                        e
+                    ),
+                    ast,
+                    expr,
+                )),
             }
         }
     }
@@ -782,7 +803,11 @@ pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), 
     }
 }
 
-fn infer_type_with_context(c : Context, ast: &AST, expr: usize) -> Result<(Type, Context), TypeError> {
+fn infer_type_with_context(
+    c: Context,
+    ast: &AST,
+    expr: usize,
+) -> Result<(Type, Context), TypeError> {
     let (t, c) = synthesize_type(c, ast, expr)?;
 
     let t = c.substitute(&t).forall_ify();
@@ -796,7 +821,10 @@ pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
     Ok(infer_type_with_context(c, ast, expr)?.0)
 }
 
-pub fn infer_or_check_assignment_types(ast: &mut AST, module: usize) -> Result<LabelTable, TypeError> {
+pub fn infer_or_check_assignment_types(
+    ast: &mut AST,
+    module: usize,
+) -> Result<LabelTable, TypeError> {
     let mut lt = LabelTable::new();
     let mut c = Context::from_labels(&lt);
 
@@ -826,10 +854,9 @@ pub fn infer_or_check_assignment_types(ast: &mut AST, module: usize) -> Result<L
                     Err(type_error(format!("Cannot infer type of expression containing recursive call. Assign a type to label '{}'", &assign_var), ast, assign_expr)),
                 ));
                 let (t, new_c) = infer_type_with_context(c.clone(), &ast, assign_expr)?;
-                c = new_c.assigns_only().remove_assignment(assign_var).append(ContextItem::TypeAssignment(
-                    assign_var.clone(),
-                    Ok(t.clone()),
-                ));
+                c = new_c.assigns_only().remove_assignment(assign_var).append(
+                    ContextItem::TypeAssignment(assign_var.clone(), Ok(t.clone())),
+                );
                 ast.set_assignment_type(assign, t.clone());
                 t
             }

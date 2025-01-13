@@ -98,8 +98,14 @@ fn type_check_const_abst() {
 fn type_check_pair() {
     tc_test_should_pass("pair :: a -> b -> (a, b)\npair x y = (x, y)");
     inference_test("\\x y. (x, y)", "∀a. ∀b. a -> b -> (a, b)");
-    inference_test("\\x y z. (x, (y, z))", "∀a. ∀b. ∀c. a -> b -> c -> (a, (b, c))");
-    inference_test("\\a b c d. ((a, b), (c, d))", "∀a. ∀b. ∀c. ∀d. a -> b -> c -> d -> ((a, b), (c, d))");
+    inference_test(
+        "\\x y z. (x, (y, z))",
+        "∀a. ∀b. ∀c. a -> b -> c -> (a, (b, c))",
+    );
+    inference_test(
+        "\\a b c d. ((a, b), (c, d))",
+        "∀a. ∀b. ∀c. ∀d. a -> b -> c -> d -> ((a, b), (c, d))",
+    );
 }
 
 #[test]
@@ -140,7 +146,10 @@ fn infer() {
     expr_inference_should_fail("\\x . x x");
     mod_inference_should_fail("recurse = recurse");
 
-    inference_test("\\b . if true then (\\x . x) else (\\x . x)", "∀a. ∀b. a -> b -> b");
+    inference_test(
+        "\\b . if true then (\\x . x) else (\\x . x)",
+        "∀a. ∀b. a -> b -> b",
+    );
 
     inference_test("if true then (\\x :: Int. x) else (\\x . x)", "Int -> Int");
     inference_test(
@@ -157,12 +166,7 @@ fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
     let mut main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
     let module = ast.root;
     let lt = &infer_or_check_assignment_types(&mut ast, module)?;
-    let mut rcs = find_redex_contraction_pairs(
-        &ast,
-        Some(ast.root),
-        main_expr,
-        lt,
-    );
+    let mut rcs = find_redex_contraction_pairs(&ast, Some(ast.root), main_expr, lt);
     while rcs.len() > 0 {
         #[cfg(debug_assertions)]
         let _module_str = ast.to_string_sugar(ast.root, true);
@@ -174,12 +178,7 @@ fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
         main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
         let module = ast.root;
         let lt = &infer_or_check_assignment_types(&mut ast, module)?;
-        rcs = find_redex_contraction_pairs(
-            &ast,
-            Some(ast.root),
-            main_expr,
-            lt,
-        );
+        rcs = find_redex_contraction_pairs(&ast, Some(ast.root), main_expr, lt);
     }
     Ok(())
 }

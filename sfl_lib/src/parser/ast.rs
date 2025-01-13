@@ -86,11 +86,11 @@ impl ASTNode {
         }
     }
 
-    fn new_pair(a : usize, b : usize, line : usize, col : usize) -> Self {
+    fn new_pair(a: usize, b: usize, line: usize, col: usize) -> Self {
         ASTNode {
-            t : ASTNodeType::Pair,
+            t: ASTNodeType::Pair,
             info: None,
-            children : vec![a, b],
+            children: vec![a, b],
             line,
             col,
             type_assignment: None,
@@ -166,14 +166,14 @@ impl AST {
 
     pub fn wait_for_args(&mut self, node: usize) {
         self.vec[node].wait_for_args();
-        let expr = self.get_abstr_exp(node);
-        if self.get(expr).t == ASTNodeType::Abstraction {
-            self.wait_for_args(expr);
-        }
     }
 
     pub fn fancy_assign_abst_syntax(&mut self, node: usize) {
         self.vec[node].fancy_assign_abst_syntax = true;
+    }
+
+    pub fn set_type(&mut self, node: usize, t: Type) {
+        self.vec[node].type_assignment = Some(t);
     }
 
     pub fn add(&mut self, n: ASTNode) -> usize {
@@ -393,7 +393,7 @@ impl AST {
         self.add(ASTNode::new_app(f, x, line, col))
     }
 
-    pub fn add_pair(&mut self, a : usize, b : usize, line: usize, col: usize) -> usize {
+    pub fn add_pair(&mut self, a: usize, b: usize, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_pair(a, b, line, col))
     }
 
@@ -401,7 +401,7 @@ impl AST {
         self.add(ASTNode::new_abstraction(id, exp, line, col))
     }
 
-    pub fn set_assignment_type(&mut self, assignment: usize, type_ : Type) {
+    pub fn set_assignment_type(&mut self, assignment: usize, type_: Type) {
         self.vec[assignment].type_assignment = Some(type_);
     }
 
@@ -421,7 +421,7 @@ impl AST {
     }
 
     pub fn add_to_module(&mut self, module: usize, assign: usize) {
-        assert!(self.vec[module].t == ASTNodeType::Module);
+        assert_eq!(self.vec[module].t, ASTNodeType::Module);
         self.vec[module].children.push(assign);
     }
 
@@ -430,23 +430,23 @@ impl AST {
         &self.vec[i]
     }
 
-    pub fn get_first(&self, p : usize) -> usize {
+    pub fn get_first(&self, p: usize) -> usize {
         assert_eq!(self.get(p).t, ASTNodeType::Pair);
         self.get(p).children[0]
     }
 
-    pub fn get_second(&self, p : usize) -> usize {
+    pub fn get_second(&self, p: usize) -> usize {
         assert_eq!(self.get(p).t, ASTNodeType::Pair);
         self.get(p).children[1]
     }
 
     pub fn get_abstr_var(&self, abst: usize) -> usize {
-        assert!(self.vec[abst].t == ASTNodeType::Abstraction);
+        assert_eq!(self.vec[abst].t, ASTNodeType::Abstraction);
         self.vec[abst].children[0]
     }
 
     pub fn get_abstr_exp(&self, abst: usize) -> usize {
-        assert!(self.vec[abst].t == ASTNodeType::Abstraction);
+        assert_eq!(self.vec[abst].t, ASTNodeType::Abstraction);
         self.vec[abst].children[1]
     }
 
@@ -552,7 +552,7 @@ impl AST {
 
     // Get assignment within module
     pub fn get_assign_to(&self, module: usize, name: String) -> Option<usize> {
-        assert!(self.vec[module].t == ASTNodeType::Module);
+        assert_eq!(self.vec[module].t, ASTNodeType::Module);
 
         let assigns = &self.vec[module].children;
         for a in assigns {
@@ -696,8 +696,7 @@ impl AST {
                 while self.get(ass_abst).fancy_assign_abst_syntax {
                     assert_eq!(self.get(ass_abst).t, ASTNodeType::Abstraction);
                     fancy_syntax_abst_vars += " ";
-                    fancy_syntax_abst_vars +=
-                        self.get(self.get_abstr_var(ass_abst)).get_value().as_str();
+                    fancy_syntax_abst_vars += self.to_string_sugar(self.get_abstr_var(ass_abst), show_assigned_types).as_str();
                     exp = self.to_string_sugar(self.get_abstr_exp(ass_abst), show_assigned_types);
                     ass_abst = self.get_abstr_exp(ass_abst);
                 }

@@ -352,7 +352,7 @@ impl Lexer {
                     tt: TokenType::Comma,
                     value: ",".to_string(),
                 })
-            },
+            }
             '\\' => {
                 self.advance();
                 Ok(Token {

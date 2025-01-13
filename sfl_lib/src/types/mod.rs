@@ -83,7 +83,9 @@ impl Type {
     pub fn contains_existential(&self, ex: usize) -> bool {
         match self {
             Type::Primitive(_) => false,
-            Type::Function(t1, t2) | Type::Product(t1, t2) => t1.contains_existential(ex) || t2.contains_existential(ex),
+            Type::Function(t1, t2) | Type::Product(t1, t2) => {
+                t1.contains_existential(ex) || t2.contains_existential(ex)
+            }
             Type::TypeVariable(_) => false,
             Type::Existential(e) => *e == ex,
             Type::Forall(_, t) => t.contains_existential(ex),
@@ -91,7 +93,11 @@ impl Type {
         }
     }
 
-    pub fn substitute_type_variable(&self, var: &String, replacement: &Type) -> Result<Self, String> {
+    pub fn substitute_type_variable(
+        &self,
+        var: &String,
+        replacement: &Type,
+    ) -> Result<Self, String> {
         match self {
             Type::Primitive(p) => Ok(Type::Primitive(*p)),
             Type::Function(t1, t2) => Ok(Type::Function(
@@ -118,9 +124,9 @@ impl Type {
         }
     }
 
-    fn remove_duplicates<T : Eq + Hash + Clone>(ls : &Vec<T>) -> Vec<T> {
+    fn remove_duplicates<T: Eq + Hash + Clone>(ls: &Vec<T>) -> Vec<T> {
         let mut seen = HashSet::new();
-        let mut new_vec : Vec<T> = Vec::new();
+        let mut new_vec: Vec<T> = Vec::new();
         for i in ls {
             if !seen.contains(i) {
                 new_vec.push(i.clone());
@@ -145,7 +151,7 @@ impl Type {
     }
 
     /// Convert all exists with id ext to TVs
-    fn exist_to_tv(&self, ext : usize, str : &String) -> Self {
+    fn exist_to_tv(&self, ext: usize, str: &String) -> Self {
         match self {
             Type::Existential(n) => {
                 if *n == ext {
@@ -153,7 +159,7 @@ impl Type {
                 } else {
                     self.clone()
                 }
-            },
+            }
             Type::Forall(v, t2) => Type::Forall(v.clone(), Box::new(t2.exist_to_tv(ext, str))),
             Type::Function(t1, t2) => {
                 let lhs = t1.exist_to_tv(ext, str);
@@ -172,7 +178,7 @@ impl Type {
     pub fn forall_ify(&self) -> Self {
         let mut tv_set = self.get_tvs_set();
         let mut exsts = vec![];
-        let mut new_self= self.clone();
+        let mut new_self = self.clone();
         for (index, exst) in self.ordered_existentials().into_iter().enumerate() {
             let mut str = Self::num_identifier_to_str(index);
             let mut i = 0;
@@ -227,12 +233,12 @@ impl Type {
                 let t2 = t2.get_tvs_set();
                 t1.extend(t2);
                 t1
-            },
+            }
             Type::Forall(str1, t1) => {
                 let mut t1 = t1.get_tvs_set();
                 t1.insert(str1.clone());
                 t1
-            },
+            }
             Type::TypeVariable(str) => HashSet::from_iter(vec![str.clone()]),
             _ => HashSet::new(),
         }
@@ -245,7 +251,7 @@ impl Type {
         }
     }
 
-    fn num_identifier_to_str(n : usize) -> String {
+    fn num_identifier_to_str(n: usize) -> String {
         let mut s = String::new();
         let mut n = n;
         s.insert(0, (b'a' + (n % 26) as u8) as char);
@@ -284,21 +290,18 @@ impl Type {
             }
             Type::TypeVariable(n) => n.clone(),
             Type::Existential(n) => {
-                format!(
-                    "E{}",
-                    Self::num_identifier_to_str(*n)
-                )
+                format!("E{}", Self::num_identifier_to_str(*n))
             }
             Type::Unit => "1".to_string(),
             Type::Forall(n, t) => {
-                format!(
-                    "∀{}. {}",
-                    n,
-                    t.to_string_internal(full_braces)
-                )
+                format!("∀{}. {}", n, t.to_string_internal(full_braces))
             }
             Type::Product(t1, t2) => {
-                format!("({}, {})", t1.to_string_internal(full_braces), t2.to_string_internal(full_braces))
+                format!(
+                    "({}, {})",
+                    t1.to_string_internal(full_braces),
+                    t2.to_string_internal(full_braces)
+                )
             }
         }
     }
