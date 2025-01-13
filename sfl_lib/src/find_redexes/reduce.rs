@@ -1,6 +1,6 @@
 use crate::functions::LabelTable;
 use std::collections::HashMap;
-
+use crate::Type;
 use super::*;
 
 /// This will check for applications to functions:
@@ -60,6 +60,28 @@ fn check_for_ready_call(
                         }
                     } else {
                         if !(ast.get(f).wait_for_args && literals_only) {
+                            // Check the args are of the correct form for the type assignments
+                            #[cfg(debug_assertions)]
+                            let _t_str = label.label_type.to_string();
+
+                            let flat_t = label.label_type.flatten();
+                            #[cfg(debug_assertions)]
+                            let _flat_t_str = format!("{:?}", label.label_type.flatten());
+
+                            assert!(argv.len() < flat_t.len());
+
+                            for i in 0..argv.len() {
+                                match (&argv[i].t, &flat_t[i]) {
+                                    // Only consider pair as reduction candidate if it is actually a pair
+                                    (ASTNodeType::Pair, Type::Product(_, _)) => {
+                                        #[cfg(debug_assertions)]
+                                        let _x = 1;
+                                    }
+                                    (_, Type::Product(_, _)) => {return None}
+                                    _ => {},
+                                }
+                            }
+
                             let assign = *am.get(&name).unwrap();
                             let assign_exp = ast.get_assign_exp(assign);
                             Some(ast.do_multiple_abst_substs(assign_exp, argv_ids))
@@ -73,6 +95,17 @@ fn check_for_ready_call(
             }
             ASTNodeType::Abstraction => {
                 return if !(ast.get(f).wait_for_args && literals_only) {
+                    let n_args = ast.get_n_abstr_vars(f, argv.len());
+                    assert_eq!(argv.len(), n_args.len());
+
+                    for i in 0..argv.len() {
+                        match (&argv[i].t, &ast.get(n_args[i]).t) {
+                            (ASTNodeType::Pair, ASTNodeType::Pair) => {},
+                            (_, ASTNodeType::Pair) => return None,
+                            _ => {}
+                        }
+                    }
+
                     Some(ast.do_multiple_abst_substs(f, argv_ids))
                 } else {
                     None
@@ -90,13 +123,13 @@ fn check_for_ready_call(
 pub fn find_redex_contraction_pairs(
     ast: &AST,
     module: Option<usize>,
-    exp: usize,
+    expr: usize,
     lt: &LabelTable,
 ) -> Vec<(usize, AST)> {
     let mut pairs: Vec<(usize, AST)> = vec![];
 
     #[cfg(debug_assertions)]
-    let _exp_str = ast.to_string_sugar(exp, false);
+    let _exp_str = ast.to_string_sugar(expr, false);
 
     // Dont need to worry about this as main must be at the end, so everything defined in
     // the module is defined here
@@ -105,10 +138,16 @@ pub fn find_redex_contraction_pairs(
         None => HashMap::new(),
     };
 
-    match ast.get(exp).t {
+    match ast.get(expr).t {
         ASTNodeType::Literal | ASTNodeType::Abstraction => {}
+        ASTNodeType::Pair => {
+            let left_rcs = find_redex_contraction_pairs(ast, module, ast.get_first(expr), lt);
+            let right_rcs = find_redex_contraction_pairs(ast, module, ast.get_second(expr), lt);
+            pairs.extend(left_rcs);
+            pairs.extend(right_rcs);
+        }
         ASTNodeType::Identifier => {
-            let value = ast.get(exp).get_value();
+            let value = ast.get(expr).get_value();
 
             // It should not be non zero_ary func as otherwise it would be caught by the app case
             if let Some(labels) = lt.get_n_ary_labels(0) {
@@ -116,12 +155,12 @@ pub fn find_redex_contraction_pairs(
                     let label = labels.get(&value).unwrap();
 
                     if label.is_inbuilt() {
-                        let inbuilt = label.call_inbuilt(&ast.get(exp), vec![]);
-                        pairs.push((exp, inbuilt));
+                        let inbuilt = label.call_inbuilt(&ast.get(expr), vec![]);
+                        pairs.push((expr, inbuilt));
                     } else {
                         let assign = *am.get(&value).unwrap();
                         let assign_exp = ast.get_assign_exp(assign);
-                        pairs.push((exp, ast.clone_node(assign_exp)));
+                        pairs.push((expr, ast.clone_node(assign_exp)));
                     }
                 }
             } else {
@@ -129,11 +168,11 @@ pub fn find_redex_contraction_pairs(
             }
         }
         ASTNodeType::Application => {
-            let f = ast.get_func(exp);
-            let x = ast.get_arg(exp);
+            let f = ast.get_func(expr);
+            let x = ast.get_arg(expr);
 
-            if let Some(inbuilt_reduction) = check_for_ready_call(ast, exp, &lt, am) {
-                pairs.push((exp, inbuilt_reduction));
+            if let Some(inbuilt_reduction) = check_for_ready_call(ast, expr, &lt, am) {
+                pairs.push((expr, inbuilt_reduction));
             }
 
             pairs.extend(find_redex_contraction_pairs(ast, module, f, &lt));

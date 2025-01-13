@@ -603,7 +603,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
                 c,
                 &Type::Existential(next_exst + 1),
                 ast,
-                ast.get_abstr_exp(expr),
+                ast.get_abstr_expr(expr),
             )?;
 
             #[cfg(debug_assertions)]
@@ -801,7 +801,7 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
 
             let (c, before) = recurse_add_to_context(c, from, &ast, var)?;
 
-            let pred = check_type(c, to, ast, ast.get_abstr_exp(expr))?;
+            let pred = check_type(c, to, ast, ast.get_abstr_expr(expr))?;
             Ok(pred.get_before_assignment(before))
         }
 
@@ -871,7 +871,7 @@ fn infer_type_with_context(
 ) -> Result<(Type, Context), TypeError> {
     let (t, c) = synthesize_type(c, ast, expr)?;
 
-    let t = c.substitute(&t).forall_ify();
+    let t = c.substitute(&t);
     Ok((t, c))
 }
 
@@ -902,7 +902,7 @@ pub fn infer_or_check_assignment_types(
 
         let type_of_assignment = match &ast.get(assign).type_assignment {
             Some(type_assignment) => {
-                c = c.assigns_only().append(ContextItem::TypeAssignment(
+                c = c.append(ContextItem::TypeAssignment(
                     assign_var.clone(),
                     Ok(type_assignment.clone()),
                 ));
@@ -915,6 +915,7 @@ pub fn infer_or_check_assignment_types(
                     Err(type_error(format!("Cannot infer type of expression containing recursive call. Assign a type to label '{}'", &assign_var), ast, assign_expr)),
                 ));
                 let (t, new_c) = infer_type_with_context(c.clone(), &ast, assign_expr)?;
+                let t = t.forall_ify();
                 c = new_c.assigns_only().remove_assignment(assign_var).append(
                     ContextItem::TypeAssignment(assign_var.clone(), Ok(t.clone())),
                 );

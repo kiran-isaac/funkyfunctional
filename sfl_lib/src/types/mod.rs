@@ -120,6 +120,9 @@ impl Type {
                     t2.substitute_type_variable(var, replacement)?,
                 ))
             }
+            Type::Product(t1, t2) => {
+                Ok(Type::pr(t1.substitute_type_variable(var, replacement)?, t2.substitute_type_variable(var, replacement)?))
+            }
             _ => Ok(self.clone()),
         }
     }
@@ -207,6 +210,18 @@ impl Type {
             Type::Primitive(_) => true,
             Type::Function(t1, t2) => t1.is_concrete() && t2.is_concrete(),
             _ => false,
+        }
+    }
+
+    pub fn flatten(&self) -> Vec<Self> {
+        match self {
+            Type::Function(t1, t2) => {
+                vec![t1.as_ref().clone()].into_iter().chain(t2.flatten().into_iter()).collect()
+            }
+            Type::Forall(_, t1) => {
+                t1.flatten()
+            }
+            _ => vec![self.clone()],
         }
     }
 

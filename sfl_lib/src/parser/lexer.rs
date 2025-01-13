@@ -159,7 +159,7 @@ impl Lexer {
             _ => {}
         }
 
-        while !(self.c().is_whitespace() || self.c() == '\0' || self.c() == ')') {
+        while !(self.c().is_whitespace() || self.c() == '\0' || self.c() == ')' || self.c() == ',') {
             match self.c() {
                 '0'..='9' => {
                     if has_point {

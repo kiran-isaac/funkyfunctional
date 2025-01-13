@@ -40,12 +40,12 @@ fn main() {
     // Typecheck
     let lt = if typechecked {
         let module = ast.root;
+        println!(
+            "INPUT:\n\n{}\n{}",
+            ast.to_string_sugar(ast.root, true),
+            HORIZONTAL_SEPARATOR
+        );
         infer_or_check_assignment_types(&mut ast, module).unwrap_or_else(|e| {
-            println!(
-                "INPUT:\n\n{}\n{}",
-                ast.to_string_sugar(ast.root, true),
-                HORIZONTAL_SEPARATOR
-            );
             eprintln!("{:?}", e);
             std::process::exit(1)
         })
@@ -53,12 +53,12 @@ fn main() {
         let mut lt = LabelTable::new();
         match &lt.consume_from_module(&ast, ast.root) {
             Ok(()) => lt,
-            Err(e) => panic!("{:?}", e),
+            Err(e) => panic!("Cannot run this program without typechecking: {:?}", e),
         }
     };
 
     println!(
-        "INPUT:\n\n{}\n{}",
+        "Typed: \n{}\n{}\n",
         ast.to_string_sugar(ast.root, true),
         HORIZONTAL_SEPARATOR
     );
@@ -100,6 +100,14 @@ fn main() {
             }
             &rcs_filtered[num - 1]
         };
+
+        if input == "" {
+            let s1 = ast.to_string_sugar(choice.0, false);
+            let s2 = choice.1.to_string_sugar(choice.1.root, false);
+            println!("Chose Laziest: {} => {}", s1, s2);
+        }
+
+        let choice = &choice;
 
         ast.do_rc_subst_and_identical_rcs(choice, &rcs);
 

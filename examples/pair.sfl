@@ -1,0 +1,6 @@
+second (x, y) = y
+
+fac :: Int -> (Int, Int)
+fac n = (n, if n <= 1 then 1 else n * (second (fac (n - 1))))
+
+main = second (fac 5)
