@@ -1,6 +1,5 @@
 use crate::functions::LabelTable;
 use std::collections::HashMap;
-use crate::Type;
 use super::*;
 
 /// This will check for applications to functions:

@@ -155,13 +155,13 @@ fn expr_inference_should_fail(program: &str) {
 
 #[test]
 fn infer() {
-    expr_inference_should_fail("\\x . x x");
-    mod_inference_should_fail("recurse = recurse");
-
     inference_test(
         "\\b . if true then (\\x . x) else (\\x . x)",
         "∀a. ∀b. a -> b -> b",
     );
+
+    expr_inference_should_fail("\\x . x x");
+    mod_inference_should_fail("recurse = recurse");
 
     inference_test("if true then (\\x :: Int. x) else (\\x . x)", "Int -> Int");
     inference_test(

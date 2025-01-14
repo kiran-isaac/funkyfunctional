@@ -6,7 +6,6 @@ use inbuilt_control_flow::*;
 use crate::*;
 mod inbuilt_arith;
 mod inbuilt_control_flow;
-mod product;
 
 #[cfg(test)]
 mod test;

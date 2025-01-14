@@ -212,21 +212,23 @@ impl Context {
                 }
                 // If this is an existential with a product that refers to the one being set, set the
                 // types within the product too
-                ContextItem::Existential(_, Some(Type::Product(t1, t2))) => {
-                    let mut t1 = t1.as_ref().clone();
-                    if let Type::Existential(e1) = t1 {
-                        if e1 == existential_being_set {
-                            t1 = t.clone();
-                        }
-                    }
-
-                    let mut t2 = t2.as_ref().clone();
-                    if let Type::Existential(e2) = t2 {
-                        if e2 == existential_being_set {
-                            t2 = t.clone();
-                        }
-                    }
-                }
+                // ContextItem::Existential(e, Some(Type::Product(t1, t2))) => {
+                //     let mut t1 = t1.as_ref().clone();
+                //     if let Type::Existential(e1) = t1 {
+                //         if e1 == existential_being_set {
+                //             t1 = t.clone();
+                //         }
+                //     }
+                //
+                //     let mut t2 = t2.as_ref().clone();
+                //     if let Type::Existential(e2) = t2 {
+                //         if e2 == existential_being_set {
+                //             t2 = t.clone();
+                //         }
+                //     }
+                //     new_v.push(ContextItem::Existential(*e, Some(t.clone())));
+                //     continue;
+                // }
                 ContextItem::Existential(e, _) => {
                     if *e == existential_being_set {
                         new_v.push(ContextItem::Existential(*e, Some(t.clone())));
@@ -594,7 +596,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
                 c
             };
 
-            let (c, before) = recurse_add_to_context(c, &Type::Existential(next_exst), ast, ast.get_abstr_var((expr)))?;
+            let (c, before) = recurse_add_to_context(c, &Type::Existential(next_exst), ast, ast.get_abstr_var(expr))?;
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
@@ -875,11 +877,12 @@ fn infer_type_with_context(
     Ok((t, c))
 }
 
+#[cfg(test)]
 pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
     let lt = LabelTable::new();
     let c = Context::from_labels(&lt);
 
-    Ok(infer_type_with_context(c, ast, expr)?.0)
+    Ok(infer_type_with_context(c, ast, expr)?.0.forall_ify())
 }
 
 pub fn infer_or_check_assignment_types(
