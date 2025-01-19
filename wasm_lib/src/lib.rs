@@ -1,6 +1,12 @@
 mod utils;
 
+use sfl_lib::AST;
 use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+pub struct ASTWasmBinding {
+    pub ast: AST
+}
 
 #[wasm_bindgen]
 extern "C" {
