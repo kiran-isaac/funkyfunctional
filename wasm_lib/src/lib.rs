@@ -1,12 +1,7 @@
 mod utils;
 
-use sfl_lib::AST;
+use sfl_lib::{ASTNode, ASTNodeType, Parser, AST};
 use wasm_bindgen::prelude::*;
-
-#[wasm_bindgen]
-pub struct ASTWasmBinding {
-    pub ast: AST
-}
 
 #[wasm_bindgen]
 extern "C" {
@@ -19,11 +14,13 @@ pub fn greet() {
 }
 
 #[wasm_bindgen]
-pub fn add(a: i32, b: i32) -> i32 {
-    sfl_lib::add(a as i64, b as i64) as i32
+pub fn hello_world() -> String {
+    "Hello from Rust!".to_string()
 }
 
 #[wasm_bindgen]
-pub fn hello_world() -> String {
-    "Hello from Rust!".to_string()
+pub fn parse(str: &str) -> *mut AST {
+    let ast = Parser::from_string(str.to_string()).parse_module().unwrap();
+    let b = unsafe {Box::into_raw(Box::new(ast))};
+    b
 }

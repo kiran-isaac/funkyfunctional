@@ -1,13 +1,39 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 
+import * as monaco from 'monaco-editor';
+
 import Editor from '@monaco-editor/react';
 
 function App() {
-  let editor = <Editor height="90vh" width="100vh" defaultLanguage="javascript" defaultValue="// some comment" theme='vs-dark'/>;
-  return editor;
+  useEffect(() => {
+    // Access the document object and perform actions
+    const editorContainer = document.getElementById('editor-container');
+    if (editorContainer) {
+      console.log('Editor container found:', editorContainer);
+      const editor = monaco.editor.create(editorContainer, {
+        value: 'console.log("Hello, world!")',
+      });
+      const editor_dom: HTMLElement | null = editor.getDomNode();
+
+      if (editor_dom) {
+        // Use editor_dom safely here
+        editor_dom.style.width = '100%';
+        editor_dom.style.height = '100%';
+        editorContainer.appendChild(editor_dom);
+      } else {
+        console.error('Editor DOM element not found');
+      }
+    }
+  }, []); // Empty dependency array ensures this runs only once after the component mounts
+
+  return (
+    <div id="editor-container" style={{ height: '500px' }}>
+      {/* Your editor component or other content */}
+    </div>
+  );
 }
 
 // function App() {
