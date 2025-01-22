@@ -27,7 +27,7 @@ function App() {
 
     console.log(laziest);
 
-    let rc_elems = [<div key={0}><button  onClick={() => rc_callback(laziest)}>Laziest</button><br/></div>];
+    let rc_elems = [<div key={0}><button className="rc" onClick={() => rc_callback(laziest)}>Laziest</button><br/></div>];
 
     for (let i = 0; i < wasm.get_rcs_len(rcs); i++) {
       let from_string = wasm.get_rcs_from(rcs, i);
@@ -38,8 +38,7 @@ function App() {
     setRcs(rc_elems);
   }
 
-  const handleRun = () => {
-    const programInput = (document.getElementById("ProgramInput") as HTMLTextAreaElement).value;
+  const handleRun = (programInput: string) => {
     try {
       const ast = wasm.parse(programInput);
       setAstString(wasm.to_string(ast))

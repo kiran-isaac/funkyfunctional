@@ -1,20 +1,79 @@
 #root {
-  height: 100%;
-  width: 100%;
+    height: 100%;
+    width: 100%;
+}
+
+#RCArea {
+    width: 98%;
+    padding: 2% 0px;
+    padding-left: 1%;
 }
 
 #inputContainer {
-  width: 100%;
-  background-color: #242424;
-  position: sticky;
-  top: 0;
-  height: 50%;
-  min-height: 300px;
-  margin: 0px;
+    width: 100%;
+    background-color: #242424;
+    position: sticky;
+    height: 50%;
+    margin: 0px;
+    display: grid;
+    grid-template-columns: 80% 1fr;
+    grid-template-rows: 1fr;
+    grid-column-gap: 0px;
+    grid-row-gap: 0px;
+    width: calc(99% - 10px);
+    margin: 5px auto;
 }
 
-#TextArea {
-  width: 96%;
-  padding-left: 1%;
-  margin: 0px;
+#ASTArea {
+    width: 96%;
+    padding-left: 1%;
+    margin: 0px;
+}
+
+@media only screen and (max-width: 1000px) {
+    #inputContainer {
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: 50% 1fr;
+        grid-column-gap: 0px;
+        grid-row-gap: 0px;
+    }
+    #ASTArea {
+        width: 96%;
+        padding-left: 1%;
+        margin: 0px;
+        overflow-x: scroll;
+    }
+}
+
+button.rc {
+    border-radius: 8px;
+    border: 1px solid transparent;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: inherit;
+    background-color: #1a1a1a;
+    cursor: pointer;
+    transition: border-color 0.25s;
+    white-space: normal;
+    overflow-wrap: break-word;
+    width: 100%;
+    margin-top: 5px;
+    transition: border-color 0.25s;
+
+}
+button:hover {
+    border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media only screen and (max-width: 1000px) {
+    button.rc {
+        font-size: 14pt;
+        /* border: 1px solid rgba(255, 255, 255, 0.308); */
+    }
 }
