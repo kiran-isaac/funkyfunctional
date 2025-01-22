@@ -11,20 +11,20 @@ function App() {
 
   const generateRCs = (ast: wasm.RawASTInfo) => {
     let rcs = wasm.get_redexes(ast);
-    let rcs_strings = [];
+    let rc_elems = [];
     let i = 0;
     for (let rc of rcs) {
       i++;
-      let callback = () => {
-        wasm.pick_rc_and_free(ast, rcs, i - 1);
+      let callback = (rc_index : number) => {
+        wasm.pick_rc_and_free(ast, rcs, rc_index - 1);
         setAstString(wasm.to_string(ast));
         generateRCs(ast);
       };
       let from_string = wasm.get_rc_from(rc);
       let to_string = wasm.get_rc_to(rc);
-      rcs_strings.push(<><RC onClick={callback} from={from_string} to={to_string} i={i} /><br /></>);
+      rc_elems.push(<RC key={i} i={i} onClick={callback} from={from_string} to={to_string} />);
     }
-    setRcs(rcs_strings);
+    setRcs(rc_elems);
   }
 
   const handleRun = () => {

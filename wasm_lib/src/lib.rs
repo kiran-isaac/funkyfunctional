@@ -1,10 +1,13 @@
 mod utils;
 
+use std::rc;
+
 use sfl_lib::{
     find_redex_contraction_pairs, infer_or_check_assignment_types, ASTNode, ASTNodeType,
     LabelTable, Parser, RCPair, AST,
 };
 use wasm_bindgen::prelude::*;
+use web_sys::console::log;
 
 #[wasm_bindgen]
 pub struct RawASTInfo {
@@ -44,17 +47,22 @@ pub unsafe fn get_rc_to(rc: &RawRC) -> String {
 }
 
 #[wasm_bindgen]
-pub unsafe fn pick_rc_and_free(info: &mut RawASTInfo, rcs: Vec<RawRC>, index: usize) {
+pub unsafe fn pick_rc_and_free(info: &mut RawASTInfo, rcs: Vec<RawRC>, to_subst: usize) {
     let ast = &mut *info.ast;
     let mut rust_rcs = vec![];
-    for i in 0..rcs.len() {
-        rust_rcs.push(&*rcs[i].redex);
+
+    log!("len: {}\nchosen: {}", rcs.len(), to_subst);    
+    
+    for rc in &rcs {
+        // log!("rc: {}", ast.rc_to_str(&*rc.redex));
+        rust_rcs.push(&*rc.redex);
     }
-    ast.do_rc_subst_and_identical_rcs_borrowed(&*rcs[index].redex, &rust_rcs);
-    for i in 0..rcs.len() {
-        if i != index {
-            rcs[i].free();
-        }
+
+    ast.do_rc_subst_and_identical_rcs_borrowed(&*rcs[to_subst].redex, &rust_rcs);
+
+    for rc in rcs {
+        log!("{}", ast.rc_to_str(&*rc.redex));
+        rc.free();
     }
 }
 

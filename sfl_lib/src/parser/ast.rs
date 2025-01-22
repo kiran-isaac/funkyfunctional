@@ -33,6 +33,21 @@ pub struct ASTNode {
     pub fancy_assign_abst_syntax: bool,
 }
 
+impl Debug for ASTNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = format!("{:?} ", self.t);
+        if let Some(tk) = &self.info {
+            s.push_str(&format!("{:?} ", tk.value));
+        }
+        // s.push_str(&format!("{}:{} ", self.line, self.col));
+        // if let Some(t) = &self.type_assignment {
+        //     s.push_str(&format!("Type: {:?} ", t));
+        // }
+        // s.push_str(&format!("Children: {:?}", self.children));
+        write!(f, "{}", s)
+    }
+}
+
 impl ASTNode {
     pub fn get_lit_type(&self) -> Type {
         match &self.t {
@@ -260,10 +275,19 @@ impl AST {
     }
 
     pub fn do_rc_subst_and_identical_rcs(&mut self, rc0: &RCPair, rcs: &Vec<RCPair>) {
+        self.do_rc_subst_and_identical_rcs_borrowed(rc0, &rcs.into_iter().map(|rc| rc).collect());
+    }
+
+    pub fn do_rc_subst_and_identical_rcs_borrowed(&mut self, rc0: &RCPair, rcs: &Vec<&RCPair>) {
+        #[cfg(debug_assertions)]
         let _rc0_0_str = self.to_string_sugar(rc0.0, false);
+        #[cfg(debug_assertions)]
         let _rc1_0_str = rc0.1.to_string_sugar(rc0.1.root, false);
+
         for rc in rcs {
+            #[cfg(debug_assertions)]
             let _this_rc = self.to_string_sugar(rc.0, false);
+            #[cfg(debug_assertions)]
             let _this_rc_1 = rc.1.to_string_sugar(rc.1.root, false);
             if self.expr_eq(rc0.0, rc.0) {
                 self.do_rc_subst(rc);
@@ -271,16 +295,16 @@ impl AST {
         }
     }
 
-    pub fn do_rc_subst_and_identical_rcs_borrowed(&mut self, rc0: &RCPair, rcs: &Vec<&RCPair>) {
-        let _rc0_0_str = self.to_string_sugar(rc0.0, false);
-        let _rc1_0_str = rc0.1.to_string_sugar(rc0.1.root, false);
-        for rc in rcs {
-            let _this_rc = self.to_string_sugar(rc.0, false);
-            let _this_rc_1 = rc.1.to_string_sugar(rc.1.root, false);
-            if self.expr_eq(rc0.0, rc.0) {
-                self.do_rc_subst(rc);
-            }
+    pub fn rc_to_str(&self, rc: &RCPair) -> String {
+        self.to_string_sugar(rc.0, false) + " -> " + &rc.1.to_string_sugar(rc.1.root, false)
+    }
+
+    pub fn print_vec_string(&self) -> String {
+        let mut s = String::new();
+        for n in &self.vec {
+            s.push_str(&format!("{:?}\n", n));
         }
+        s
     }
 
     fn get_laziest_rc_recurse(
@@ -510,7 +534,7 @@ impl AST {
         self.get_all_instances_of_var_in_exp(self.get_abstr_expr(abst), &var_name)
     }
 
-    pub fn get_n_abstr_vars(&self, abstr : usize, n: usize) -> Vec<usize> {
+    pub fn get_n_abstr_vars(&self, abstr: usize, n: usize) -> Vec<usize> {
         if n <= 0 {
             vec![]
         } else {
@@ -756,7 +780,9 @@ impl AST {
                 while self.get(ass_abst).fancy_assign_abst_syntax {
                     assert_eq!(self.get(ass_abst).t, ASTNodeType::Abstraction);
                     fancy_syntax_abst_vars += " ";
-                    fancy_syntax_abst_vars += self.to_string_sugar(self.get_abstr_var(ass_abst), show_assigned_types).as_str();
+                    fancy_syntax_abst_vars += self
+                        .to_string_sugar(self.get_abstr_var(ass_abst), show_assigned_types)
+                        .as_str();
                     exp = self.to_string_sugar(self.get_abstr_expr(ass_abst), show_assigned_types);
                     ass_abst = self.get_abstr_expr(ass_abst);
                 }

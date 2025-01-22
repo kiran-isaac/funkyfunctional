@@ -1,14 +1,14 @@
 interface RCProp {
-    onClick: () => void;
+    i: number;
+    onClick: (rc_index: number) => void;
     from: string;
     to: string;
-    i: number;
 }
 
-const RC: React.FC<RCProp> = ({ onClick, from, to, i }) => {
-    return <button onClick={onClick}>
+const RC: React.FC<RCProp> = ({ i, onClick, from, to }) => {
+    return <><button onClick={() => onClick(i)}>
         {i}{") "}{from} {"->"} {to}
-    </button>
+    </button><br /></>;
 }
 
 export default RC   
