@@ -16,8 +16,10 @@ RUN wasm-pack build --target web
 FROM node:18-alpine AS frontend-builder
 
 COPY --from=wasm-builder /build/wasm_lib/pkg /build/wasm_lib/pkg
-COPY frontend /build
+COPY frontend /build/frontend
 
-WORKDIR /build
-RUN npm install
+WORKDIR /build/frontend
+# Remove node modules if they exist
+RUN rm -rf node_modules
+RUN npm ci
 RUN npm run build
