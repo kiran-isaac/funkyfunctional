@@ -1,0 +1,19 @@
+#ProgramInput {
+    height:98%;
+    font-size:14pt;
+    width: 90%;
+    position: absolute;
+    resize: vertical;
+    top:1%;
+    left: 1%;
+}
+
+#RunButton {
+    position: absolute;
+    width: 50%;
+    bottom: 1%;
+    right: 1%;
+    top: 1%;
+    height:100%;
+    width: 7%;
+}
