@@ -36,24 +36,42 @@ impl RawRC {
     }
 }
 
-#[wasm_bindgen]
 pub unsafe fn get_rc_from(rc: &RawRC) -> String {
     (&*rc.from_str).clone()
 }
 
-#[wasm_bindgen]
 pub unsafe fn get_rc_to(rc: &RawRC) -> String {
     (&*rc.to_str).clone()
 }
 
 #[wasm_bindgen]
-pub unsafe fn pick_rc_and_free(info: &mut RawASTInfo, rcs: Vec<RawRC>, to_subst: usize) {
+pub unsafe fn get_rcs_from(rcs: *mut Vec<RawRC>, rc: usize) -> String {
+    let rcs = &*rcs;
+    get_rc_from(&rcs[rc])
+}
+
+#[wasm_bindgen]
+pub unsafe fn get_rcs_to(rcs: *mut Vec<RawRC>, rc: usize) -> String {
+    let rcs = &*rcs;
+    get_rc_to(&rcs[rc])
+}
+
+#[wasm_bindgen]
+pub unsafe fn get_rcs_len(rcs: *mut Vec<RawRC>) -> usize {
+    let rcs = &*rcs;
+    rcs.len()
+}
+
+#[wasm_bindgen]
+pub unsafe fn pick_rc_and_free(info: &mut RawASTInfo, rcs: *mut Vec<RawRC>, to_subst: usize) {
+    let rcs = &*rcs;
+
     let ast = &mut *info.ast;
     let mut rust_rcs = vec![];
 
     log!("len: {}\nchosen: {}", rcs.len(), to_subst);    
     
-    for rc in &rcs {
+    for rc in rcs {
         // log!("rc: {}", ast.rc_to_str(&*rc.redex));
         rust_rcs.push(&*rc.redex);
     }
@@ -67,7 +85,35 @@ pub unsafe fn pick_rc_and_free(info: &mut RawASTInfo, rcs: Vec<RawRC>, to_subst:
 }
 
 #[wasm_bindgen]
-pub unsafe fn get_redexes(info: &RawASTInfo) -> Vec<RawRC> {
+pub unsafe fn get_laziest(info: &RawASTInfo, rcs: *mut Vec<RawRC>) -> usize {
+    let info = info;
+    let ast = &mut *info.ast;
+    let rcs = &*rcs;
+
+    let module = ast.root;
+    let main_assign = ast.get_assign_to(module, "main".to_string()).unwrap();
+    let main_expr = ast.get_assign_exp(main_assign);
+
+    let mut rust_rcs = vec![];
+    
+    for rc in rcs {
+        // log!("rc: {}", ast.rc_to_str(&*rc.redex));
+        rust_rcs.push(&*rc.redex);
+    }
+
+    let laziest = ast.get_laziest_rc_borrowed(main_expr, &rust_rcs).unwrap();
+
+    for (i, rc) in rust_rcs.iter().enumerate() {
+        if rc.0 == laziest.0 {
+            return i
+        }
+    }
+
+    unreachable!("FAILED TO GET LAZIEST");
+}
+
+#[wasm_bindgen]
+pub unsafe fn get_redexes(info: &RawASTInfo) -> *mut Vec<RawRC> {
     let info = info;
     let ast = &mut *info.ast;
     let lt = &*info.lt;
@@ -84,7 +130,7 @@ pub unsafe fn get_redexes(info: &RawASTInfo) -> Vec<RawRC> {
             redex: Box::into_raw(Box::new(rc)),
         });
     }
-    rcs
+    Box::into_raw(Box::new(rcs))
 }
 
 #[wasm_bindgen]

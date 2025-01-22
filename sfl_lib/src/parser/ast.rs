@@ -343,6 +343,10 @@ impl AST {
     }
 
     pub fn get_laziest_rc(&self, expr: usize, rcs: &Vec<RCPair>) -> Option<RCPair> {
+        self.get_laziest_rc_borrowed(expr, &rcs.into_iter().map(|rc| rc).collect())
+    }
+
+    pub fn get_laziest_rc_borrowed(&self, expr: usize, rcs: &Vec<&RCPair>) -> Option<RCPair> {
         // Convert to map for O(1) lookup of whether a node is an RC
         let mut rc_map: HashMap<usize, &RCPair> = HashMap::new();
         for rc in rcs {
