@@ -7,8 +7,12 @@ interface RCProp {
 }
 
 const RC: React.FC<RCProp> = ({ i, onClick, from, to, laziest }) => {
-    return <><button className="rc" onClick={() => onClick(i)} style={{ color: laziest ? "yellow" : "white" }}>
-        {i + 1}{") "}{from} {"   ->   "} {to}
+    return <><button 
+        className="rc" 
+        onClick={() => onClick(i)} 
+        // style={{ color: laziest ? "yellow" : "white" }}
+        >
+        {from} {"|"} {to}
     </button><br /></>;
 }
 
