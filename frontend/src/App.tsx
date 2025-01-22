@@ -12,6 +12,11 @@ function App() {
   const generateRCs = (ast: wasm.RawASTInfo) => {
     let rcs = wasm.get_redexes(ast);
 
+    if (wasm.get_rcs_len(rcs) == 0) {
+      setRcs([]);
+      return;
+    }
+
     let rc_callback = (rc_index: number) => {
       wasm.pick_rc_and_free(ast, rcs, rc_index);
       setAstString(wasm.to_string(ast));
