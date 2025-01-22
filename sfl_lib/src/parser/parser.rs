@@ -230,9 +230,9 @@ impl Parser {
     }
 
     fn parse_expression(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
-        #[cfg(debug_assertions)]
         let mut left = self.parse_primary(ast)?;
 
+        #[cfg(debug_assertions)]
         let _t_queue = format!("{:?}", self.t_queue);
         loop {
             let line = self.lexer.line;

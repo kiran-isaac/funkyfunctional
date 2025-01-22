@@ -1,69 +1,77 @@
-import { useEffect, useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useState } from 'react'
+import Input from './Input'
+import * as wasm from 'sfl_wasm_lib'
 import './App.css'
-
-import * as monaco from 'monaco-editor';
-
-import Editor from '@monaco-editor/react';
+import RC from './RC';
 
 function App() {
-  useEffect(() => {
-    // Access the document object and perform actions
-    const editorContainer = document.getElementById('editor-container');
-    if (editorContainer) {
-      console.log('Editor container found:', editorContainer);
-      const editor = monaco.editor.create(editorContainer, {
-        value: 'console.log("Hello, world!")',
-      });
-      const editor_dom: HTMLElement | null = editor.getDomNode();
+  const [astString, setAstString] = useState("");
+  const [rcs, setRcs] = useState<JSX.Element[]>([]);
+  const [errorString, setErrorString] = useState("");
 
-      if (editor_dom) {
-        // Use editor_dom safely here
-        editor_dom.style.width = '100%';
-        editor_dom.style.height = '100%';
-        editorContainer.appendChild(editor_dom);
-      } else {
-        console.error('Editor DOM element not found');
-      }
+  const generateRCs = (ast: wasm.RawASTInfo) => {
+    let rcs = wasm.get_redexes(ast);
+
+    if (wasm.get_rcs_len(rcs) == 0) {
+      setRcs([]);
+      return;
     }
-  }, []); // Empty dependency array ensures this runs only once after the component mounts
+
+    let rc_callback = (rc_index: number) => {
+      wasm.pick_rc_and_free(ast, rcs, rc_index);
+      setAstString(wasm.to_string(ast));
+      generateRCs(ast);
+    };
+
+    let laziest = wasm.get_laziest(ast, rcs);
+
+    console.log(laziest);
+
+    let rc_elems = [<div key={0}><button  onClick={() => rc_callback(laziest)}>Laziest</button><br/></div>];
+
+    for (let i = 0; i < wasm.get_rcs_len(rcs); i++) {
+      let from_string = wasm.get_rcs_from(rcs, i);
+      let to_string = wasm.get_rcs_to(rcs, i);
+      rc_elems.push(<RC key={i + 1} i={i} onClick={rc_callback} from={from_string} to={to_string} laziest={i == laziest} />);
+    }
+
+    setRcs(rc_elems);
+  }
+
+  const handleRun = () => {
+    const programInput = (document.getElementById("ProgramInput") as HTMLTextAreaElement).value;
+    try {
+      const ast = wasm.parse(programInput);
+      setAstString(wasm.to_string(ast))
+      generateRCs(ast);
+      
+      setErrorString("")
+    } catch (e: any) {
+      setErrorString(e.toString())
+      setAstString("")
+      setRcs([])
+    };
+  };
 
   return (
-    <div id="editor-container" style={{ height: '500px' }}>
-      {/* Your editor component or other content */}
-    </div>
-  );
+    <>
+      <div id="inputContainer">
+        <Input onRun={handleRun} />
+      </div>
+      <div id="Spacer"></div>
+      <div id="TextArea">
+        <div id="ASTArea">
+          <pre>{astString}</pre>
+        </div>
+        <div id="Error">
+          <pre>{errorString}</pre>
+        </div>
+        <div id="RCArea">
+          <pre>{rcs}</pre>
+        </div>
+      </div>
+    </>
+  )
 }
-
-// function App() {
-  
-//   const [count, setCount] = useState(0)
-
-//   return (
-//     <>
-//       <div>
-//         <a href="https://vite.dev" target="_blank">
-//           <img src={viteLogo} className="logo" alt="Vite logo" />
-//         </a>
-//         <a href="https://react.dev" target="_blank">
-//           <img src={reactLogo} className="logo react" alt="React logo" />
-//         </a>
-//       </div>
-//       <h1>Vite + React</h1>
-//       <div className="card">
-//         <button onClick={() => setCount((count) => count + 1)}>
-//           count is {count}
-//         </button>
-//         <p>
-//           Edit <code>src/App.tsx</code> and save to test HMR
-//         </p>
-//       </div>
-//       <p className="read-the-docs">
-//         Click on the Vite and React logos to learn more
-//       </p>
-//     </>
-//   )
-// }
 
 export default App
