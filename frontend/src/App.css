@@ -24,10 +24,11 @@
     margin: 5px auto;
 }
 
-#ASTArea {
+#ASTArea, #Error {
     width: 96%;
     padding-left: 1%;
     margin: 0px;
+    overflow-x: scroll;
 }
 
 @media only screen and (max-width: 1000px) {
@@ -38,12 +39,7 @@
         grid-column-gap: 0px;
         grid-row-gap: 0px;
     }
-    #ASTArea {
-        width: 96%;
-        padding-left: 1%;
-        margin: 0px;
-        overflow-x: scroll;
-    }
+
 }
 
 button.rc {
