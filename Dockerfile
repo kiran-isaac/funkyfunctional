@@ -1,4 +1,4 @@
-FROM rust:1.80 AS wasm-builder
+FROM rust:1.81 AS wasm-builder
 
 COPY wasm_lib /build/wasm_lib
 COPY sfl_lib /build/sfl_lib
@@ -16,7 +16,7 @@ RUN wasm-pack build --target web
 FROM node:18-alpine AS frontend-builder
 
 COPY --from=wasm-builder /build/wasm_lib/pkg /build/wasm_lib/pkg
-COPY . /build
+COPY frontend /build
 
 WORKDIR /build
 RUN npm install
