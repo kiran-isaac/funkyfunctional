@@ -10,4 +10,4 @@ inc2 x = inc (inc (dec (inc x)))
 
 main = \x . floor (inc2 10)
 
-x y = y y
+// x y = y y
