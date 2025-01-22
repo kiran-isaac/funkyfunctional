@@ -14,7 +14,7 @@ interface InputProps {
 
 function Input({ onRun }: InputProps) {
     const [editorValue, setEditorValue] = useState(examples.fac);
-    const editorOnChange = useCallback((val: SetStateAction<string>, viewUpdate: any) => {
+    const editorOnChange = useCallback((val: SetStateAction<string>, _: any) => {
         setEditorValue(val);
     }, []);
     return (

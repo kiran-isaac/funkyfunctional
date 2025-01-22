@@ -70,10 +70,3 @@ button:focus,
 button:focus-visible {
     outline: 4px auto -webkit-focus-ring-color;
 }
-
-@media only screen and (max-width: 1000px) {
-    button.rc {
-        font-size: 14pt;
-        /* border: 1px solid rgba(255, 255, 255, 0.308); */
-    }
-}

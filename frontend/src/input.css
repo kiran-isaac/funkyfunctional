@@ -1,6 +1,5 @@
 #ProgramInput {
     position: relative;
-    font-size:14pt;
     grid-area: 1 / 1 / 2 / 2;
     width: 99%;
     height: 100%;
@@ -11,7 +10,6 @@
 }
 
 button#RunButton {
-    font-size: 14pt;
     font-weight: 500;
     background-color: #1a1a1a;
     cursor: pointer;
