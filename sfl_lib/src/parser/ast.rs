@@ -271,6 +271,18 @@ impl AST {
         }
     }
 
+    pub fn do_rc_subst_and_identical_rcs_borrowed(&mut self, rc0: &RCPair, rcs: &Vec<&RCPair>) {
+        let _rc0_0_str = self.to_string_sugar(rc0.0, false);
+        let _rc1_0_str = rc0.1.to_string_sugar(rc0.1.root, false);
+        for rc in rcs {
+            let _this_rc = self.to_string_sugar(rc.0, false);
+            let _this_rc_1 = rc.1.to_string_sugar(rc.1.root, false);
+            if self.expr_eq(rc0.0, rc.0) {
+                self.do_rc_subst(rc);
+            }
+        }
+    }
+
     fn get_laziest_rc_recurse(
         &self,
         expr: usize,

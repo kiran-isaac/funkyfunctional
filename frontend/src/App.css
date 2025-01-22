@@ -13,9 +13,8 @@
   margin: 0px;
 }
 
-
-#RCArea {
-  /* position: relative;
-  margin-top: 30px;
-  margin-left: 1%; */
+#TextArea {
+  width: 96%;
+  padding-left: 1%;
+  margin: 0px;
 }
