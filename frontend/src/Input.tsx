@@ -14,7 +14,7 @@ interface InputProps {
 
 function Input({ onRun }: InputProps) {
     const fac = "fac :: Int -> Int\nfac n = if n <= 1 then 1 else n * (fac (n - 1))\nmain = fac 15";
-    const pair = "second (x, y) = y\nfirst (x, y) = x\npair x y = (x, y)\n\nfac:: Int -> (Int, Int)\nfac n = pair 5 (if n <= 1 then 1 else n * (second (fac (n - 1))))\nmain = second (fac 5)";
+    // const pair = "second (x, y) = y\nfirst (x, y) = x\npair x y = (x, y)\n\nfac:: Int -> (Int, Int)\nfac n = pair 5 (if n <= 1 then 1 else n * (second (fac (n - 1))))\nmain = second (fac 5)";
     
     return (
         <>
