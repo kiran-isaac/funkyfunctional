@@ -3,15 +3,13 @@ interface RCProp {
     onClick: (rc_index: number) => void;
     from: string;
     to: string;
-    laziest: boolean;
 }
 
-const RC: React.FC<RCProp> = ({ i, onClick, from, to, _ }) => {
-    return <><button 
-        className="rc" 
-        onClick={() => onClick(i)} 
-        // style={{ color: laziest ? "yellow" : "white" }}
-        >
+const RC: React.FC<RCProp> = ({ i, onClick, from, to }) => {
+    return <><button
+        className="rc"
+        onClick={() => onClick(i)}
+    >
         {from} {"|"} {to}
     </button><br /></>;
 }

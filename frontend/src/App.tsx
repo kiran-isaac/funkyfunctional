@@ -10,29 +10,29 @@ function App() {
   const [errorString, setErrorString] = useState("");
 
   const generateRCs = (ast: wasm.RawASTInfo) => {
-    let rcs = wasm.get_redexes(ast);
+    const rcs = wasm.get_redexes(ast);
 
     if (wasm.get_rcs_len(rcs) == 0) {
       setRcs([]);
       return;
     }
 
-    let rc_callback = (rc_index: number) => {
+    const rc_callback = (rc_index: number) => {
       wasm.pick_rc_and_free(ast, rcs, rc_index);
       setAstString(wasm.to_string(ast));
       generateRCs(ast);
     };
 
-    let laziest = wasm.get_laziest(ast, rcs);
+    const laziest = wasm.get_laziest(ast, rcs);
 
     console.log(laziest);
 
-    let rc_elems = [<div key={0}><button className="rc" onClick={() => rc_callback(laziest)}>Laziest</button><br/></div>];
+    const rc_elems = [<div key={0}><button className="rc" onClick={() => rc_callback(laziest)}>Laziest</button><br/></div>];
 
     for (let i = 0; i < wasm.get_rcs_len(rcs); i++) {
-      let from_string = wasm.get_rcs_from(rcs, i);
-      let to_string = wasm.get_rcs_to(rcs, i);
-      rc_elems.push(<RC key={i + 1} i={i} onClick={rc_callback} from={from_string} to={to_string} laziest={i == laziest} />);
+      const from_string = wasm.get_rcs_from(rcs, i);
+      const to_string = wasm.get_rcs_to(rcs, i);
+      rc_elems.push(<RC key={i + 1} i={i} onClick={rc_callback} from={from_string} to={to_string} />);
     }
 
     setRcs(rc_elems);
@@ -45,8 +45,8 @@ function App() {
       generateRCs(ast);
       
       setErrorString("")
-    } catch (e: any) {
-      setErrorString(e.toString())
+    } catch (e) {
+      setErrorString(e as string)
       setAstString("")
       setRcs([])
     };
