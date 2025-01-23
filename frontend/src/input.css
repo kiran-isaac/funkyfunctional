@@ -1,19 +1,31 @@
 #ProgramInput {
-    height:98%;
-    font-size:14pt;
-    width: 90%;
-    position: absolute;
-    resize: vertical;
-    top:1%;
-    left: 1%;
+    position: relative;
+    grid-area: 1 / 1 / 2 / 2;
+    width: 99%;
+    height: 100%;
+    margin: 5px auto;
+    overflow-x: auto;
+    min-height: 300px;
 }
 
-#RunButton {
-    position: absolute;
-    width: 50%;
-    bottom: 1%;
-    right: 1%;
-    top: 1%;
-    height:100%;
-    width: 7%;
+button#RunButton {
+    background-color: #1a1a1a;
+    cursor: pointer;
+    transition: border-color 0.25s;
+    border: 1px solid rgba(255, 255, 255, 0.349);
+    width: 100%;
+    height: 98%;
+    padding: 10px;
+    grid-area: 1 / 2 / 2 / 3;
+}
+ 
+@media only screen and (max-width: 1000px) {
+    #ProgramInput {
+        grid-area: 1 / 1 / 2 / 2;
+    }
+
+    button#RunButton {
+        height: 98%;
+        grid-area: 2 / 1 / 3 / 2;
+    }
 }

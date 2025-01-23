@@ -6,9 +6,13 @@ interface RCProp {
     laziest: boolean;
 }
 
-const RC: React.FC<RCProp> = ({ i, onClick, from, to, laziest }) => {
-    return <><button onClick={() => onClick(i)} style={{ color: laziest ? "yellow" : "white" }}>
-        {i + 1}{") "}{from} {"->"} {to}
+const RC: React.FC<RCProp> = ({ i, onClick, from, to, _ }) => {
+    return <><button 
+        className="rc" 
+        onClick={() => onClick(i)} 
+        // style={{ color: laziest ? "yellow" : "white" }}
+        >
+        {from} {"|"} {to}
     </button><br /></>;
 }
 

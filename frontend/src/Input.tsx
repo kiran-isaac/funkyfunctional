@@ -1,25 +1,33 @@
 import "./input.css";
+import CodeMirror from '@uiw/react-codemirror'; 
+import { SetStateAction, useCallback, useState } from "react";
+import { okaidia } from '@uiw/codemirror-theme-okaidia';
 
-interface RunButtonProps {
-    onClick: () => void;
-}
-
-function RunButton({ onClick }: RunButtonProps) {
-    return <button id="RunButton" onClick={onClick}>Run</button>;
+const examples = {
+    fac: "fac :: Int -> Int\nfac n = if n <= 1 then 1 else n * (fac (n - 1))\nmain = fac 15",
+    pair: "second (x, y) = y\nfirst (x, y) = x\npair x y = (x, y)\n\nfac:: Int -> (Int, Int)\nfac n = pair 5 (if n <= 1 then 1 else n * (second (fac (n - 1))))\nmain = second (fac 5)"
 }
 
 interface InputProps {
-    onRun: () => void;
+    onRun: (editorValue: string) => void;
 }
 
 function Input({ onRun }: InputProps) {
-    const fac = "fac :: Int -> Int\nfac n = if n <= 1 then 1 else n * (fac (n - 1))\nmain = fac 15";
-    // const pair = "second (x, y) = y\nfirst (x, y) = x\npair x y = (x, y)\n\nfac:: Int -> (Int, Int)\nfac n = pair 5 (if n <= 1 then 1 else n * (second (fac (n - 1))))\nmain = second (fac 5)";
-    
+    const [editorValue, setEditorValue] = useState(examples.fac);
+    const editorOnChange = useCallback((val: SetStateAction<string>, _: any) => {
+        setEditorValue(val);
+    }, []);
     return (
         <>
-            <textarea id="ProgramInput" defaultValue={fac} />
-            <RunButton onClick={onRun} />
+            <div id="ProgramInput"><CodeMirror
+                id="CodeMirrorEditor"
+                height="300px"
+                width="100%"
+                value={editorValue}
+                onChange={editorOnChange}
+                theme={okaidia} 
+            /></div>
+            <button id="RunButton" onClick={() => onRun(editorValue)}>Run</button>
         </>
     );
 }

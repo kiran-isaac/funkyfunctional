@@ -1,10 +1,7 @@
-FROM rust:1.81 AS wasm-builder
+FROM kiranisturt/wasm_pack:1.81 AS wasm-builder
 
 COPY wasm_lib /build/wasm_lib
 COPY sfl_lib /build/sfl_lib
-
-# Install wasm-pack
-RUN cargo install wasm-pack
 
 ENV PATH="/root/.cargo/bin:${PATH}"
 
