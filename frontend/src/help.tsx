@@ -1,15 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import definitionString from './../../definition.md?raw';
 import './help.css';
 import Markdown from 'markdown-to-jsx'
 
-function definition() {
-    const [isVisible, setIsVisible] = useState(true);
+interface DefinitionWindowProps {
+    definitionIsVisible: boolean;
+    setDefinitionIsVisible: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const DefinitionWindow: React.FC<DefinitionWindowProps> = ({ definitionIsVisible, setDefinitionIsVisible }) => {
     const definitionRef = useRef<HTMLDivElement>(null);
 
     const handleClickOutside = (event: MouseEvent) => {
         if (definitionRef.current && !definitionRef.current.contains(event.target as Node)) {
-            setIsVisible(false);
+            setDefinitionIsVisible(false);
         }
     };
 
@@ -19,13 +23,28 @@ function definition() {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
-    
-    return <div id="definition" ref={definitionRef} style={{ display: isVisible ? "block" : "none" }}>
+
+
+    if (!definitionIsVisible) {
+        return <></>;
+    }
+    return <div id="definition" ref={definitionRef}>
         <button id="definitiondissmis" onClick={() => {
-            setIsVisible(!isVisible);
+            setDefinitionIsVisible(false);
         }}>X</button>
-        <Markdown options={{ forceBlock: true }}className="md" children={definitionString}/>
+        <Markdown options={{ forceBlock: true }} className="md" children={definitionString} />
     </div>;
 }
 
-export default definition;
+
+const DefinitionSpawnButton: React.FC<DefinitionWindowProps> = ({ definitionIsVisible, setDefinitionIsVisible }) => {
+    if (!definitionIsVisible) {
+        return <button id="definitionspawn" onClick={() => {
+        }}>?</button>;
+    }
+    return <button id="definitionspawn" onClick={() => {
+        setDefinitionIsVisible(true);
+    }}>?</button>;
+}
+
+export {DefinitionWindow, DefinitionSpawnButton};

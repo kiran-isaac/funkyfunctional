@@ -3,12 +3,13 @@ import Input from './Input'
 import * as wasm from 'sfl_wasm_lib'
 import './App.css'
 import RC from './RC';
-import Definition from './help';
+import { DefinitionWindow, DefinitionSpawnButton } from './help';
 
 function App() {
   const [astString, setAstString] = useState("");
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
   const [errorString, setErrorString] = useState("");
+  const [definitionIsVisible, setDefinitionIsVisible] = useState(true);
 
   const generateRCs = (ast: wasm.RawASTInfo) => {
     const rcs = wasm.get_redexes(ast);
@@ -28,7 +29,7 @@ function App() {
 
     console.log(laziest);
 
-    const rc_elems = [<div key={0}><button className="rc" onClick={() => rc_callback(laziest)}>Laziest</button><br/></div>];
+    const rc_elems = [<div key={0}><button className="rc" onClick={() => rc_callback(laziest)}>Laziest</button><br /></div>];
 
     for (let i = 0; i < wasm.get_rcs_len(rcs); i++) {
       const from_string = wasm.get_rcs_from(rcs, i);
@@ -44,7 +45,7 @@ function App() {
       const ast = wasm.parse(programInput);
       setAstString(wasm.to_string(ast))
       generateRCs(ast);
-      
+
       setErrorString("")
     } catch (e) {
       setErrorString(e as string)
@@ -55,7 +56,8 @@ function App() {
 
   return (
     <>
-      <Definition />
+      <DefinitionSpawnButton setDefinitionIsVisible={setDefinitionIsVisible} />
+      <DefinitionWindow definitionIsVisible={definitionIsVisible} setDefinitionIsVisible={setDefinitionIsVisible} />
       <div id="inputContainer">
         <Input onRun={handleRun} />
       </div>

@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build-rust": "cd ../wasm_lib && wasm-pack build --target web && cd ../frontend",
+    "build-with-rust": "npm run build-rust && npm run build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
