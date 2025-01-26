@@ -7,6 +7,10 @@
     width: 98%;
     padding-left: 1%;
     margin: 0px;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    grid-row-gap: 5px;
 }
 
 #inputContainer {
@@ -47,8 +51,6 @@
 button.rc {
     border-radius: 8px;
     border: 1px solid transparent;
-    padding: 0.6em 1.2em;
-    font-size: 1em;
     font-weight: 500;
     font-family: inherit;
     background-color: #1a1a1a;
@@ -57,9 +59,32 @@ button.rc {
     white-space: normal;
     overflow-wrap: break-word;
     width: 100%;
-    margin-top: 5px;
+    margin-top: 0px;
     transition: border-color 0.25s;
+    display: grid;
+    grid-template-columns: 1fr 2em 1fr;
 }
+
+pre#rarrow {
+    display: table-cell; 
+    vertical-align: middle;
+    padding: 0px;
+    margin: 0px;
+    font-size: 2em;
+}
+
+button.rc > .from, button.rc > .to {
+    margin-left: 10px;
+    margin-right: 10px;
+    white-space: normal; /* Allows text to wrap normally */
+}
+
+button.rc#laziest {
+    grid-template-columns: 1fr;
+    height: 30px;
+    width: 100%;
+}
+
 button:hover {
     border-color: #646cff;
 }

@@ -2,14 +2,13 @@
 
 div#definition {
     position: absolute;
-    margin-top: 20px;
     background-color: #303030;
     width: calc(80% - 20px);
     z-index: 9999;
     border-radius: 5px;
     border: 2px solid rgba(255, 255, 255, 0.29);
     padding: 10px;
-    margin-left: 10%;
+    margin: 20px 10%;
 }
 
 div#definition > button {
