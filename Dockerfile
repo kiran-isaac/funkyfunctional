@@ -10,9 +10,10 @@ WORKDIR /build/wasm_lib
 RUN wasm-pack build --target web
 
 # Build the frontend
-FROM node:18-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 
 COPY --from=wasm-builder /build/wasm_lib/pkg /build/wasm_lib/pkg
+COPY definition.md /build/definition.md
 COPY frontend /build/frontend
 
 WORKDIR /build/frontend
