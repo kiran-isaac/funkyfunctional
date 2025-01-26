@@ -13,7 +13,7 @@ const RC: React.FC<RCProp> = ({ i, onClick, from, to }) => {
         <div className="from">
             <pre>{from}</pre>
         </div> 
-        <div id="rarrow"><pre>&rArr;</pre></div> 
+        <div id="rarrow"><p>&rArr;</p></div> 
         <div className="to">
             <pre className="to">{to}</pre>
         </div>

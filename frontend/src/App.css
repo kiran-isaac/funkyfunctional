@@ -22,7 +22,7 @@
 #ASTArea,
 #Error {
     width: 96%;
-    padding-left: 1%;
+    padding-left: 2%;
     margin: 0px;
     overflow-x: auto;
 }
@@ -51,7 +51,6 @@ ul#RCArea {
 button.rc {
     border-radius: 8px;
     border: 1px solid transparent;
-    font-weight: 500;
     font-family: inherit;
     background-color: #1a1a1a;
     cursor: pointer;
@@ -63,51 +62,34 @@ button.rc {
     padding: 10px 0px;
     transition: border-color 0.25s;
     display: grid;
-    grid-template-columns: 1fr 20px 1fr;
-    min-height: 30px;
+    grid-template-columns: 1fr 2em 1fr;
+    min-height: 50px;
 }
 
-button.rc > .from, button.rc > .to {
+button.rc > div  {
     margin-left: 10px;
     margin-right: 10px;
     width: calc(100% - 20px);
     text-align: center;
-}
-
-button.rc > .from {
-    grid-area: 1 / 1 / 2 / 2;
-}
-
-button.rc > .to {
-    grid-area: 1 / 3 / 2 / 4;
-}
-
-button.rc > div  {
     padding: 0px;
     margin: 0px;
     vertical-align: center;
     position: relative;
     text-align: center;
     height: 100%; 
-
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-button.rc > div > pre {
+button.rc > div > * {
     margin: 0;
     white-space: normal;
-    text-align: center;
+    padding: 0;
 }
 
-button.rc > div#rarrow > pre {
+button.rc > div#rarrow > * {
     font-size: 2em;
-    margin: 0;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
 }
 
 button:hover {
