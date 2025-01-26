@@ -23,3 +23,8 @@ div.md {
     font-family: 'JetBrains Mono', sans-serif;
     font-size: 10pt;
 }
+
+button#definitionspawn {
+    position: absolute;
+    top: 0px;
+}
