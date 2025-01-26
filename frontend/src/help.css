@@ -2,17 +2,14 @@
 
 div#definition {
     position: absolute;
-    margin-left: 20%;
     margin-top: 20px;
     background-color: #303030;
-    width: 60%;
+    width: calc(80% - 20px);
     z-index: 9999;
     border-radius: 5px;
     border: 2px solid rgba(255, 255, 255, 0.29);
     padding: 10px;
-    
-    /* fade in/out when dispaly set to block/none */
-    animation: fadeIn 0.5s;
+    margin-left: 10%;
 }
 
 div#definition > button {
@@ -26,5 +23,6 @@ div.md {
 
 button#definitionspawn {
     position: absolute;
-    top: 0px;
+    top: 5px;
+    z-index: 9999;
 }

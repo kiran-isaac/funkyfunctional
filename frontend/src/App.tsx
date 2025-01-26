@@ -56,7 +56,7 @@ function App() {
 
   return (
     <>
-      <DefinitionSpawnButton setDefinitionIsVisible={setDefinitionIsVisible} />
+      <DefinitionSpawnButton definitionIsVisible={definitionIsVisible} setDefinitionIsVisible={setDefinitionIsVisible} />
       <DefinitionWindow definitionIsVisible={definitionIsVisible} setDefinitionIsVisible={setDefinitionIsVisible} />
       <div id="inputContainer">
         <Input onRun={handleRun} />

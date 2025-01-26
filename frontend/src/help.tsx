@@ -38,9 +38,8 @@ const DefinitionWindow: React.FC<DefinitionWindowProps> = ({ definitionIsVisible
 
 
 const DefinitionSpawnButton: React.FC<DefinitionWindowProps> = ({ definitionIsVisible, setDefinitionIsVisible }) => {
-    if (!definitionIsVisible) {
-        return <button id="definitionspawn" onClick={() => {
-        }}>?</button>;
+    if (definitionIsVisible) {
+        return <></>
     }
     return <button id="definitionspawn" onClick={() => {
         setDefinitionIsVisible(true);

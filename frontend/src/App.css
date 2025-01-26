@@ -10,7 +10,6 @@
 }
 
 #inputContainer {
-    width: 100%;
     background-color: #242424;
     position: sticky;
     height: 50%;
@@ -20,7 +19,7 @@
     grid-template-rows: 1fr;
     grid-column-gap: 0px;
     grid-row-gap: 0px;
-    width: calc(99% - 10px);
+    width: calc(99% - 20px);
     margin: 5px auto;
     overflow-y: hidden;
     overflow-x: hidden;
