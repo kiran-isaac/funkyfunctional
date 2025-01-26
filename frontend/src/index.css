@@ -21,6 +21,7 @@ body {
   height: 100%;
   font-family: 'JetBrains Mono', sans-serif;
   font-size: 10pt;
+  margin-bottom: 20px;
 }
 
 @media only screen and (max-width: 1000px) {

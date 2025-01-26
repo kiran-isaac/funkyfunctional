@@ -43,16 +43,14 @@ Module (set of assignments and type assignments (see more about types below), se
 *`m ::= ([x = e | x :: T](\n)+)*`*
 
 ### Examples
-```
-a = 1
-b = \x . x
-first = \(x, y) . x
-second = \(x, y) . y
-pair x y = (x, y)
-fib n = if n < 2 then n else fib (n - 1) + fib (n - 2)
-```
+*`a = 1`*
+*`b = \x . x`*
+*`first = \(x, y) . x`*
+*`second = \(x, y) . y`*
+*`pair x y = (x, y)`*
+*`fib n = if n < 2 then n else fib (n - 1) + fib (n - 2)`*
 
 ## Types
-T ::= forall a . T | T -> T | Bool | Int | Float | (T, T)
+*`T ::= forall a . T | T -> T | Bool | Int | Float | (T, T)`*
 
 The type inference is based on "complete and easy bidirectional typechecking for higher-rank polymorphism" by Dunfield and Krishnaswami. 
