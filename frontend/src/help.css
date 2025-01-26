@@ -9,6 +9,16 @@ div#definition {
     border: 2px solid rgba(255, 255, 255, 0.29);
     padding: 10px;
     margin: 20px 10%;
+    word-wrap: break-word; /* Ensures text wraps onto a new line */
+    word-break: break-all; /* Breaks words to fit within the container */
+    white-space: normal; /* Allows text to wrap normally */
+}
+
+/* Ensure text within <pre> elements wraps */
+div#definition pre {
+    white-space: pre-wrap; /* Allows text to wrap within <pre> elements */
+    word-wrap: break-word; /* Ensures text wraps onto a new line */
+    word-break: break-all; /* Breaks words to fit within the container */
 }
 
 div#definition > button {
