@@ -1,13 +1,10 @@
+#[allow(unused)]
 mod utils;
 
-use std::rc;
-
 use sfl_lib::{
-    find_redex_contraction_pairs, infer_or_check_assignment_types, ASTNode, ASTNodeType,
-    LabelTable, Parser, RCPair, AST,
+    find_redex_contraction_pairs, infer_or_check_assignment_types, LabelTable, Parser, RCPair, AST,
 };
 use wasm_bindgen::prelude::*;
-use web_sys::console::log;
 
 #[wasm_bindgen]
 pub struct RawASTInfo {
@@ -69,8 +66,8 @@ pub unsafe fn pick_rc_and_free(info: &mut RawASTInfo, rcs: *mut Vec<RawRC>, to_s
     let ast = &mut *info.ast;
     let mut rust_rcs = vec![];
 
-    log!("len: {}\nchosen: {}", rcs.len(), to_subst);    
-    
+    log!("len: {}\nchosen: {}", rcs.len(), to_subst);
+
     for rc in rcs {
         // log!("rc: {}", ast.rc_to_str(&*rc.redex));
         rust_rcs.push(&*rc.redex);
@@ -95,7 +92,7 @@ pub unsafe fn get_laziest(info: &RawASTInfo, rcs: *mut Vec<RawRC>) -> usize {
     let main_expr = ast.get_assign_exp(main_assign);
 
     let mut rust_rcs = vec![];
-    
+
     for rc in rcs {
         // log!("rc: {}", ast.rc_to_str(&*rc.redex));
         rust_rcs.push(&*rc.redex);
@@ -105,7 +102,7 @@ pub unsafe fn get_laziest(info: &RawASTInfo, rcs: *mut Vec<RawRC>) -> usize {
 
     for (i, rc) in rust_rcs.iter().enumerate() {
         if rc.0 == laziest.0 {
-            return i
+            return i;
         }
     }
 
