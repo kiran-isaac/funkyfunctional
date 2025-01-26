@@ -9,8 +9,7 @@ div#definition {
     border: 2px solid rgba(255, 255, 255, 0.29);
     padding: 10px;
     margin: 20px 10%;
-    word-wrap: break-word; /* Ensures text wraps onto a new line */
-    word-break: break-all; /* Breaks words to fit within the container */
+    word-break: break-word; /* Breaks words to fit within the container */
     white-space: normal; /* Allows text to wrap normally */
 }
 
