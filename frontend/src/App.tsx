@@ -3,6 +3,7 @@ import Input from './Input'
 import * as wasm from 'sfl_wasm_lib'
 import './App.css'
 import RC from './RC';
+import Definition from './help';
 
 function App() {
   const [astString, setAstString] = useState("");
@@ -54,6 +55,7 @@ function App() {
 
   return (
     <>
+      <Definition />
       <div id="inputContainer">
         <Input onRun={handleRun} />
       </div>

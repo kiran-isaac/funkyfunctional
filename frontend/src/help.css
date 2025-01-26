@@ -1,0 +1,16 @@
+div#definition {
+    position: absolute;
+    margin-left: 20%;
+    margin-top: 20px;
+    background-color: #303030;
+    width: 60%;
+    z-index: 9999;
+    height: 80%;
+    border-radius: 5px;
+    border: 1px solid white;
+    padding: 10px;
+}
+
+div#definition > button {
+    float: right;
+}
