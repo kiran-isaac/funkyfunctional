@@ -10,7 +10,7 @@ const RC: React.FC<RCProp> = ({ i, onClick, from, to }) => {
         className="rc"
         onClick={() => onClick(i)}
     >
-        {from} {"|"} {to}
+        <pre className="from">{from}</pre> <pre id="rarrow">&rArr;</pre> <pre className="to">{to}</pre>
     </button><br /></>;
 }
 

@@ -29,7 +29,8 @@ function App() {
 
     console.log(laziest);
 
-    const rc_elems = [<div key={0}><button className="rc" onClick={() => rc_callback(laziest)}>Laziest</button><br /></div>];
+    // const rc_elems = [<div key={0}><button className="rc" id="laziest" onClick={() => rc_callback(laziest)}>Laziest</button><br /></div>];
+    const rc_elems = [];
 
     for (let i = 0; i < wasm.get_rcs_len(rcs); i++) {
       const from_string = wasm.get_rcs_from(rcs, i);
@@ -56,7 +57,7 @@ function App() {
 
   return (
     <>
-      <DefinitionSpawnButton setDefinitionIsVisible={setDefinitionIsVisible} />
+      <DefinitionSpawnButton definitionIsVisible={definitionIsVisible} setDefinitionIsVisible={setDefinitionIsVisible} />
       <DefinitionWindow definitionIsVisible={definitionIsVisible} setDefinitionIsVisible={setDefinitionIsVisible} />
       <div id="inputContainer">
         <Input onRun={handleRun} />
@@ -69,9 +70,9 @@ function App() {
         <div id="Error">
           <pre>{errorString}</pre>
         </div>
-        <div id="RCArea">
-          <pre>{rcs}</pre>
-        </div>
+        <ul id="RCArea">
+          {rcs}
+        </ul>
       </div>
     </>
   )
