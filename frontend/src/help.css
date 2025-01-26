@@ -1,3 +1,5 @@
+@import url('https://fonts.cdnfonts.com/css/jetbrains-mono-2');
+
 div#definition {
     position: absolute;
     margin-left: 20%;
@@ -5,12 +7,19 @@ div#definition {
     background-color: #303030;
     width: 60%;
     z-index: 9999;
-    height: 80%;
     border-radius: 5px;
-    border: 1px solid white;
+    border: 2px solid rgba(255, 255, 255, 0.29);
     padding: 10px;
+    
+    /* fade in/out when dispaly set to block/none */
+    animation: fadeIn 0.5s;
 }
 
 div#definition > button {
     float: right;
+}
+
+div.md {
+    font-family: 'JetBrains Mono', sans-serif;
+    font-size: 10pt;
 }
