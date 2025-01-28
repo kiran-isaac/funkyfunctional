@@ -48,7 +48,7 @@ impl Label {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LabelTable {
     /// Sorted by arity. So inbuilts[0] will be all inbuilts with arity 0
     /// inbuilts[1] will be all inbuilts with arity 1, etc.

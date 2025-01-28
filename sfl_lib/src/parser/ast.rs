@@ -196,7 +196,7 @@ impl AST {
         self.vec.len() - 1
     }
 
-    pub fn expr_eq(&mut self, n1: usize, n2: usize) -> bool {
+    pub fn expr_eq(&self, n1: usize, n2: usize) -> bool {
         match (&self.get(n1).t, &self.get(n2).t) {
             (ASTNodeType::Identifier, ASTNodeType::Identifier)
             | (ASTNodeType::Literal, ASTNodeType::Literal) => {
@@ -279,18 +279,34 @@ impl AST {
     }
 
     pub fn do_rc_subst_and_identical_rcs_borrowed(&mut self, rc0: &RCPair, rcs: &Vec<&RCPair>) {
+        self.do_rc_subst_and_identical_substs_borrowed(rc0);
+        // #[cfg(debug_assertions)]
+        // let _rc0_0_str = self.to_string_sugar(rc0.0, false);
+        // #[cfg(debug_assertions)]
+        // let _rc1_0_str = rc0.1.to_string_sugar(rc0.1.root, false);
+
+        // for rc in rcs {
+        //     #[cfg(debug_assertions)]
+        //     let _this_rc = self.to_string_sugar(rc.0, false);
+        //     #[cfg(debug_assertions)]
+        //     let _this_rc_1 = rc.1.to_string_sugar(rc.1.root, false);
+        //     if self.expr_eq(rc0.0, rc.0) {
+        //         self.do_rc_subst(rc);
+        //     }
+        // }
+    }
+
+    pub fn do_rc_subst_and_identical_substs_borrowed(&mut self, rc0: &RCPair) {
         #[cfg(debug_assertions)]
         let _rc0_0_str = self.to_string_sugar(rc0.0, false);
         #[cfg(debug_assertions)]
         let _rc1_0_str = rc0.1.to_string_sugar(rc0.1.root, false);
 
-        for rc in rcs {
-            #[cfg(debug_assertions)]
-            let _this_rc = self.to_string_sugar(rc.0, false);
-            #[cfg(debug_assertions)]
-            let _this_rc_1 = rc.1.to_string_sugar(rc.1.root, false);
-            if self.expr_eq(rc0.0, rc.0) {
-                self.do_rc_subst(rc);
+
+        // Its important that the ast contains no orphans before this function is called
+        for node in 0..self.vec.len() {
+            if self.expr_eq(rc0.0, node) {
+                self.do_rc_subst(&(node, rc0.1.clone()));
             }
         }
     }

@@ -2,7 +2,7 @@
 mod utils;
 
 use sfl_lib::{
-    find_redex_contraction_pairs, infer_or_check_assignment_types, LabelTable, Parser, RCPair, AST,
+    find_all_redex_contraction_pairs, infer_or_check_assignment_types, LabelTable, Parser, RCPair, AST,
 };
 use wasm_bindgen::prelude::*;
 
@@ -60,10 +60,11 @@ pub unsafe fn get_rcs_len(rcs: *mut Vec<RawRC>) -> usize {
 }
 
 #[wasm_bindgen]
-pub unsafe fn pick_rc_and_free(info: &mut RawASTInfo, rcs: *mut Vec<RawRC>, to_subst: usize) {
+pub unsafe fn pick_rc_and_free(info: &mut RawASTInfo, rcs: *mut Vec<RawRC>, to_subst: usize) -> RawASTInfo {
     let rcs = &*rcs;
 
     let ast = &mut *info.ast;
+    let lt = &*info.lt;
     let mut rust_rcs = vec![];
 
     log!("len: {}\nchosen: {}", rcs.len(), to_subst);
@@ -79,6 +80,16 @@ pub unsafe fn pick_rc_and_free(info: &mut RawASTInfo, rcs: *mut Vec<RawRC>, to_s
         log!("{}", ast.rc_to_str(&*rc.redex));
         rc.free();
     }
+
+    // clone to cleanup and remove orphan nodes
+    let ast2 = ast.clone_node(ast.root);
+    
+    // Drop the original AST
+    drop(Box::from_raw(ast));
+    return RawASTInfo {
+        ast: Box::into_raw(Box::new(ast2)),
+        lt: Box::into_raw(Box::new(lt.clone())),
+    };
 }
 
 #[wasm_bindgen]
@@ -118,7 +129,7 @@ pub unsafe fn get_redexes(info: &RawASTInfo) -> *mut Vec<RawRC> {
     let main_assign = ast.get_assign_to(module, "main".to_string()).unwrap();
     let main_expr = ast.get_assign_exp(main_assign);
     let mut rcs = vec![];
-    for rc in find_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &lt) {
+    for rc in find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &lt) {
         let from_str = Box::into_raw(Box::new(ast.to_string_sugar(rc.0, false).clone()));
         let to_string = Box::into_raw(Box::new(rc.1.to_string_sugar(rc.1.root, false).clone()));
         rcs.push(RawRC {

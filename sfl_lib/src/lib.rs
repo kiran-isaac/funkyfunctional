@@ -3,7 +3,7 @@ mod functions;
 mod parser;
 mod types;
 
-pub use find_redexes::{find_redex_contraction_pairs, RCPair};
+pub use find_redexes::{find_all_redex_contraction_pairs, RCPair};
 pub use functions::LabelTable;
 pub use parser::ast::{ASTNode, ASTNodeType, AST};
 pub use parser::Parser;

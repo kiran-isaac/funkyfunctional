@@ -20,14 +20,10 @@ function App() {
     }
 
     const rc_callback = (rc_index: number) => {
-      wasm.pick_rc_and_free(ast, rcs, rc_index);
+      ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
       setAstString(wasm.to_string(ast));
       generateRCs(ast);
     };
-
-    const laziest = wasm.get_laziest(ast, rcs);
-
-    console.log(laziest);
 
     // const rc_elems = [<div key={0}><button className="rc" id="laziest" onClick={() => rc_callback(laziest)}>Laziest</button><br /></div>];
     const rc_elems = [];

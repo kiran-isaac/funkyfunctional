@@ -6,13 +6,13 @@ fn full_run_test(program: String) -> String {
     let lt = infer_or_check_assignment_types(&mut ast, module).unwrap();
     let mut exp = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
 
-    let mut rcs = find_redex_contraction_pairs(&ast, Some(ast.root), exp, &lt);
+    let mut rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), exp, &lt);
     while rcs.len() != 0 {
         let rc = &rcs[0];
         ast.do_rc_subst(rc);
 
         exp = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
-        rcs = find_redex_contraction_pairs(&ast, Some(ast.root), exp, &lt);
+        rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), exp, &lt);
     }
     ast.to_string_sugar(exp, false)
 }

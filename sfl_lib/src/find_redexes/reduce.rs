@@ -34,19 +34,16 @@ fn check_for_ready_call(
             ASTNodeType::Literal => {}
             _ => literals_only = false,
         }
+        let f_node = ast.get(f);
 
-        match ast.get(f).t {
+        match f_node.t {
             ASTNodeType::Identifier => {
                 let labels_of_arity = if let Some(lables) = lt.get_n_ary_labels(argv.len()) {
                     lables
                 } else {
                     return None;
                 };
-                let name = ast.get(f).get_value();
-
-                if name == "second" {
-                    let _y = 1 + 1;
-                }
+                let name = f_node.get_value();
 
                 return if labels_of_arity.contains_key(&name) {
                     let label = labels_of_arity.get(&name).unwrap();
@@ -56,13 +53,13 @@ fn check_for_ready_call(
                                 labels_of_arity
                                     .get(&name)
                                     .unwrap()
-                                    .call_inbuilt(ast.get(f), argv),
+                                    .call_inbuilt(f_node, argv),
                             )
                         } else {
                             None
                         }
                     } else {
-                        if !(ast.get(f).wait_for_args && literals_only) {
+                        if !(f_node.wait_for_args && literals_only) {
                             let assign = *am.get(&name).unwrap();
 
                             let assign_exp = ast.get_assign_exp(assign);
@@ -87,7 +84,7 @@ fn check_for_ready_call(
                 };
             }
             ASTNodeType::Abstraction => {
-                return if !(ast.get(f).wait_for_args && literals_only) {
+                return if !(f_node.wait_for_args && literals_only) {
                     let n_args = ast.get_n_abstr_vars(f, argv.len());
                     assert_eq!(argv.len(), n_args.len());
 
@@ -113,13 +110,18 @@ fn check_for_ready_call(
     }
 }
 
-pub fn find_redex_contraction_pairs(
+pub fn find_all_redex_contraction_pairs(
     ast: &AST,
     module: Option<usize>,
     expr: usize,
     lt: &LabelTable,
 ) -> Vec<(usize, AST)> {
     let mut pairs: Vec<(usize, AST)> = vec![];
+    let value = find_redex_contraction_pair(ast, module, expr, lt);
+    if let Some(v) = value {
+        pairs.push(v);
+    }
+    return pairs;
 
     #[cfg(debug_assertions)]
     let _exp_str = ast.to_string_sugar(expr, false);
@@ -134,8 +136,8 @@ pub fn find_redex_contraction_pairs(
     match ast.get(expr).t {
         ASTNodeType::Literal | ASTNodeType::Abstraction => {}
         ASTNodeType::Pair => {
-            let left_rcs = find_redex_contraction_pairs(ast, module, ast.get_first(expr), lt);
-            let right_rcs = find_redex_contraction_pairs(ast, module, ast.get_second(expr), lt);
+            let left_rcs = find_all_redex_contraction_pairs(ast, module, ast.get_first(expr), lt);
+            let right_rcs = find_all_redex_contraction_pairs(ast, module, ast.get_second(expr), lt);
             pairs.extend(left_rcs);
             pairs.extend(right_rcs);
         }
@@ -168,11 +170,71 @@ pub fn find_redex_contraction_pairs(
                 pairs.push((expr, inbuilt_reduction));
             }
 
-            pairs.extend(find_redex_contraction_pairs(ast, module, f, &lt));
-            pairs.extend(find_redex_contraction_pairs(ast, module, x, &lt));
+            pairs.extend(find_all_redex_contraction_pairs(ast, module, f, &lt));
+            pairs.extend(find_all_redex_contraction_pairs(ast, module, x, &lt));
         }
         _ => unreachable!("Expected expression"),
     }
 
     pairs
+}
+
+
+pub fn find_redex_contraction_pair(
+    ast: &AST,
+    module: Option<usize>,
+    expr: usize,
+    lt: &LabelTable,
+) -> Option<RCPair> {
+    #[cfg(debug_assertions)]
+    let _exp_str = ast.to_string_sugar(expr, false);
+
+    // Dont need to worry about this as main must be at the end, so everything defined in
+    // the module is defined here
+    let am: HashMap<String, usize> = match module {
+        Some(m) => ast.get_assigns_map(m),
+        None => HashMap::new(),
+    };
+
+    match ast.get(expr).t {
+        ASTNodeType::Literal | ASTNodeType::Abstraction => {None}
+        ASTNodeType::Pair => {
+            if let Some(left_rc) = find_redex_contraction_pair(ast, module, ast.get_first(expr), lt) {
+                Some(left_rc)
+            } else {
+                find_redex_contraction_pair(ast, module, ast.get_second(expr), lt)
+            }
+        }
+        ASTNodeType::Identifier => {
+            let value = ast.get(expr).get_value();
+
+            // It should not be non zero_ary func as otherwise it would be caught by the app case
+            if let Some(labels) = lt.get_n_ary_labels(0) {
+                if labels.contains_key(&value) {
+                    let label = labels.get(&value).unwrap();
+
+                    if label.is_inbuilt() {
+                        let inbuilt = label.call_inbuilt(&ast.get(expr), vec![]);
+                        Some((expr, inbuilt))
+                    } else {
+                        let assign = *am.get(&value).unwrap();
+                        let assign_exp = ast.get_assign_exp(assign);
+                        Some((expr, ast.clone_node(assign_exp)))
+                    }
+                } else {None}
+            } else {
+                unreachable!("No label match: {}", value);
+            }
+        }
+        ASTNodeType::Application => {
+            if let Some(ready_call_reduction) = check_for_ready_call(ast, expr, &lt, am) {
+                Some((expr, ready_call_reduction))
+            } else if let Some(f_rc) = find_redex_contraction_pair(ast, module, ast.get_func(expr), lt) {
+                Some(f_rc)
+            } else {
+                find_redex_contraction_pair(ast, module, ast.get_arg(expr), lt)
+            }
+        }
+        _ => unreachable!("Expected expression"),
+    }
 }
