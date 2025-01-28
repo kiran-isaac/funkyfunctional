@@ -11,6 +11,12 @@
     overflow-x: auto;
 }
 
+#ASTHistory {
+    list-style: none;
+    padding: 0px;
+    margin: 0px;
+}
+
 ul#RCArea {
     width: 98%;
     padding: 0px;

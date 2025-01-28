@@ -301,7 +301,6 @@ impl AST {
         #[cfg(debug_assertions)]
         let _rc1_0_str = rc0.1.to_string_sugar(rc0.1.root, false);
 
-
         // Its important that the ast contains no orphans before this function is called
         for node in 0..self.vec.len() {
             if self.expr_eq(rc0.0, node) {
@@ -412,7 +411,14 @@ impl AST {
             ASTNodeType::Abstraction => {
                 let var = self.append(other, n.children[0]);
                 let exp = self.append(other, other.get_abstr_expr(node));
-                self.add_abstraction(var, exp, n.line, n.col)
+                let s = self.add_abstraction(var, exp, n.line, n.col);
+                if n.fancy_assign_abst_syntax {
+                    self.fancy_assign_abst_syntax(s);
+                }
+                if n.wait_for_args {
+                    self.wait_for_args(s);
+                }
+                s
             }
             ASTNodeType::Module => {
                 let mut assigns = vec![];

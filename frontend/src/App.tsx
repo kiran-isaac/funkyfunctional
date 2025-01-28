@@ -4,12 +4,13 @@ import * as wasm from 'sfl_wasm_lib'
 import './App.css'
 import RC from './RC';
 import { DefinitionWindow, DefinitionSpawnButton } from './help';
+import ASTHistory from './ASTHistory';
 
 function App() {
-  const [astString, setAstString] = useState("");
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
   const [errorString, setErrorString] = useState("");
   const [definitionIsVisible, setDefinitionIsVisible] = useState(true);
+  const [astHistory, setAstHistory] = useState<wasm.RawASTInfo[]>([]);
 
   const generateRCs = (ast: wasm.RawASTInfo, multiple: boolean) => {
     try {
@@ -24,8 +25,13 @@ function App() {
       }
 
       const rc_callback = (rc_index: number) => {
+        // add the current ast to the history
+        // add the current ast to the history
+        setAstHistory((prevAstHistory) => {
+          const newAstHistory = [...prevAstHistory, ast];
+          return newAstHistory;
+        });
         ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
-        setAstString(wasm.to_string(ast));
         generateRCs(ast, multiple);
       };
 
@@ -39,7 +45,6 @@ function App() {
       setRcs(rc_elems);
     } catch (e) {
       setErrorString(e as string)
-      setAstString("")
       setRcs([])
     }
   }
@@ -47,13 +52,12 @@ function App() {
   const handleRun = (programInput: string, multiple: boolean) => {
     try {
       const ast = wasm.parse(programInput);
-      setAstString(wasm.to_string(ast))
+      astHistory.push(ast);
       generateRCs(ast, multiple);
 
       setErrorString("")
     } catch (e) {
       setErrorString(e as string)
-      setAstString("")
       setRcs([])
     };
   };
@@ -68,7 +72,7 @@ function App() {
       <div id="Spacer"></div>
       <div id="TextArea">
         <div id="ASTArea">
-          <pre>{astString}</pre>
+          <pre><ASTHistory astHistory={astHistory} /></pre>
         </div>
         <div id="Error">
           <pre>{errorString}</pre>
