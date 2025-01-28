@@ -1,5 +1,5 @@
 import "./input.css";
-import CodeMirror from '@uiw/react-codemirror'; 
+import CodeMirror from '@uiw/react-codemirror';
 import { SetStateAction, useCallback, useState } from "react";
 import { okaidia } from '@uiw/codemirror-theme-okaidia';
 
@@ -9,11 +9,14 @@ const examples = {
 }
 
 interface InputProps {
-    onRun: (editorValue: string) => void;
+    onRunMultiple: (editorValue: string) => void;
+    onRunSingle: (editorValue: string) => void;
 }
 
-function Input({ onRun }: InputProps) {
+function Input({ onRunMultiple, onRunSingle }: InputProps) {
     const [editorValue, setEditorValue] = useState(examples.fac);
+
+    // eslint-disable-next-line 
     const editorOnChange = useCallback((val: SetStateAction<string>, _: any) => {
         setEditorValue(val);
     }, []);
@@ -25,9 +28,10 @@ function Input({ onRun }: InputProps) {
                 width="100%"
                 value={editorValue}
                 onChange={editorOnChange}
-                theme={okaidia} 
+                theme={okaidia}
             /></div>
-            <button id="RunButton" onClick={() => onRun(editorValue)}>Run</button>
+            {/* <button className="runbutton" id="RunButtonSingle" onClick={() => onRunSingle(editorValue)}>Run 1</button> */}
+            <button className="runbutton" id="RunButtonMultiple" onClick={() => onRunMultiple(editorValue)}>Run</button>
         </>
     );
 }

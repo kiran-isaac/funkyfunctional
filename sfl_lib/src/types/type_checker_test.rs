@@ -1,5 +1,5 @@
 use super::*;
-use crate::{find_redex_contraction_pairs, Parser};
+use crate::{find_all_redex_contraction_pairs, Parser};
 
 fn tc_test_should_pass(program: &str) {
     let mut ast = Parser::from_string(program.to_string())
@@ -178,7 +178,7 @@ fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
     let mut main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
     let module = ast.root;
     let lt = &infer_or_check_assignment_types(&mut ast, module)?;
-    let mut rcs = find_redex_contraction_pairs(&ast, Some(ast.root), main_expr, lt);
+    let mut rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, lt);
     while rcs.len() > 0 {
         #[cfg(debug_assertions)]
         let _module_str = ast.to_string_sugar(ast.root, true);
@@ -190,7 +190,7 @@ fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
         main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
         let module = ast.root;
         let lt = &infer_or_check_assignment_types(&mut ast, module)?;
-        rcs = find_redex_contraction_pairs(&ast, Some(ast.root), main_expr, lt);
+        rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, lt);
     }
     Ok(())
 }

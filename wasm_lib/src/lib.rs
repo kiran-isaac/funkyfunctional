@@ -2,7 +2,8 @@
 mod utils;
 
 use sfl_lib::{
-    find_redex_contraction_pairs, infer_or_check_assignment_types, LabelTable, Parser, RCPair, AST,
+    find_all_redex_contraction_pairs, find_single_redex_contraction_pair,
+    infer_or_check_assignment_types, LabelTable, Parser, RCPair, AST,
 };
 use wasm_bindgen::prelude::*;
 
@@ -60,57 +61,39 @@ pub unsafe fn get_rcs_len(rcs: *mut Vec<RawRC>) -> usize {
 }
 
 #[wasm_bindgen]
-pub unsafe fn pick_rc_and_free(info: &mut RawASTInfo, rcs: *mut Vec<RawRC>, to_subst: usize) {
+pub unsafe fn pick_rc_and_free(
+    info: &mut RawASTInfo,
+    rcs: *mut Vec<RawRC>,
+    to_subst: usize,
+) -> RawASTInfo {
     let rcs = &*rcs;
 
     let ast = &mut *info.ast;
+    let lt = &*info.lt;
     let mut rust_rcs = vec![];
 
-    log!("len: {}\nchosen: {}", rcs.len(), to_subst);
-
     for rc in rcs {
-        // log!("rc: {}", ast.rc_to_str(&*rc.redex));
         rust_rcs.push(&*rc.redex);
     }
 
-    ast.do_rc_subst_and_identical_rcs_borrowed(&*rcs[to_subst].redex, &rust_rcs);
+    let mut ast2 = ast.clone();
+    ast2.do_rc_subst_and_identical_substs_borrowed(&*rcs[to_subst].redex);
 
     for rc in rcs {
-        log!("{}", ast.rc_to_str(&*rc.redex));
         rc.free();
     }
+
+    // clone to cleanup and remove orphan nodes
+    let ast2 = ast2.clone_node(ast2.root);
+
+    return RawASTInfo {
+        ast: Box::into_raw(Box::new(ast2)),
+        lt: Box::into_raw(Box::new(lt.clone())),
+    };
 }
 
 #[wasm_bindgen]
-pub unsafe fn get_laziest(info: &RawASTInfo, rcs: *mut Vec<RawRC>) -> usize {
-    let info = info;
-    let ast = &mut *info.ast;
-    let rcs = &*rcs;
-
-    let module = ast.root;
-    let main_assign = ast.get_assign_to(module, "main".to_string()).unwrap();
-    let main_expr = ast.get_assign_exp(main_assign);
-
-    let mut rust_rcs = vec![];
-
-    for rc in rcs {
-        // log!("rc: {}", ast.rc_to_str(&*rc.redex));
-        rust_rcs.push(&*rc.redex);
-    }
-
-    let laziest = ast.get_laziest_rc_borrowed(main_expr, &rust_rcs).unwrap();
-
-    for (i, rc) in rust_rcs.iter().enumerate() {
-        if rc.0 == laziest.0 {
-            return i;
-        }
-    }
-
-    unreachable!("FAILED TO GET LAZIEST");
-}
-
-#[wasm_bindgen]
-pub unsafe fn get_redexes(info: &RawASTInfo) -> *mut Vec<RawRC> {
+pub unsafe fn get_all_redexes(info: &RawASTInfo) -> *mut Vec<RawRC> {
     let info = info;
     let ast = &mut *info.ast;
     let lt = &*info.lt;
@@ -118,7 +101,7 @@ pub unsafe fn get_redexes(info: &RawASTInfo) -> *mut Vec<RawRC> {
     let main_assign = ast.get_assign_to(module, "main".to_string()).unwrap();
     let main_expr = ast.get_assign_exp(main_assign);
     let mut rcs = vec![];
-    for rc in find_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &lt) {
+    for rc in find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &lt) {
         let from_str = Box::into_raw(Box::new(ast.to_string_sugar(rc.0, false).clone()));
         let to_string = Box::into_raw(Box::new(rc.1.to_string_sugar(rc.1.root, false).clone()));
         rcs.push(RawRC {
@@ -128,6 +111,30 @@ pub unsafe fn get_redexes(info: &RawASTInfo) -> *mut Vec<RawRC> {
         });
     }
     Box::into_raw(Box::new(rcs))
+}
+
+#[wasm_bindgen]
+pub unsafe fn get_one_redex(info: &RawASTInfo) -> *mut Vec<RawRC> {
+    let info = info;
+    let ast = &mut *info.ast;
+    let lt = &*info.lt;
+    let module = ast.root;
+    let main_assign = ast.get_assign_to(module, "main".to_string()).unwrap();
+    let main_expr = ast.get_assign_exp(main_assign);
+
+    Box::into_raw(Box::new(
+        if let Some(rc) = find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt) {
+            let from_str = Box::into_raw(Box::new(ast.to_string_sugar(rc.0, false).clone()));
+            let to_string = Box::into_raw(Box::new(rc.1.to_string_sugar(rc.1.root, false).clone()));
+            vec![RawRC {
+                from_str: from_str,
+                to_str: to_string,
+                redex: Box::into_raw(Box::new(rc)),
+            }]
+        } else {
+            vec![]
+        },
+    ))
 }
 
 #[wasm_bindgen]
@@ -153,3 +160,26 @@ pub unsafe fn to_string(info: &RawASTInfo) -> String {
     let ast = &*info.ast;
     ast.to_string_sugar(ast.root, true)
 }
+
+#[wasm_bindgen]
+pub unsafe fn main_to_string(info: &RawASTInfo) -> String {
+    let info = info;
+    let ast = &*info.ast;
+    let main_assign = ast.get_assign_to(ast.root, "main".to_string()).unwrap();
+    let main_expr = ast.get_assign_exp(main_assign);
+    ast.to_string_sugar(main_expr, true)
+}
+
+// #[wasm_bindgen]
+// pub unsafe fn get_highlight_regions(
+//     info: &RawASTInfo,
+//     rcs: *mut Vec<RawRC>,
+//     to_subst: usize,
+// ) -> String {
+//     let info = info;
+//     let ast = &*info.ast;
+//     let main_assign = ast.get_assign_to(ast.root, "main".to_string()).unwrap();
+//     let main_expr = ast.get_assign_exp(main_assign);
+//     let rc_expr = (&*(&*rcs)[to_subst].redex).0;
+
+// }

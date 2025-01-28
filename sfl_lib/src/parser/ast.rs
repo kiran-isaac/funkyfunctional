@@ -196,7 +196,7 @@ impl AST {
         self.vec.len() - 1
     }
 
-    pub fn expr_eq(&mut self, n1: usize, n2: usize) -> bool {
+    pub fn expr_eq(&self, n1: usize, n2: usize) -> bool {
         match (&self.get(n1).t, &self.get(n2).t) {
             (ASTNodeType::Identifier, ASTNodeType::Identifier)
             | (ASTNodeType::Literal, ASTNodeType::Literal) => {
@@ -293,6 +293,30 @@ impl AST {
                 self.do_rc_subst(rc);
             }
         }
+    }
+
+    pub fn do_rc_subst_and_identical_substs_borrowed(&mut self, rc0: &RCPair) {
+        #[cfg(debug_assertions)]
+        let _rc0_0_str = self.to_string_sugar(rc0.0, false);
+        #[cfg(debug_assertions)]
+        let _rc1_0_str = rc0.1.to_string_sugar(rc0.1.root, false);
+
+        // Its important that the ast contains no orphans before this function is called
+        for node in 0..self.vec.len() {
+            if self.expr_eq(rc0.0, node) {
+                self.do_rc_subst(&(node, rc0.1.clone()));
+            }
+        }
+    }
+
+    pub fn get_identical(&self, expr: usize) -> Vec<usize> {
+        let mut identical = vec![];
+        for node in 0..self.vec.len() {
+            if self.expr_eq(expr, node) {
+                identical.push(node);
+            }
+        }
+        identical
     }
 
     pub fn rc_to_str(&self, rc: &RCPair) -> String {
@@ -397,7 +421,14 @@ impl AST {
             ASTNodeType::Abstraction => {
                 let var = self.append(other, n.children[0]);
                 let exp = self.append(other, other.get_abstr_expr(node));
-                self.add_abstraction(var, exp, n.line, n.col)
+                let s = self.add_abstraction(var, exp, n.line, n.col);
+                if n.fancy_assign_abst_syntax {
+                    self.fancy_assign_abst_syntax(s);
+                }
+                if n.wait_for_args {
+                    self.wait_for_args(s);
+                }
+                s
             }
             ASTNodeType::Module => {
                 let mut assigns = vec![];

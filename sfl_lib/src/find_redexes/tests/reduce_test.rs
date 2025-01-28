@@ -4,18 +4,18 @@
 //     ASTNodeType, Parser, AST,
 // };
 
-// /// O(n^2) so only use for small things
-// fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
-//     for x in a {
-//         let mut found = false;
-//         for y in b {
-//             if x == y {
-//                 found = true;
-//             }
-//         }
-//         assert!(found);
-//     }
-// }
+/// O(n^2) so only use for small things
+fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
+    for x in a {
+        let mut found = false;
+        for y in b {
+            if x == y {
+                found = true;
+            }
+        }
+        assert!(found);
+    }
+}
 
 // fn rc_pair_to_string(ast: &AST, rc: &RCPair) -> String {
 //     format!("{} => {:?}", ast.to_string(rc.0), rc.1)
@@ -78,22 +78,39 @@
 //     }
 // }
 
-// #[test]
-// fn basic_add_test() {
-//     let program = "main = add 5 1";
-//     let ast = Parser::from_string(program.to_string())
-//         .parse_module()
-//         .unwrap();
+use crate::{find_all_redex_contraction_pairs, infer_or_check_assignment_types, LabelTable, Parser};
+use crate::find_redexes::reduce::find_single_redex_contraction_pair;
 
-//     let module = ast.root;
-//     let exp = ast.get_assign_exp(ast.get_main(module));
+#[test]
+fn basic_add_test() {
+    let program = "main = add 5 1";
+    let ast = Parser::from_string(program.to_string())
+        .parse_module()
+        .unwrap();
 
-//     let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
-//     assert!(rcs.len() == 1);
+    let module = ast.root;
+    let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
 
-//     let rc = &rcs[0];
-//     assert_eq!(rc_pair_to_string(&ast, rc), "add 5 1 => 6")
-// }
+    let rcs = find_all_redex_contraction_pairs(&ast, Some(module), exp, &LabelTable::new());
+    assert!(rcs.len() == 1);
+    println!("{}", ast.rc_to_str(&rcs[0]));
+}
+
+#[test]
+fn waits_for_eval() {
+    let program = "func x = x\n  main = func (add 5 1)";
+    let mut ast = Parser::from_string(program.to_string())
+        .parse_module()
+        .unwrap();
+
+    let module = ast.root;
+    let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
+
+    let lt = infer_or_check_assignment_types(&mut ast, module).unwrap();
+
+    let rcs = find_single_redex_contraction_pair(&ast, Some(module), exp, &lt).unwrap();
+    println!("{}", ast.rc_to_str(&rcs));
+}
 
 // #[test]
 // fn multi_op_test() {
@@ -108,9 +125,9 @@
 //     let mut ast = Parser::from_string(program).parse_module().unwrap();
 
 //     let module = ast.root;
-//     let exp = ast.get_assign_exp(ast.get_main(module));
+//     let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
 
-//     let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
+//     let rcs = find_redex_contraction_pairs(&ast, Some(module), exp, &LabelTable::new());
 
 //     let correct = vec![
 //         format!("add {} {} => {}", a_int, b_int, a_int + b_int),
@@ -120,7 +137,7 @@
 //     let proposed: Vec<String> = rcs
 //         .clone()
 //         .into_iter()
-//         .map(|rc| rc_pair_to_string(&ast, &rc))
+//         .map(|rc| ast.rc_to_str(&rc))
 //         .collect();
 
 //     assert_eq_in_any_order(&correct, &proposed);
@@ -129,7 +146,7 @@
 //         ast.do_rc_subst(&(old, new));
 //     }
 
-//     let rcs = find_redex_contraction_pairs(&ast, module, exp, &LabelTable::new());
+//     let rcs = find_redex_contraction_pairs(&ast, Some(module), exp, &LabelTable::new());
 //     assert!(rcs.len() == 1);
 //     for (old, new) in rcs {
 //         ast.do_rc_subst(&(old, new));
