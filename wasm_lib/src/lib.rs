@@ -93,34 +93,6 @@ pub unsafe fn pick_rc_and_free(
 }
 
 #[wasm_bindgen]
-pub unsafe fn get_laziest(info: &RawASTInfo, rcs: *mut Vec<RawRC>) -> usize {
-    let info = info;
-    let ast = &mut *info.ast;
-    let rcs = &*rcs;
-
-    let module = ast.root;
-    let main_assign = ast.get_assign_to(module, "main".to_string()).unwrap();
-    let main_expr = ast.get_assign_exp(main_assign);
-
-    let mut rust_rcs = vec![];
-
-    for rc in rcs {
-        // log!("rc: {}", ast.rc_to_str(&*rc.redex));
-        rust_rcs.push(&*rc.redex);
-    }
-
-    let laziest = ast.get_laziest_rc_borrowed(main_expr, &rust_rcs).unwrap();
-
-    for (i, rc) in rust_rcs.iter().enumerate() {
-        if rc.0 == laziest.0 {
-            return i;
-        }
-    }
-
-    unreachable!("FAILED TO GET LAZIEST");
-}
-
-#[wasm_bindgen]
 pub unsafe fn get_all_redexes(info: &RawASTInfo) -> *mut Vec<RawRC> {
     let info = info;
     let ast = &mut *info.ast;
@@ -188,3 +160,26 @@ pub unsafe fn to_string(info: &RawASTInfo) -> String {
     let ast = &*info.ast;
     ast.to_string_sugar(ast.root, true)
 }
+
+#[wasm_bindgen]
+pub unsafe fn main_to_string(info: &RawASTInfo) -> String {
+    let info = info;
+    let ast = &*info.ast;
+    let main_assign = ast.get_assign_to(ast.root, "main".to_string()).unwrap();
+    let main_expr = ast.get_assign_exp(main_assign);
+    ast.to_string_sugar(main_expr, true)
+}
+
+// #[wasm_bindgen]
+// pub unsafe fn get_highlight_regions(
+//     info: &RawASTInfo,
+//     rcs: *mut Vec<RawRC>,
+//     to_subst: usize,
+// ) -> String {
+//     let info = info;
+//     let ast = &*info.ast;
+//     let main_assign = ast.get_assign_to(ast.root, "main".to_string()).unwrap();
+//     let main_expr = ast.get_assign_exp(main_assign);
+//     let rc_expr = (&*(&*rcs)[to_subst].redex).0;
+
+// }

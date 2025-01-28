@@ -309,6 +309,16 @@ impl AST {
         }
     }
 
+    pub fn get_identical(&self, expr: usize) -> Vec<usize> {
+        let mut identical = vec![];
+        for node in 0..self.vec.len() {
+            if self.expr_eq(expr, node) {
+                identical.push(node);
+            }
+        }
+        identical
+    }
+
     pub fn rc_to_str(&self, rc: &RCPair) -> String {
         self.to_string_sugar(rc.0, false) + " -> " + &rc.1.to_string_sugar(rc.1.root, false)
     }
