@@ -10,10 +10,10 @@ const examples = {
 
 interface InputProps {
     onRunMultiple: (editorValue: string) => void;
-    onRunSingle: (editorValue: string) => void;
+    // onRunSingle: (editorValue: string) => void;
 }
 
-function Input({ onRunMultiple, onRunSingle }: InputProps) {
+function Input({ onRunMultiple }: InputProps) {
     const [editorValue, setEditorValue] = useState(examples.fac);
 
     // eslint-disable-next-line 

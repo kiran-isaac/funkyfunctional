@@ -69,7 +69,10 @@ function App() {
       <DefinitionSpawnButton definitionIsVisible={definitionIsVisible} setDefinitionIsVisible={setDefinitionIsVisible} />
       <DefinitionWindow definitionIsVisible={definitionIsVisible} setDefinitionIsVisible={setDefinitionIsVisible} />
       <div id="inputContainer">
-        <Input onRunMultiple={(editorValue) => handleRun(editorValue, true)} onRunSingle={(editorValue) => handleRun(editorValue, false)} />
+        <Input 
+          onRunMultiple={(editorValue) => handleRun(editorValue, true)} 
+          // onRunSingle={(editorValue) => handleRun(editorValue, false)} 
+        />
       </div>
       <div id="Spacer"></div>
       <div id="TextArea">
