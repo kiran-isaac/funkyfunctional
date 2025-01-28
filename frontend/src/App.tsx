@@ -7,6 +7,7 @@ import { DefinitionWindow, DefinitionSpawnButton } from './help';
 import ASTHistory from './ASTHistory';
 
 function App() {
+  const [originalAstString, setOriginalAstString] = useState("");
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
   const [errorString, setErrorString] = useState("");
   const [definitionIsVisible, setDefinitionIsVisible] = useState(true);
@@ -52,7 +53,8 @@ function App() {
   const handleRun = (programInput: string, multiple: boolean) => {
     try {
       const ast = wasm.parse(programInput);
-      astHistory.push(ast);
+      setAstHistory([]);
+      setOriginalAstString(wasm.to_string(ast));
       generateRCs(ast, multiple);
 
       setErrorString("")
@@ -72,7 +74,7 @@ function App() {
       <div id="Spacer"></div>
       <div id="TextArea">
         <div id="ASTArea">
-          <pre><ASTHistory astHistory={astHistory} /></pre>
+          <pre>{originalAstString}</pre>
         </div>
         <div id="Error">
           <pre>{errorString}</pre>
@@ -80,6 +82,7 @@ function App() {
         <ul id="RCArea">
           {rcs}
         </ul>
+        <pre><ASTHistory astHistory={astHistory} /></pre>
       </div>
     </>
   )

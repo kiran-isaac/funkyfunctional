@@ -76,17 +76,18 @@ pub unsafe fn pick_rc_and_free(
         rust_rcs.push(&*rc.redex);
     }
 
-    ast.do_rc_subst_and_identical_substs_borrowed(&*rcs[to_subst].redex);
+    let mut ast2 = ast.clone();
+    ast2.do_rc_subst_and_identical_substs_borrowed(&*rcs[to_subst].redex);
 
     for rc in rcs {
         rc.free();
     }
 
     // clone to cleanup and remove orphan nodes
-    let ast = ast.clone_node(ast.root);
+    let ast2 = ast2.clone_node(ast2.root);
 
     return RawASTInfo {
-        ast: Box::into_raw(Box::new(ast)),
+        ast: Box::into_raw(Box::new(ast2)),
         lt: Box::into_raw(Box::new(lt.clone())),
     };
 }

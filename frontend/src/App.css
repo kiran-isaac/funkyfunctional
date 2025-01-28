@@ -3,18 +3,19 @@
     width: 100%;
 }
 
-#ASTArea,
-#Error {
-    width: 96%;
-    padding-left: 2%;
-    margin: 0px;
-    overflow-x: auto;
-}
-
 #ASTHistory {
     list-style: none;
     padding: 0px;
     margin: 0px;
+}
+
+#ASTArea,
+#Error,
+#ASTHistory {
+    width: 96%;
+    padding-left: 2%;
+    margin: 0px;
+    overflow-x: auto;
 }
 
 ul#RCArea {

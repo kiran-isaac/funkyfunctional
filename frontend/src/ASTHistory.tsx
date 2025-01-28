@@ -7,11 +7,11 @@ interface ASTHistoryProps {
 const ASTHistory = ({ astHistory }: ASTHistoryProps) => {
     const astStrings = [];
     for (let i = 0; i < astHistory.length; i++) {
-        astStrings.push(wasm.to_string(astHistory[i]));
+        astStrings.push(wasm.to_string(astHistory[i]) + "\n");
     }
     return (
         <ul id="ASTHistory">
-            {astStrings.map((astString, i) => <li key={i}>{astString}</li>)}
+            {astStrings.map((astString, i) => <li key={i}>{astString}<br /></li>)}
         </ul>
     );
 }
