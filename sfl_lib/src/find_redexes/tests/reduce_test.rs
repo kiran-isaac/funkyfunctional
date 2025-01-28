@@ -79,7 +79,7 @@ fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
 // }
 
 use crate::{find_all_redex_contraction_pairs, infer_or_check_assignment_types, LabelTable, Parser};
-use crate::find_redexes::reduce::find_redex_contraction_pair;
+use crate::find_redexes::reduce::find_single_redex_contraction_pair;
 
 #[test]
 fn basic_add_test() {
@@ -108,7 +108,7 @@ fn waits_for_eval() {
 
     let lt = infer_or_check_assignment_types(&mut ast, module).unwrap();
 
-    let rcs = find_redex_contraction_pair(&ast, Some(module), exp, &lt).unwrap();
+    let rcs = find_single_redex_contraction_pair(&ast, Some(module), exp, &lt).unwrap();
     println!("{}", ast.rc_to_str(&rcs));
 }
 

@@ -2,7 +2,8 @@
 mod utils;
 
 use sfl_lib::{
-    find_all_redex_contraction_pairs, infer_or_check_assignment_types, LabelTable, Parser, RCPair, AST,
+    find_all_redex_contraction_pairs, find_single_redex_contraction_pair,
+    infer_or_check_assignment_types, LabelTable, Parser, RCPair, AST,
 };
 use wasm_bindgen::prelude::*;
 
@@ -60,7 +61,11 @@ pub unsafe fn get_rcs_len(rcs: *mut Vec<RawRC>) -> usize {
 }
 
 #[wasm_bindgen]
-pub unsafe fn pick_rc_and_free(info: &mut RawASTInfo, rcs: *mut Vec<RawRC>, to_subst: usize) -> RawASTInfo {
+pub unsafe fn pick_rc_and_free(
+    info: &mut RawASTInfo,
+    rcs: *mut Vec<RawRC>,
+    to_subst: usize,
+) -> RawASTInfo {
     let rcs = &*rcs;
 
     let ast = &mut *info.ast;
@@ -74,7 +79,7 @@ pub unsafe fn pick_rc_and_free(info: &mut RawASTInfo, rcs: *mut Vec<RawRC>, to_s
         rust_rcs.push(&*rc.redex);
     }
 
-    ast.do_rc_subst_and_identical_rcs_borrowed(&*rcs[to_subst].redex, &rust_rcs);
+    ast.do_rc_subst_and_identical_substs_borrowed(&*rcs[to_subst].redex);
 
     for rc in rcs {
         log!("{}", ast.rc_to_str(&*rc.redex));
@@ -83,11 +88,12 @@ pub unsafe fn pick_rc_and_free(info: &mut RawASTInfo, rcs: *mut Vec<RawRC>, to_s
 
     // clone to cleanup and remove orphan nodes
     let ast2 = ast.clone_node(ast.root);
-    
     // Drop the original AST
     drop(Box::from_raw(ast));
+    let ast = ast2;
+
     return RawASTInfo {
-        ast: Box::into_raw(Box::new(ast2)),
+        ast: Box::into_raw(Box::new(ast)),
         lt: Box::into_raw(Box::new(lt.clone())),
     };
 }
@@ -121,7 +127,7 @@ pub unsafe fn get_laziest(info: &RawASTInfo, rcs: *mut Vec<RawRC>) -> usize {
 }
 
 #[wasm_bindgen]
-pub unsafe fn get_redexes(info: &RawASTInfo) -> *mut Vec<RawRC> {
+pub unsafe fn get_all_redexes(info: &RawASTInfo) -> *mut Vec<RawRC> {
     let info = info;
     let ast = &mut *info.ast;
     let lt = &*info.lt;
@@ -139,6 +145,30 @@ pub unsafe fn get_redexes(info: &RawASTInfo) -> *mut Vec<RawRC> {
         });
     }
     Box::into_raw(Box::new(rcs))
+}
+
+#[wasm_bindgen]
+pub unsafe fn get_one_redex(info: &RawASTInfo) -> *mut Vec<RawRC> {
+    let info = info;
+    let ast = &mut *info.ast;
+    let lt = &*info.lt;
+    let module = ast.root;
+    let main_assign = ast.get_assign_to(module, "main".to_string()).unwrap();
+    let main_expr = ast.get_assign_exp(main_assign);
+
+    Box::into_raw(Box::new(
+        if let Some(rc) = find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt) {
+            let from_str = Box::into_raw(Box::new(ast.to_string_sugar(rc.0, false).clone()));
+            let to_string = Box::into_raw(Box::new(rc.1.to_string_sugar(rc.1.root, false).clone()));
+            vec![RawRC {
+                from_str: from_str,
+                to_str: to_string,
+                redex: Box::into_raw(Box::new(rc)),
+            }]
+        } else {
+            vec![]
+        },
+    ))
 }
 
 #[wasm_bindgen]

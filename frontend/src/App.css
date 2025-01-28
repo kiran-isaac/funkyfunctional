@@ -3,39 +3,12 @@
     width: 100%;
 }
 
-#inputContainer {
-    background-color: #242424;
-    position: sticky;
-    height: 50%;
-    margin: 0px;
-    display: grid;
-    grid-template-columns: 90% 1fr;
-    grid-template-rows: 1fr;
-    grid-column-gap: 0px;
-    grid-row-gap: 0px;
-    width: calc(99% - 20px);
-    margin: 5px auto;
-    overflow-y: hidden;
-    overflow-x: hidden;
-}
-
 #ASTArea,
 #Error {
     width: 96%;
     padding-left: 2%;
     margin: 0px;
     overflow-x: auto;
-}
-
-@media only screen and (max-width: 1000px) {
-    #inputContainer {
-        display: grid;
-        grid-template-columns: 1fr;
-        grid-template-rows: 300px 50px;
-        grid-column-gap: 0px;
-        grid-row-gap: 5px;
-        overflow-x: hidden;
-    }
 }
 
 ul#RCArea {

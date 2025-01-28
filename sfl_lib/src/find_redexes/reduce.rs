@@ -117,11 +117,6 @@ pub fn find_all_redex_contraction_pairs(
     lt: &LabelTable,
 ) -> Vec<(usize, AST)> {
     let mut pairs: Vec<(usize, AST)> = vec![];
-    let value = find_redex_contraction_pair(ast, module, expr, lt);
-    if let Some(v) = value {
-        pairs.push(v);
-    }
-    return pairs;
 
     #[cfg(debug_assertions)]
     let _exp_str = ast.to_string_sugar(expr, false);
@@ -180,7 +175,7 @@ pub fn find_all_redex_contraction_pairs(
 }
 
 
-pub fn find_redex_contraction_pair(
+pub fn find_single_redex_contraction_pair(
     ast: &AST,
     module: Option<usize>,
     expr: usize,
@@ -199,10 +194,10 @@ pub fn find_redex_contraction_pair(
     match ast.get(expr).t {
         ASTNodeType::Literal | ASTNodeType::Abstraction => {None}
         ASTNodeType::Pair => {
-            if let Some(left_rc) = find_redex_contraction_pair(ast, module, ast.get_first(expr), lt) {
+            if let Some(left_rc) = find_single_redex_contraction_pair(ast, module, ast.get_first(expr), lt) {
                 Some(left_rc)
             } else {
-                find_redex_contraction_pair(ast, module, ast.get_second(expr), lt)
+                find_single_redex_contraction_pair(ast, module, ast.get_second(expr), lt)
             }
         }
         ASTNodeType::Identifier => {
@@ -229,10 +224,10 @@ pub fn find_redex_contraction_pair(
         ASTNodeType::Application => {
             if let Some(ready_call_reduction) = check_for_ready_call(ast, expr, &lt, am) {
                 Some((expr, ready_call_reduction))
-            } else if let Some(f_rc) = find_redex_contraction_pair(ast, module, ast.get_func(expr), lt) {
+            } else if let Some(f_rc) = find_single_redex_contraction_pair(ast, module, ast.get_func(expr), lt) {
                 Some(f_rc)
             } else {
-                find_redex_contraction_pair(ast, module, ast.get_arg(expr), lt)
+                find_single_redex_contraction_pair(ast, module, ast.get_arg(expr), lt)
             }
         }
         _ => unreachable!("Expected expression"),
