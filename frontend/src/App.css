@@ -79,3 +79,13 @@ button:focus,
 button:focus-visible {
     outline: 4px auto -webkit-focus-ring-color;
 }
+
+.expr_history .new {
+    background-color: #2600ff7e;
+    color: white;
+}
+
+.expr_history .old {
+    background-color: #ff00004f;
+    color: white;
+}
