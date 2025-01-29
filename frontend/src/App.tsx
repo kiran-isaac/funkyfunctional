@@ -10,7 +10,7 @@ function App() {
   const [originalAstString, setOriginalAstString] = useState("");
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
   const [selectedRcFromStringHistory, setSelectedRcFromStringHistory] = useState<string[]>([]);
-  const [selectedRcToString, setSelectedRcToString] = useState<string[]>([]);
+  const [selectedRcToStringHistory, setSelectedRcToStringHistory] = useState<string[]>([]);
   const [errorString, setErrorString] = useState("");
   const [definitionIsVisible, setDefinitionIsVisible] = useState(true);
   const [astHistory, setAstHistory] = useState<wasm.RawASTInfo[]>([]);
@@ -41,7 +41,7 @@ function App() {
           const newRcFromStringHistory = [...prev, from_string];
           return newRcFromStringHistory;
         });
-        setSelectedRcToString((prev) => {
+        setSelectedRcToStringHistory((prev) => {
           const newRcToString = [...prev, to_string];
           return newRcToString;
         });
@@ -69,6 +69,8 @@ function App() {
       const ast = wasm.parse(programInput);
       setAstHistory([ast]);
       setOriginalAstString(wasm.to_string(ast));
+      setSelectedRcFromStringHistory([]);
+      setSelectedRcToStringHistory([]);
       generateRCs(ast, multiple);
 
       setErrorString("")
@@ -99,7 +101,7 @@ function App() {
         <ul id="RCArea">
           {rcs}
         </ul>
-        <pre><ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToString} astHistory={astHistory} /></pre>
+        <pre><ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToStringHistory} astHistory={astHistory} /></pre>
       </div>
     </>
   )
