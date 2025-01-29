@@ -33,6 +33,7 @@ function App() {
           return newAstHistory;
         });
         ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
+				setOriginalAstString(wasm.to_string(ast));
         generateRCs(ast, multiple);
       };
 
