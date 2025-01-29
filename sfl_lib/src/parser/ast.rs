@@ -585,7 +585,7 @@ impl AST {
 
         let mut abst_ast = self.do_abst_subst(abst, *substs.last().unwrap());
         let substs = &substs[..substs.len() - 1];
-        for subst in substs {
+        for subst in substs.iter().rev() {
             let subst = abst_ast.append(self, *subst);
             abst_ast = abst_ast.do_abst_subst(abst_ast.root, subst);
         }
