@@ -112,6 +112,23 @@ fn waits_for_eval() {
     println!("{}", ast.rc_to_str(&rcs));
 }
 
+#[test]
+fn correct_abst_order() {
+    let program = "test f x y z = f x\nmain = test id 1 2 3";
+    // let program = "main = (\\f x y z. f x) id 1 2 3";
+    let mut ast = Parser::from_string(program.to_string())
+        .parse_module()
+        .unwrap();
+
+    let module = ast.root;
+    let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
+
+    let lt = infer_or_check_assignment_types(&mut ast, module).unwrap();
+
+    let rcs = find_single_redex_contraction_pair(&ast, Some(module), exp, &lt).unwrap();
+    println!("{}", ast.rc_to_str(&rcs));
+}
+
 // #[test]
 // fn multi_op_test() {
 //     let a_int = rand::random::<u16>() as i64;

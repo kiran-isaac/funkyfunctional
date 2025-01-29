@@ -23,6 +23,9 @@ fn check_for_ready_call(
     let mut x = ast.get_arg(exp);
     let mut argv = vec![];
     let mut argv_ids = vec![];
+    
+    #[cfg(debug_assertions)]
+    let mut argv_strs = vec![];
 
     // True if only literals encountered. If true, then we can call inbuilt functions
     let mut literals_only = true;
@@ -30,6 +33,10 @@ fn check_for_ready_call(
     loop {
         argv.push(ast.get(x));
         argv_ids.push(x);
+
+        #[cfg(debug_assertions)]
+        argv_strs.push(ast.to_string_sugar(x, false));
+
         match ast.get(x).t {
             ASTNodeType::Literal => {}
             _ => literals_only = false,
@@ -66,6 +73,7 @@ fn check_for_ready_call(
                             let n_args = ast.get_n_abstr_vars(assign_exp, argv.len());
                             assert_eq!(argv.len(), n_args.len());
 
+                            // Stop it being a ready call when a pair is expected but we dont have it
                             for i in 0..argv.len() {
                                 match (&argv[i].t, &ast.get(n_args[i]).t) {
                                     (ASTNodeType::Pair, ASTNodeType::Pair) => {},
