@@ -22,8 +22,7 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
     const astLIs = [];
     for (let i = astStrings.length - 1; i >= 0; i--) {
         const list: JSX.Element[] = [];
-        const rc_to = rcToHistory[i - 1];
-        const next_from = rcFromHistory[i];
+        const prev_to_this = rcToHistory[i - 1];
 
         // let next_from = "";
         // if (i < rcFromHistory.length - 1) {
@@ -33,19 +32,21 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
 
         // Get all occurences of rc_from in current, and make them bold
         if (i == astStrings.length - 1) {
-            const parts = current.split(rc_to);
+            const parts = current.split(prev_to_this);
             for (let j = 0; j < parts.length; j++) {
                 list.push(<span key={`${i}-${j}`}>{parts[j]}</span>);
                 if (j < parts.length - 1) {
-                    list.push(<span className="new" key={`${i}-${j}-new`}>{rc_to}</span>);
+                    list.push(<span className="new" key={`${i}-${j}-new`}>{prev_to_this}</span>);
                 }
             }
         } else {
-            const parts = current.split(next_from);
+            const next_from_this = rcFromHistory[i];
+            const parts = current.split(next_from_this);
+            
             for (let j = 0; j < parts.length; j++) {
                 list.push(<span key={`${i}-${j}`}>{parts[j]}</span>);
                 if (j < parts.length - 1) {
-                    list.push(<span className="old" key={`${i}-${j}-old`}>{next_from}</span>);
+                    list.push(<span className="old" key={`${i}-${j}-old`}>{next_from_this}</span>);
                 }
             }
         }

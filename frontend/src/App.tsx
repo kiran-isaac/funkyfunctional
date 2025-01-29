@@ -20,6 +20,7 @@ function App() {
       const rcs = multiple ? wasm.get_all_redexes(ast) : wasm.get_one_redex(ast);
 
       if (wasm.get_rcs_len(rcs) === 0) {
+        setRcs([]);
         return;
       }
 
@@ -46,7 +47,7 @@ function App() {
           return newRcToString;
         });
         ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
-				setOriginalAstString(wasm.to_string(ast));
+        setOriginalAstString(wasm.to_string(ast));
         generateRCs(ast, multiple);
       };
 
@@ -85,9 +86,9 @@ function App() {
       <DefinitionSpawnButton definitionIsVisible={definitionIsVisible} setDefinitionIsVisible={setDefinitionIsVisible} />
       <DefinitionWindow definitionIsVisible={definitionIsVisible} setDefinitionIsVisible={setDefinitionIsVisible} />
       <div id="inputContainer">
-        <Input 
-          onRunMultiple={(editorValue) => handleRun(editorValue, true)} 
-          onRunSingle={(editorValue) => handleRun(editorValue, false)} 
+        <Input
+          onRunMultiple={(editorValue) => handleRun(editorValue, true)}
+          onRunSingle={(editorValue) => handleRun(editorValue, false)}
         />
       </div>
       <div id="Spacer"></div>
