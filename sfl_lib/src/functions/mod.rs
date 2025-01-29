@@ -213,30 +213,6 @@ impl LabelTable {
             )),
         );
 
-        let id_type = Type::fa(
-            vec!["a".to_string()],
-            Type::f(Type::tv("a".to_string()), Type::tv("a".to_string())),
-        );
-        let const1_type = Type::fa(
-            vec!["a".to_string(), "b".to_string()],
-            Type::f(
-                Type::TypeVariable("a".to_string()),
-                Type::f(Type::tv("b".to_string()), Type::tv("a".to_string())),
-            ),
-        );
-        let const2_type = Type::fa(
-            vec!["a".to_string(), "b".to_string()],
-            Type::f(
-                Type::TypeVariable("a".to_string()),
-                Type::f(Type::tv("b".to_string()), Type::tv("b".to_string())),
-            ),
-        );
-
-        self.add_inbuilt("id".to_string(), 1, inbuilt_id, id_type);
-        self.add_inbuilt("const".to_string(), 2, inbuilt_const1, const1_type.clone());
-        self.add_inbuilt("const1".to_string(), 2, inbuilt_const1, const1_type);
-        self.add_inbuilt("const2".to_string(), 2, inbuilt_const2, const2_type);
-
         self.add_inbuilt(
             "add".to_string(),
             2,
