@@ -9,6 +9,8 @@ import ASTHistory from './ASTHistory';
 function App() {
   const [originalAstString, setOriginalAstString] = useState("");
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
+  const [selectedRcFromStringHistory, setSelectedRcFromStringHistory] = useState<string[]>([]);
+  const [selectedRcToString, setSelectedRcToString] = useState<string[]>([]);
   const [errorString, setErrorString] = useState("");
   const [definitionIsVisible, setDefinitionIsVisible] = useState(true);
   const [astHistory, setAstHistory] = useState<wasm.RawASTInfo[]>([]);
@@ -26,13 +28,25 @@ function App() {
       }
 
       const rc_callback = (rc_index: number) => {
-        // add the current ast to the history
+        const from_string = wasm.get_rcs_from(rcs, rc_index);
+        const to_string = wasm.get_rcs_to(rcs, rc_index);
+        console.log(from_string, to_string);
+
         // add the current ast to the history
         setAstHistory((prevAstHistory) => {
           const newAstHistory = [...prevAstHistory, ast];
           return newAstHistory;
         });
+        setSelectedRcFromStringHistory((prev) => {
+          const newRcFromStringHistory = [...prev, from_string];
+          return newRcFromStringHistory;
+        });
+        setSelectedRcToString((prev) => {
+          const newRcToString = [...prev, to_string];
+          return newRcToString;
+        });
         ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
+				setOriginalAstString(wasm.to_string(ast));
         generateRCs(ast, multiple);
       };
 
@@ -53,7 +67,7 @@ function App() {
   const handleRun = (programInput: string, multiple: boolean) => {
     try {
       const ast = wasm.parse(programInput);
-      setAstHistory([]);
+      setAstHistory([ast]);
       setOriginalAstString(wasm.to_string(ast));
       generateRCs(ast, multiple);
 
@@ -85,7 +99,7 @@ function App() {
         <ul id="RCArea">
           {rcs}
         </ul>
-        <pre><ASTHistory astHistory={astHistory} /></pre>
+        <pre><ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToString} astHistory={astHistory} /></pre>
       </div>
     </>
   )

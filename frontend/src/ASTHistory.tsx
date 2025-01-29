@@ -1,11 +1,12 @@
 import * as wasm from 'sfl_wasm_lib'
-import * as diff from 'diff';
 
 interface ASTHistoryProps {
-    astHistory: wasm.RawASTInfo[]
+    astHistory: wasm.RawASTInfo[];
+    rcFromHistory: string[];
+    rcToHistory: string[];
 }
 
-const ASTHistory = ({ astHistory }: ASTHistoryProps) => {
+const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps) => {
     const astStrings = [];
     for (let i = 0; i < astHistory.length; i++) {
         astStrings.push(wasm.main_to_string(astHistory[i]) + "\n");
@@ -16,26 +17,41 @@ const ASTHistory = ({ astHistory }: ASTHistoryProps) => {
     }
 
     // Get diffs between each string
-    // Get diffs between each string
+    console.log(astStrings, rcFromHistory, rcToHistory);
+
     const astLIs = [];
-    for (let i = astStrings.length - 2; i >= 0; i--) {
-        const list : JSX.Element[] = [];
-        const previous = astStrings[i + 1];
+    for (let i = astStrings.length - 1; i >= 0; i--) {
+        const list: JSX.Element[] = [];
+        const rc_to = rcToHistory[i - 1];
+        const next_from = rcFromHistory[i];
+
+        // let next_from = "";
+        // if (i < rcFromHistory.length - 1) {
+        //     next_from = rcFromHistory[i + 1];
+        // }
         const current = astStrings[i];
-        diff.diffWords(current, previous).forEach((part, index) => {
-            const color = part.added ? 'green' : 'white';
-            if (part.removed) {
-                return;
+
+        // Get all occurences of rc_from in current, and make them bold
+        if (i == astStrings.length - 1) {
+            const parts = current.split(rc_to);
+            for (let j = 0; j < parts.length; j++) {
+                list.push(<span key={`${i}-${j}`}>{parts[j]}</span>);
+                if (j < parts.length - 1) {
+                    list.push(<span className="new" key={`${i}-${j}-new`}>{rc_to}</span>);
+                }
             }
-            list.push(
-                <span key={index} style={{ color }}>
-                    {part.value}
-                </span>
-            );
-        });
-        astLIs.push(<li key={i + 1}>{list}<br/></li>);
+        } else {
+            const parts = current.split(next_from);
+            for (let j = 0; j < parts.length; j++) {
+                list.push(<span key={`${i}-${j}`}>{parts[j]}</span>);
+                if (j < parts.length - 1) {
+                    list.push(<span className="old" key={`${i}-${j}-old`}>{next_from}</span>);
+                }
+            }
+        }
+
+        astLIs.push(<li className='expr_history' key={i}>{list}<br /></li>);
     }
-    astLIs.push(<li key={0}>{astStrings[0]}</li>);
     // astLIs = astLIs.reverse();   
 
     return (

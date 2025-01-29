@@ -47,7 +47,7 @@ button#RunButtonMultiple {
 
 button#RunButtonMultiple {
     /* second row, second column */
-    grid-area: 1 / 2 / 3 / 3;
+    grid-area: 2 / 2 / 3 / 3;
 }
  
 @media only screen and (max-width: 1000px) {

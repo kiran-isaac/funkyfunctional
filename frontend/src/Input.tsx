@@ -30,8 +30,8 @@ function Input({ onRunMultiple }: InputProps) {
                 onChange={editorOnChange}
                 theme={okaidia}
             /></div>
-            {/* <button className="runbutton" id="RunButtonSingle" onClick={() => onRunSingle(editorValue)}>Run 1</button> */}
-            <button className="runbutton" id="RunButtonMultiple" onClick={() => onRunMultiple(editorValue)}>Run</button>
+            <button className="runbutton" id="RunButtonSingle" onClick={() => onRunSingle(editorValue)}>Lazy</button>
+            <button className="runbutton" id="RunButtonMultiple" onClick={() => onRunMultiple(editorValue)}>Free Choice</button>
         </>
     );
 }
