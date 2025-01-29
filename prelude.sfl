@@ -3,6 +3,3 @@ id = \x . x
 
 const :: forall a b. a -> b -> a
 const = \x y . x
-
-const2 :: forall a b. a -> b -> b
-const = \x y . y
