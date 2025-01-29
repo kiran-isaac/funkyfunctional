@@ -40,7 +40,7 @@ button.runbutton {
     padding: 10px;
 }
 
-button#RunButtonMultiple {
+button#RunButtonSingle {
     /* second row, second column */
     grid-area: 1 / 2 / 2 / 3;
 }

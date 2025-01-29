@@ -85,7 +85,7 @@ function App() {
       <div id="inputContainer">
         <Input 
           onRunMultiple={(editorValue) => handleRun(editorValue, true)} 
-          // onRunSingle={(editorValue) => handleRun(editorValue, false)} 
+          onRunSingle={(editorValue) => handleRun(editorValue, false)} 
         />
       </div>
       <div id="Spacer"></div>
