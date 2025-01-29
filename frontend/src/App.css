@@ -89,8 +89,3 @@ button:focus-visible {
     background-color: #ff00004f;
     color: white;
 }
-
-.expr_history .new.old {
-    background-color: #cc00ff6b;
-    color: white;
-}
