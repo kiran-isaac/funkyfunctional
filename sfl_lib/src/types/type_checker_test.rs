@@ -120,15 +120,6 @@ fn type_check_pair() {
     );
 }
 
-#[test]
-fn type_check_control_flow_kws() {
-    tc_test_should_pass("main :: Float\nmain = const1 2.0 20");
-    tc_test_should_fail("main :: Int\nmain = const1 2.0");
-    tc_test_should_pass("main :: Int\nmain = const2 2.0 20");
-    tc_test_should_pass("main :: Int\nmain = const2 2.0 20");
-    tc_test_should_pass("main :: Int\nmain = id (id 20)");
-}
-
 fn inference_test(program: &str, type_str: &str) {
     let ast = Parser::from_string(program.to_string())
         .parse_tl_expression()

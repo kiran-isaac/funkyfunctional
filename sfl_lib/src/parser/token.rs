@@ -21,6 +21,8 @@ pub enum TokenType {
     DoubleColon,
     RArrow,
     Forall,
+    KWType,
+    KWData,
 
     LParen,
     RParen,

@@ -1,3 +1,5 @@
+use std::iter::zip;
+
 use crate::{functions::LabelTable, ASTNodeType, AST};
 
 use super::{Type, TypeError};
@@ -365,20 +367,45 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
             }
         }
 
-        (Type::Product(ut1_1, ut1_2), a) | (a, Type::Product(ut1_1, ut1_2)) => {
+        (Type::Product(pt1_1, pt1_2), a) | (a, Type::Product(pt1_1, pt1_2)) => {
             let (ut2_1, ut2_2) = match a {
                 Type::Product(a, b) => (a, b),
                 _ => {
                     return Err(format!(
-                        "Type {} is not a subtype of union {}",
+                        "Type {} is not a subtype of product {}",
                         a,
-                        Type::Product(ut1_1.clone(), ut1_1.clone())
+                        Type::Product(pt1_1.clone(), pt1_2.clone())
                     ))
                 }
             };
-            let ut_1_st = subtype(c, ut1_1, ut2_1)?;
-            subtype(ut_1_st, ut1_2, ut2_2)
+            let ut_1_st = subtype(c, pt1_1, ut2_1)?;
+            subtype(ut_1_st, pt1_2, ut2_2)
         }
+
+        (Type::Union(name1, uargs1), a) | (a, Type::Union(name1, uargs1)) => {
+            let (name2, uargs2) = match a {
+                Type::Union(name2, uargs2) => (name2, uargs2),
+                _ => {
+                    return Err(format!(
+                        "Type {} is not a subtype of union {}",
+                        a,
+                        Type::Union(name1.clone(), uargs1.clone())
+                    ))
+                }
+            };
+            if uargs1.len() != uargs2.len() || name1 != name2 {
+                return Err(format!(
+                    "Type {} is not a subtype of union {}",
+                    a,
+                    Type::Union(name1.clone(), uargs1.clone())
+                ))
+            }
+            let mut c = c;
+            for (t1, t2) in zip(uargs1, uargs2) {
+                c = subtype(c, t1, t2)?;
+            }
+            Ok(c)
+        },
 
         // <:Unit
         (Type::Unit, Type::Unit) => Ok(c),

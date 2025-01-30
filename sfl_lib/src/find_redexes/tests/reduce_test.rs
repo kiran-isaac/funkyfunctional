@@ -114,7 +114,7 @@ fn waits_for_eval() {
 
 #[test]
 fn correct_abst_order() {
-    let program = "test f x y z = f x\nmain = test id 1 2 3";
+    let program = "test f x y z = f x\nmain = test (\\x . x) 1 2 3";
     // let program = "main = (\\f x y z. f x) id 1 2 3";
     let mut ast = Parser::from_string(program.to_string())
         .parse_module()

@@ -2,10 +2,11 @@ use super::ast::AST;
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
-use crate::{ASTNodeType, Primitive, Type};
+use crate::{ASTNodeType, LabelTable, Primitive, Type, TypeError};
 use std::collections::{HashMap, VecDeque};
-use std::fmt::Debug;
+use std::fmt::{format, Debug};
 use std::fs::File;
+use std::hash::Hash;
 use std::io::{self, prelude::*};
 
 pub struct Parser {
@@ -79,7 +80,10 @@ impl Parser {
             ASTNodeType::Identifier => {
                 let str = n.get_value().clone();
                 if self.bound.is_bound(str.as_str()) {
-                    return Err(self.parse_error(format!("Variable {} is already bound, and cannot be rebound for abstraction", str)));
+                    return Err(self.parse_error(format!(
+                        "Variable {} is already bound, and cannot be rebound for abstraction",
+                        str
+                    )));
                 }
                 if str != "_" {
                     self.bind(str);
@@ -156,7 +160,11 @@ impl Parser {
     }
 
     // Parse potentially multiple abstraction, return the abstr node and all the absts as a vector
-    fn parse_abstraction(&mut self, ast: &mut AST, is_assign : bool) -> Result<(usize, Vec<usize>), ParserError> {
+    fn parse_abstraction(
+        &mut self,
+        ast: &mut AST,
+        is_assign: bool,
+    ) -> Result<(usize, Vec<usize>), ParserError> {
         let mut args = vec![];
 
         loop {
@@ -208,7 +216,7 @@ impl Parser {
             }
             TokenType::DoubleColon => {
                 self.advance();
-                let type_ = self.parse_type_expression(ast)?;
+                let type_ = self.parse_type_expression(&ast.type_decls)?;
                 ast.set_type(left, type_);
                 Ok(left)
             }
@@ -359,8 +367,8 @@ impl Parser {
         Ok(app3)
     }
 
-    fn parse_type_expression(&mut self, ast: &mut AST) -> Result<Type, ParserError> {
-        let mut left = self.parse_type_expression_primary(ast)?;
+    fn parse_type_expression(&mut self, type_table: &HashMap<String, Type>) -> Result<Type, ParserError> {
+        let mut left = self.parse_type_expression_primary(type_table)?;
 
         loop {
             let next = self.peek(0)?;
@@ -368,13 +376,13 @@ impl Parser {
             match next.tt {
                 TokenType::RArrow | TokenType::LParen => {
                     self.advance();
-                    let right = self.parse_type_expression(ast)?;
+                    let right = self.parse_type_expression(type_table)?;
                     left = Type::Function(Box::new(left), Box::new(right));
                 }
 
                 TokenType::Comma => {
                     self.advance();
-                    left = Type::pr(left, self.parse_type_expression(ast)?);
+                    left = Type::pr(left, self.parse_type_expression(type_table)?);
                 }
 
                 TokenType::RParen
@@ -390,7 +398,7 @@ impl Parser {
         }
     }
 
-    fn parse_forall(&mut self, ast: &mut AST) -> Result<Type, ParserError> {
+    fn parse_forall(&mut self, type_table: &HashMap<String, Type>) -> Result<Type, ParserError> {
         let mut vars = vec![];
         while self.peek(0)?.tt == TokenType::Id {
             let v = self.peek(0)?.value;
@@ -416,33 +424,33 @@ impl Parser {
             )));
         }
 
-        Ok(Type::fa(vars, self.parse_type_expression(ast)?))
+        Ok(Type::fa(vars, self.parse_type_expression(type_table)?))
     }
 
-    fn parse_type_expression_primary(&mut self, ast: &mut AST) -> Result<Type, ParserError> {
+    fn parse_type_expression_primary(&mut self, type_table: &HashMap<String, Type>) -> Result<Type, ParserError> {
         let t = self.consume()?;
 
         match t.tt {
-            TokenType::TypeId | TokenType::Id => {
+            TokenType::Id => Ok(Type::TypeVariable(t.value)),
+            TokenType::TypeId => {
                 let id = t.value;
-                match id.as_str() {
-                    "Int" => Ok(Type::Primitive(Primitive::Int64)),
-                    "Float" => Ok(Type::Primitive(Primitive::Float64)),
-                    "Bool" => Ok(Type::Primitive(Primitive::Bool)),
-                    _ => Ok(Type::TypeVariable(id)),
+                if let Some(t_match) = type_table.get(&id) {
+                    Ok(t_match.clone())
+                } else {
+                    Err(self.parse_error(format!("Type {} is not defined", id)))
                 }
             }
             TokenType::LParen => {
-                let inner = self.parse_type_expression(ast)?;
+                let inner = self.parse_type_expression(type_table)?;
                 self.advance();
                 Ok(inner)
             }
-            TokenType::Forall => self.parse_forall(ast),
+            TokenType::Forall => self.parse_forall(type_table),
             _ => Err(self.parse_error(format!("Unexpected token in type expression: {:?}", t))),
         }
     }
 
-    fn parse_type_assignment(&mut self, ast: &mut AST) -> Result<(), ParserError> {
+    fn parse_type_assignment(&mut self, type_table: &HashMap<String, Type>) -> Result<(), ParserError> {
         let name = self.peek(0)?.value.clone();
         if self.type_assignment_map.contains_key(&name) {
             return Err(self.parse_error(format!("Type already assigned: {}", name)));
@@ -450,7 +458,7 @@ impl Parser {
         self.advance();
         self.advance();
 
-        let assigned_type = self.parse_type_expression(ast)?;
+        let assigned_type = self.parse_type_expression(type_table)?;
         self.type_assignment_map.insert(name, assigned_type);
 
         Ok(())
@@ -491,7 +499,9 @@ impl Parser {
                 }
                 expr
             }
-            _ => return Err(self.parse_error(format!("Unexpected token in assignment: {}", t.value)))
+            _ => {
+                return Err(self.parse_error(format!("Unexpected token in assignment: {}", t.value)))
+            }
         };
 
         let id = ast.add_id(assid, self.lexer.line, self.lexer.col);
@@ -503,6 +513,64 @@ impl Parser {
         };
 
         Ok(ast.add_assignment(id, expr, self.lexer.line, self.lexer.col, type_assignment))
+    }
+
+    /// Takes type table, returns the name of the data and also the type constructors
+    pub fn parse_type_decl(&mut self, type_table: &HashMap<String, Type>) -> Result<(String, Type), ParserError> {
+        assert_eq!(self.consume()?.tt, TokenType::KWType);
+
+        let t = self.consume()?;
+        let name = match t.tt {
+            TokenType::TypeId => t.value,
+            TokenType::Id => {
+                return Err(self.parse_error(format!(
+                    "Type IDs must begin with a capital letter. Got {}",
+                    t.value
+                )))
+            }
+            _ => {
+                return Err(self.parse_error(format!(
+                    "Expected type ID after type assignment, got {}",
+                    t.value
+                )))
+            }
+        };
+
+        let t = self.consume()?;
+        match t.tt {
+            TokenType::Assignment => {}
+            _ => {
+                return Err(self.parse_error(format!(
+                    "Expected \"=\" after type assignment, got {}",
+                    t.value
+                )))
+            }
+        }
+
+        Ok((name, self.parse_type_expression(type_table)?))
+    }
+
+    pub fn parse_data_decl(&mut self, type_table: &HashMap<String, Type>) -> Result<(String, HashMap<String, Type>), ParserError> {
+        assert_eq!(self.consume()?.tt, TokenType::KWData);
+
+        let t = self.consume()?;
+        let name = match t.tt {
+            TokenType::TypeId => t.value,
+            TokenType::Id => {
+                return Err(self.parse_error(format!(
+                    "Type IDs must begin with a capital letter. Got {}",
+                    t.value
+                )))
+            }
+            _ => {
+                return Err(self.parse_error(format!(
+                    "Expected type ID after type assignment, got {}",
+                    t.value
+                )))
+            }
+        };
+
+        unimplemented!();
     }
 
     pub fn parse_module(&mut self) -> Result<AST, ParserError> {
@@ -521,7 +589,7 @@ impl Parser {
                             let assignment = self.parse_assignment(&mut ast)?;
                             ast.add_to_module(module, assignment);
                         }
-                        TokenType::DoubleColon => self.parse_type_assignment(&mut ast)?,
+                        TokenType::DoubleColon => self.parse_type_assignment(&ast.type_decls)?,
                         _ => {
                             return Err(self.parse_error(format!(
                                 "Unexpected Token: {:?}. Expected assignment operator: =",
@@ -529,6 +597,17 @@ impl Parser {
                             )))
                         }
                     }
+                }
+                TokenType::KWType => {
+                    let (decl_name, decl_type) = self.parse_type_decl(&ast.type_decls)?;
+                    if let Some(_) = ast.get_type_decl(&decl_name) {
+                        return Err(self
+                            .parse_error(format!("Type {} declared more than once", &decl_name)));
+                    }
+                    ast.add_type_decl(decl_name, decl_type);
+                }
+                TokenType::KWData => {
+
                 }
                 TokenType::Newline => {
                     self.advance();
