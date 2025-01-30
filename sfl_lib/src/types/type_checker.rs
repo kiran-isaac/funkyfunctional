@@ -1,6 +1,6 @@
 use std::iter::zip;
 
-use crate::{functions::LabelTable, ASTNodeType, AST};
+use crate::{functions::KnownTypeLabelTable, ASTNodeType, AST};
 
 use super::{Type, TypeError};
 
@@ -38,7 +38,7 @@ struct Context {
 
 impl std::fmt::Debug for Context {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let inbuilt_map = LabelTable::new().get_type_map();
+        let inbuilt_map = KnownTypeLabelTable::new().get_type_map();
         write!(f, "[")?;
         for item in &self.vec {
             match item {
@@ -55,7 +55,7 @@ impl std::fmt::Debug for Context {
 }
 
 impl Context {
-    fn from_labels(labels: &LabelTable) -> Self {
+    fn from_labels(labels: &KnownTypeLabelTable) -> Self {
         let mut vec = vec![];
 
         for (k, v) in labels.get_type_map() {
@@ -883,7 +883,7 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
 
 pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), TypeError> {
     match check_type(
-        Context::from_labels(&LabelTable::new()),
+        Context::from_labels(&KnownTypeLabelTable::new()),
         expected,
         ast,
         expr,
@@ -906,7 +906,7 @@ fn infer_type_with_context(
 
 #[cfg(test)]
 pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
-    let lt = LabelTable::new();
+    let lt = KnownTypeLabelTable::new();
     let c = Context::from_labels(&lt);
 
     Ok(infer_type_with_context(c, ast, expr)?.0.forall_ify())
@@ -915,8 +915,8 @@ pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
 pub fn infer_or_check_assignment_types(
     ast: &mut AST,
     module: usize,
-) -> Result<LabelTable, TypeError> {
-    let mut lt = LabelTable::new();
+) -> Result<KnownTypeLabelTable, TypeError> {
+    let mut lt = KnownTypeLabelTable::new();
     let mut c = Context::from_labels(&lt);
 
     for assign_var in &ast.get_assignee_names(module) {

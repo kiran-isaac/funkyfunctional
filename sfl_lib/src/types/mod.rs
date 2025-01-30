@@ -27,7 +27,8 @@ pub enum Type {
     Existential(usize),
     Forall(String, Box<Type>),
     Product(Box<Type>, Box<Type>),
-    Union(String, Vec<Type>)
+    Union(String, Vec<Type>),
+    Alias(String, Box<Type>)
 }
 
 #[derive(Clone, PartialEq, Eq)]

@@ -463,7 +463,7 @@ impl AST {
         self.type_decls.get(name)
     }
 
-    pub fn add_type_decl(&mut self, name: String, type_: Type) {
+    pub fn add_type_alias(&mut self, name: String, type_: Type) {
         self.type_decls.insert(name, type_);
     }
 

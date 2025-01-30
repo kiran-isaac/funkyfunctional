@@ -1,4 +1,4 @@
-use crate::parser::*;
+use crate::{infer_or_check_assignment_types, parser::*};
 
 #[test]
 fn assign() -> Result<(), ParserError> {
@@ -228,5 +228,13 @@ fn pair() -> Result<(), ParserError> {
     let ast = parser.parse_module()?;
     let module = 0;
     assert_eq!(ast.to_string_sugar(module, true), str);
+    Ok(())
+}
+
+#[test]
+fn type_decl() -> Result<(), ParserError> {
+    let str = "type Alias = Int\nmain :: Bingus -> Int\nmain = \\x.x";
+    let ast = Parser::from_string(str.to_string()).parse_module()?;
+
     Ok(())
 }

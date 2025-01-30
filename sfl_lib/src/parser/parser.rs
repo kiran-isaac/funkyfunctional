@@ -2,11 +2,11 @@ use super::ast::AST;
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
-use crate::{ASTNodeType, LabelTable, Primitive, Type, TypeError};
-use std::collections::{HashMap, VecDeque};
-use std::fmt::{format, Debug};
+use crate::{ASTNodeType, KnownTypeLabelTable, Type, TypeError};
+use std::any::TypeId;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::fmt::Debug;
 use std::fs::File;
-use std::hash::Hash;
 use std::io::{self, prelude::*};
 
 pub struct Parser {
@@ -20,6 +20,26 @@ pub struct ParserError {
     pub e: String,
     line: usize,
     col: usize,
+}
+
+pub struct TypeMap {
+    aliases: HashMap<String, Type>,
+    unions: HashMap<String, Vec<Type>>,
+}
+
+impl TypeMap {
+    pub fn new() -> Self {
+        Self {
+            unions: HashMap::new(),
+            aliases: HashMap::new(),
+        }
+    }
+}
+
+pub struct ModuleParseResult {
+    pub ast: AST,
+    pub lt: KnownTypeLabelTable,
+    pub tm: TypeMap,
 }
 
 impl Debug for ParserError {
@@ -367,7 +387,10 @@ impl Parser {
         Ok(app3)
     }
 
-    fn parse_type_expression(&mut self, type_table: &HashMap<String, Type>) -> Result<Type, ParserError> {
+    fn parse_type_expression(
+        &mut self,
+        type_table: &HashMap<String, Type>,
+    ) -> Result<Type, ParserError> {
         let mut left = self.parse_type_expression_primary(type_table)?;
 
         loop {
@@ -427,12 +450,15 @@ impl Parser {
         Ok(Type::fa(vars, self.parse_type_expression(type_table)?))
     }
 
-    fn parse_type_expression_primary(&mut self, type_table: &HashMap<String, Type>) -> Result<Type, ParserError> {
+    fn parse_type_expression_primary(
+        &mut self,
+        type_table: &HashMap<String, Type>,
+    ) -> Result<Type, ParserError> {
         let t = self.consume()?;
 
         match t.tt {
             TokenType::Id => Ok(Type::TypeVariable(t.value)),
-            TokenType::TypeId => {
+            TokenType::UppercaseId => {
                 let id = t.value;
                 if let Some(t_match) = type_table.get(&id) {
                     Ok(t_match.clone())
@@ -450,7 +476,10 @@ impl Parser {
         }
     }
 
-    fn parse_type_assignment(&mut self, type_table: &HashMap<String, Type>) -> Result<(), ParserError> {
+    fn parse_type_assignment(
+        &mut self,
+        type_table: &HashMap<String, Type>,
+    ) -> Result<(), ParserError> {
         let name = self.peek(0)?.value.clone();
         if self.type_assignment_map.contains_key(&name) {
             return Err(self.parse_error(format!("Type already assigned: {}", name)));
@@ -516,12 +545,15 @@ impl Parser {
     }
 
     /// Takes type table, returns the name of the data and also the type constructors
-    pub fn parse_type_decl(&mut self, type_table: &HashMap<String, Type>) -> Result<(String, Type), ParserError> {
+    fn parse_type_alias_decl(
+        &mut self,
+        type_table: &HashMap<String, Type>,
+    ) -> Result<(String, Type), ParserError> {
         assert_eq!(self.consume()?.tt, TokenType::KWType);
 
         let t = self.consume()?;
         let name = match t.tt {
-            TokenType::TypeId => t.value,
+            TokenType::UppercaseId => t.value,
             TokenType::Id => {
                 return Err(self.parse_error(format!(
                     "Type IDs must begin with a capital letter. Got {}",
@@ -550,12 +582,94 @@ impl Parser {
         Ok((name, self.parse_type_expression(type_table)?))
     }
 
-    pub fn parse_data_decl(&mut self, type_table: &HashMap<String, Type>) -> Result<(String, HashMap<String, Type>), ParserError> {
+    fn parse_multiple_constructors(
+        &mut self,
+        type_table: &HashMap<String, Type>,
+        params: &Vec<String>,
+        union_name: &String,
+    ) -> Result<HashMap<String, Type>, ParserError> {
+        let mut constructors = HashMap::new();
+        let union_type = Type::Union(
+            union_name.clone(),
+            params.iter().map(|v| Type::tv(v.clone())).collect(),
+        );
+
+        loop {
+            let t = self.consume()?;
+            match t.tt {
+                TokenType::UppercaseId => {
+                    let (constructor_name, constructor_params) =
+                        self.parse_constructor(type_table, &params)?;
+
+                    let mut constructor_type = union_type.clone();
+                    for param in constructor_params.iter().rev() {
+                        constructor_type = Type::f(param.clone(), constructor_type);
+                    }
+
+                    // forall-ify it
+                    constructor_type = Type::fa(params.clone(), constructor_type);
+                    constructors.insert(constructor_name, constructor_type);
+                }
+                TokenType::Bar => {}
+                TokenType::Newline | TokenType::EOF => break,
+                _ => {
+                    return Err(self.parse_error(format!(
+                        "Unexpected token during data declaration: {}",
+                        t.value
+                    )))
+                }
+            }
+        }
+        Ok(constructors)
+    }
+
+    fn parse_constructor(
+        &mut self,
+        type_table: &HashMap<String, Type>,
+        params: &Vec<String>,
+    ) -> Result<(String, Vec<Type>), ParserError> {
+        let t = self.consume()?;
+        if t.tt != TokenType::UppercaseId {
+            return Err(self.parse_error(format!("Expected varient name, got {}", t.value)));
+        }
+        let constructor_name = t.value;
+
+        let mut constructor_params = vec![];
+        loop {
+            let t = self.consume()?;
+            match t.tt {
+                TokenType::Id => {
+                    if params.contains(&t.value) {
+                        constructor_params.push(Type::TypeVariable(t.value));
+                    } else {
+                        return Err(
+                            self.parse_error(format!("Unbound type parameter: {}", &t.value))
+                        );
+                    }
+                }
+                TokenType::UppercaseId => {
+                    if let Some(type_) = type_table.get(&t.value) {
+                        constructor_params.push(type_.clone());
+                    } else {
+                        return Err(
+                            self.parse_error(format!("Unbound type parameter: {}", &t.value))
+                        );
+                    }
+                }
+                _ => return Ok((constructor_name, constructor_params)),
+            }
+        }
+    }
+
+    fn parse_data_decl(
+        &mut self,
+        type_table: &HashMap<String, Type>,
+    ) -> Result<(String, HashMap<String, Type>), ParserError> {
         assert_eq!(self.consume()?.tt, TokenType::KWData);
 
         let t = self.consume()?;
         let name = match t.tt {
-            TokenType::TypeId => t.value,
+            TokenType::UppercaseId => t.value,
             TokenType::Id => {
                 return Err(self.parse_error(format!(
                     "Type IDs must begin with a capital letter. Got {}",
@@ -564,18 +678,40 @@ impl Parser {
             }
             _ => {
                 return Err(self.parse_error(format!(
-                    "Expected type ID after type assignment, got {}",
+                    "Expected type ID after data keyword, got {}",
                     t.value
                 )))
             }
         };
 
-        unimplemented!();
+        // parse the params
+        let mut tparams = Vec::new();
+        let mut t = self.consume()?;
+        while t.tt == TokenType::Id {
+            if tparams.contains(&t.value) {
+                return Err(self.parse_error(format!("Duplicate data parameter: {}", t.value)));
+            }
+            tparams.push(t.value);
+            t = self.consume()?;
+        }
+
+        let t = self.consume()?;
+        if t.tt != TokenType::Assignment {
+            return Err(self.parse_error(format!(
+                "Expected \"=\" after data keyword, got {}",
+                t.value
+            )));
+        }
+
+        let constructors = self.parse_multiple_constructors(type_table, tparams, &name)?;
+        Ok((name, constructors))
     }
 
-    pub fn parse_module(&mut self) -> Result<AST, ParserError> {
+    pub fn parse_module(&mut self) -> Result<ModuleParseResult, ParserError> {
         // At the top level its just a set of assignments
         let mut ast = AST::new();
+        let mut lt = KnownTypeLabelTable::new();
+        let mut tm = TypeMap::new();
         let module = ast.add_module(Vec::new(), self.lexer.line, self.lexer.col);
 
         'assloop: loop {
@@ -599,16 +735,14 @@ impl Parser {
                     }
                 }
                 TokenType::KWType => {
-                    let (decl_name, decl_type) = self.parse_type_decl(&ast.type_decls)?;
+                    let (decl_name, decl_type) = self.parse_type_alias_decl(&ast.type_decls)?;
                     if let Some(_) = ast.get_type_decl(&decl_name) {
                         return Err(self
                             .parse_error(format!("Type {} declared more than once", &decl_name)));
                     }
-                    ast.add_type_decl(decl_name, decl_type);
+                    tm.aliases.insert(decl_name, decl_type);
                 }
-                TokenType::KWData => {
-
-                }
+                TokenType::KWData => {}
                 TokenType::Newline => {
                     self.advance();
                 }
@@ -619,7 +753,7 @@ impl Parser {
             }
         }
 
-        Ok(ast)
+        Ok(ModuleParseResult { ast, lt, tm })
     }
 
     pub fn parse_tl_expression(&mut self) -> Result<AST, ParserError> {

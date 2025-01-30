@@ -1,4 +1,4 @@
-use crate::functions::LabelTable;
+use crate::functions::KnownTypeLabelTable;
 use std::collections::HashSet;
 
 pub struct BoundChecker {
@@ -9,7 +9,7 @@ impl BoundChecker {
     pub fn new() -> Self {
         let mut bound = HashSet::new();
 
-        for binding in LabelTable::get_starting_bindings_map() {
+        for binding in KnownTypeLabelTable::get_starting_bindings_map() {
             bound.insert(binding);
         }
 

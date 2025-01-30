@@ -6,7 +6,7 @@ pub enum TokenType {
     Newline,
 
     Id,
-    TypeId,
+    UppercaseId,
 
     If,
     Then,
@@ -23,14 +23,15 @@ pub enum TokenType {
     Forall,
     KWType,
     KWData,
-
+    
     LParen,
     RParen,
-
+    
     Lambda,
-
+    
     Dot,
     Comma,
+    Bar,
 
     Assignment,
 }

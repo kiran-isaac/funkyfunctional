@@ -117,7 +117,7 @@ impl Lexer {
     /// change the TokenType to TypeId
     fn lex_type_id(&mut self) -> Result<Token, LexerError> {
         Ok(Token {
-            tt: TokenType::TypeId,
+            tt: TokenType::UppercaseId,
             value: self.parse_id()?.value,
         })
     }
@@ -280,6 +280,13 @@ impl Lexer {
                 Ok(Token {
                     tt: TokenType::LParen,
                     value: "(".to_string(),
+                })
+            }
+            '|' => {
+                self.advance();
+                Ok(Token {
+                    tt: TokenType::Bar,
+                    value: "|".to_string()
                 })
             }
             '/' => {
