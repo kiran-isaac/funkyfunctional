@@ -1,6 +1,5 @@
 use crate::{find_redexes::RCPair, types::TypeError, Primitive, Type};
 use std::collections::HashSet;
-use std::hash::Hash;
 use std::{collections::HashMap, fmt::Debug, vec};
 
 use super::token::*;
@@ -19,8 +18,6 @@ pub enum ASTNodeType {
 #[derive(Clone)]
 pub struct AST {
     vec: Vec<ASTNode>,
-    pub type_decls: HashMap<String, Type>,
-    pub type_constructors: HashMap<String, Type>,
     pub root: usize,
 }
 
@@ -42,11 +39,7 @@ impl Debug for ASTNode {
         if let Some(tk) = &self.info {
             s.push_str(&format!("{:?} ", tk.value));
         }
-        // s.push_str(&format!("{}:{} ", self.line, self.col));
-        // if let Some(t) = &self.type_assignment {
-        //     s.push_str(&format!("Type: {:?} ", t));
-        // }
-        // s.push_str(&format!("Children: {:?}", self.children));
+
         write!(f, "{}", s)
     }
 }
@@ -176,16 +169,9 @@ impl ASTNode {
 
 impl AST {
     pub fn new() -> Self {
-        let mut type_decls = HashMap::new();
-        type_decls.insert("Int".to_string(), Type::int64());
-        type_decls.insert("Float".to_string(), Type::float64());
-        type_decls.insert("Bool".to_string(), Type::bool());
-
         Self {
             vec: vec![],
             root: 0,
-            type_constructors: HashMap::new(),
-            type_decls,
         }
     }
 
@@ -457,14 +443,6 @@ impl AST {
 
     pub fn append_root(&mut self, other: &AST) -> usize {
         self.append(other, other.root)
-    }
-
-    pub fn get_type_decl(&self, name: &String) -> Option<&Type> {
-        self.type_decls.get(name)
-    }
-
-    pub fn add_type_alias(&mut self, name: String, type_: Type) {
-        self.type_decls.insert(name, type_);
     }
 
     pub fn add_id(&mut self, tk: Token, line: usize, col: usize) -> usize {

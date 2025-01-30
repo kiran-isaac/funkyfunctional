@@ -139,6 +139,16 @@ impl Type {
         }
     }
 
+    pub fn type_app(&self, t: &Type) -> Result<Type, String> {
+        match self {
+            Type::Forall(var, t2) => {
+                let new_t = t2.substitute_type_variable(var, t)?;
+                Ok(new_t)
+            }
+            _ => Err(format!("Type application error: {} is not a forall, so cannot substitute {}", self, t)),
+        }
+    }
+
     fn remove_duplicates<T: Eq + Hash + Clone>(ls: &Vec<T>) -> Vec<T> {
         let mut seen = HashSet::new();
         let mut new_vec: Vec<T> = Vec::new();
@@ -245,7 +255,7 @@ impl Type {
         }
     }
 
-    fn get_tvs_set(&self) -> HashSet<String> {
+    pub fn get_tvs_set(&self) -> HashSet<String> {
         match self {
             Type::Function(t1, t2) => {
                 let mut t1 = t1.get_tvs_set();

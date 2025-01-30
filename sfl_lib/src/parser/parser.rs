@@ -23,16 +23,16 @@ pub struct ParserError {
 }
 
 pub struct TypeMap {
-    pub aliases: HashMap<String, Type>,
-    pub unions: HashMap<String, Type>,
+    pub types: HashMap<String, Type>,
 }
 
 impl TypeMap {
     pub fn new() -> Self {
-        Self {
-            unions: HashMap::new(),
-            aliases: HashMap::new(),
-        }
+        let mut type_decls = HashMap::new();
+        type_decls.insert("Int".to_string(), Type::int64());
+        type_decls.insert("Float".to_string(), Type::float64());
+        type_decls.insert("Bool".to_string(), Type::bool());
+        Self { types: type_decls }
     }
 }
 
@@ -184,6 +184,7 @@ impl Parser {
         &mut self,
         ast: &mut AST,
         is_assign: bool,
+        type_table: &HashMap<String, Type>,
     ) -> Result<(usize, Vec<usize>), ParserError> {
         let mut args = vec![];
 
@@ -191,7 +192,7 @@ impl Parser {
             let t = self.peek(0)?;
             match (t.tt, is_assign) {
                 (TokenType::Id | TokenType::LParen, _) => {
-                    args.push(self.parse_abstr_var(ast)?);
+                    args.push(self.parse_abstr_var(ast, type_table)?);
                 }
                 (TokenType::Dot, false) => break,
                 (TokenType::Assignment, true) => break,
@@ -215,7 +216,7 @@ impl Parser {
             }
         }
 
-        let mut expr = self.parse_expression(ast)?;
+        let mut expr = self.parse_expression(ast, type_table)?;
 
         let mut absts_vec = vec![];
         for &&arg in &args.iter().rev().collect::<Vec<&usize>>() {
@@ -226,17 +227,21 @@ impl Parser {
         Ok((expr, absts_vec))
     }
 
-    fn parse_abstr_var(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
-        let left = self.parse_abstr_var_primary(ast)?;
+    fn parse_abstr_var(
+        &mut self,
+        ast: &mut AST,
+        type_table: &HashMap<String, Type>,
+    ) -> Result<usize, ParserError> {
+        let left = self.parse_abstr_var_primary(ast, type_table)?;
         match self.peek(0)?.tt {
             TokenType::Comma => {
                 self.advance();
-                let right = self.parse_abstr_var(ast)?;
+                let right = self.parse_abstr_var(ast, type_table)?;
                 Ok(ast.add_pair(left, right, self.lexer.line, self.lexer.col))
             }
             TokenType::DoubleColon => {
                 self.advance();
-                let type_ = self.parse_type_expression(&ast.type_decls)?;
+                let type_ = self.parse_type_expression(type_table, None)?;
                 ast.set_type(left, type_);
                 Ok(left)
             }
@@ -248,17 +253,25 @@ impl Parser {
         }
     }
 
-    fn parse_abstr_var_primary(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
+    fn parse_abstr_var_primary(
+        &mut self,
+        ast: &mut AST,
+        type_table: &HashMap<String, Type>,
+    ) -> Result<usize, ParserError> {
         let t = self.consume()?;
         match t.tt {
             TokenType::Id => Ok(ast.add_id(t, self.lexer.line, self.lexer.col)),
-            TokenType::LParen => self.parse_abstr_var(ast),
+            TokenType::LParen => self.parse_abstr_var(ast, type_table),
             _ => Err(self.parse_error("Expected identifier (or '(') after lambda".to_string())),
         }
     }
 
-    fn parse_expression(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
-        let mut left = self.parse_primary(ast)?;
+    fn parse_expression(
+        &mut self,
+        ast: &mut AST,
+        type_table: &HashMap<String, Type>,
+    ) -> Result<usize, ParserError> {
+        let mut left = self.parse_primary(ast, type_table)?;
 
         #[cfg(debug_assertions)]
         let _t_queue = format!("{:?}", self.t_queue);
@@ -269,7 +282,7 @@ impl Parser {
                 // If paren, apply to paren
                 TokenType::LParen => {
                     self.advance();
-                    let right = self.parse_expression(ast)?;
+                    let right = self.parse_expression(ast, type_table)?;
                     self.advance();
                     left = ast.add_app(left, right, line, col);
                 }
@@ -283,18 +296,18 @@ impl Parser {
 
                 TokenType::Comma => {
                     self.advance();
-                    let right = self.parse_expression(ast)?;
+                    let right = self.parse_expression(ast, type_table)?;
                     left = ast.add_pair(left, right, line, col);
                 }
 
                 TokenType::Lambda => {
                     self.advance();
-                    self.parse_abstraction(ast, false)?.0;
+                    self.parse_abstraction(ast, false, type_table)?.0;
                 }
 
                 TokenType::If => {
                     self.advance();
-                    let ite = self.parse_ite(ast)?;
+                    let ite = self.parse_ite(ast, type_table)?;
                     left = ast.add_app(left, ite, line, col);
                 }
 
@@ -302,18 +315,18 @@ impl Parser {
                 | TokenType::CharLit
                 | TokenType::IntLit
                 | TokenType::BoolLit => {
-                    let right = self.parse_primary(ast)?;
+                    let right = self.parse_primary(ast, type_table)?;
                     left = ast.add_app(left, right, line, col);
                 }
 
-                TokenType::Id => {
+                TokenType::Id | TokenType::UppercaseId => {
                     if self.peek(0)?.is_infix_id() {
-                        let id_node = self.parse_primary(ast)?;
-                        let right = self.parse_expression(ast)?;
+                        let id_node = self.parse_primary(ast, type_table)?;
+                        let right = self.parse_expression(ast, type_table)?;
                         left = ast.add_app(id_node, left, line, col);
                         left = ast.add_app(left, right, line, col);
                     } else {
-                        let id_node = self.parse_primary(ast)?;
+                        let id_node = self.parse_primary(ast, type_table)?;
                         left = ast.add_app(left, id_node, line, col);
                     }
                 }
@@ -327,12 +340,16 @@ impl Parser {
     }
 
     // Parse a primary expression
-    fn parse_primary(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
+    fn parse_primary(
+        &mut self,
+        ast: &mut AST,
+        type_table: &HashMap<String, Type>,
+    ) -> Result<usize, ParserError> {
         let line = self.lexer.line;
         let col = self.lexer.col;
         let t = self.consume()?;
         match t.tt {
-            TokenType::Id => {
+            TokenType::Id | TokenType::UppercaseId => {
                 let id_name = t.value.clone();
                 if !self.bound.is_bound(&id_name) {
                     return Err(self.parse_error(format!("Unbound identifier: {}", id_name)));
@@ -342,15 +359,15 @@ impl Parser {
             TokenType::IntLit | TokenType::FloatLit | TokenType::BoolLit | TokenType::CharLit => {
                 Ok(ast.add_lit(t, line, col))
             }
-            TokenType::If => Ok(self.parse_ite(ast)?),
+            TokenType::If => Ok(self.parse_ite(ast, type_table)?),
             // Removed support for lambda except at the top level
             // for now, untill i figure out type inference
             TokenType::Lambda => {
                 self.advance();
-                Ok(self.parse_abstraction(ast, false)?.0)
+                Ok(self.parse_abstraction(ast, false, type_table)?.0)
             }
             TokenType::LParen => {
-                let exp = self.parse_expression(ast)?;
+                let exp = self.parse_expression(ast, type_table)?;
                 self.advance();
                 Ok(exp)
             }
@@ -358,7 +375,11 @@ impl Parser {
         }
     }
 
-    fn parse_ite(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
+    fn parse_ite(
+        &mut self,
+        ast: &mut AST,
+        type_table: &HashMap<String, Type>,
+    ) -> Result<usize, ParserError> {
         let if_id_node = ast.add_id(
             Token {
                 tt: TokenType::If,
@@ -368,20 +389,20 @@ impl Parser {
             self.lexer.col - 2,
         );
 
-        let condition = self.parse_expression(ast)?;
+        let condition = self.parse_expression(ast, type_table)?;
 
         let app1 = ast.add_app(if_id_node, condition, self.lexer.line, self.lexer.col);
 
         let then_tk = self.consume()?;
         assert!(then_tk.tt == TokenType::Then);
 
-        let then_exp = self.parse_expression(ast)?;
+        let then_exp = self.parse_expression(ast, type_table)?;
         let app2 = ast.add_app(app1, then_exp, self.lexer.line, self.lexer.col);
 
         let else_tk = self.consume()?;
         assert!(else_tk.tt == TokenType::Else);
 
-        let else_exp = self.parse_expression(ast)?;
+        let else_exp = self.parse_expression(ast, type_table)?;
         let app3 = ast.add_app(app2, else_exp, self.lexer.line, self.lexer.col);
 
         Ok(app3)
@@ -390,8 +411,9 @@ impl Parser {
     fn parse_type_expression(
         &mut self,
         type_table: &HashMap<String, Type>,
+        bound_type_vars: Option<&HashSet<String>>,
     ) -> Result<Type, ParserError> {
-        let mut left = self.parse_type_expression_primary(type_table)?;
+        let mut left = self.parse_type_expression_primary(type_table, bound_type_vars)?;
 
         loop {
             let next = self.peek(0)?;
@@ -399,20 +421,37 @@ impl Parser {
             match next.tt {
                 TokenType::RArrow | TokenType::LParen => {
                     self.advance();
-                    let right = self.parse_type_expression(type_table)?;
+                    let right = self.parse_type_expression(type_table, bound_type_vars)?;
                     left = Type::Function(Box::new(left), Box::new(right));
                 }
 
                 TokenType::Comma => {
                     self.advance();
-                    left = Type::pr(left, self.parse_type_expression(type_table)?);
+                    left = Type::pr(
+                        left,
+                        self.parse_type_expression(type_table, bound_type_vars)?,
+                    );
                 }
 
-                TokenType::RParen
-                | TokenType::Newline
-                | TokenType::EOF
-                | TokenType::Id
-                | TokenType::Dot => return Ok(left),
+                TokenType::UppercaseId | TokenType::Id => {
+                    // If this is in an abstraction, and the next token is a double colon, then we're done because 
+                    // the next ID is another abst variable
+                    if next.tt == TokenType::Id {
+                        if self.peek(1)?.tt == TokenType::DoubleColon {
+                            return Ok(left);
+                        }
+                    }
+                    
+                    let t2 = self.parse_type_expression_primary(type_table, bound_type_vars)?;
+                    left = match left.type_app(&t2) {
+                        Ok(t) => t,
+                        Err(e) => return Err(self.parse_error(e.to_string())),
+                    }
+                }
+
+                TokenType::RParen | TokenType::Newline | TokenType::EOF | TokenType::Dot => {
+                    return Ok(left)
+                }
                 _ => {
                     return Err(self
                         .parse_error(format!("Unexpected token in type expression: {:?}", next)))
@@ -421,43 +460,26 @@ impl Parser {
         }
     }
 
-    fn parse_forall(&mut self, type_table: &HashMap<String, Type>) -> Result<Type, ParserError> {
-        let mut vars = vec![];
-        while self.peek(0)?.tt == TokenType::Id {
-            let v = self.peek(0)?.value;
-            if self.peek(0)?.is_infix_id() {
-                return Err(self.parse_error(format!(
-                    "Invalid identifier in forall type declaration: {}",
-                    v
-                )));
-            }
-            self.advance();
-            vars.push(v);
-        }
-
-        if vars.is_empty() {
-            return Err(self.parse_error("Invalid forall declaration, no variables".to_string()));
-        }
-
-        let tk = self.consume()?;
-        if tk.tt != TokenType::Dot {
-            return Err(self.parse_error(format!(
-                "Invalid forall declaration, expected dot after variables, got {:?}",
-                tk
-            )));
-        }
-
-        Ok(Type::fa(vars, self.parse_type_expression(type_table)?))
-    }
-
     fn parse_type_expression_primary(
         &mut self,
         type_table: &HashMap<String, Type>,
+        bound_type_vars: Option<&HashSet<String>>,
     ) -> Result<Type, ParserError> {
         let t = self.consume()?;
 
         match t.tt {
-            TokenType::Id => Ok(Type::TypeVariable(t.value)),
+            TokenType::Id => {
+                if let None = bound_type_vars {
+                    return Ok(Type::TypeVariable(t.value))
+                }
+
+                let id = t.value;
+                if bound_type_vars.unwrap().contains(&id) {
+                    Ok(Type::TypeVariable(id))
+                } else {
+                    Err(self.parse_error(format!("Type variable {} is not bound", id)))
+                }
+            }
             TokenType::UppercaseId => {
                 let id = t.value;
                 if let Some(t_match) = type_table.get(&id) {
@@ -467,11 +489,10 @@ impl Parser {
                 }
             }
             TokenType::LParen => {
-                let inner = self.parse_type_expression(type_table)?;
+                let inner = self.parse_type_expression(type_table, bound_type_vars)?;
                 self.advance();
                 Ok(inner)
             }
-            TokenType::Forall => self.parse_forall(type_table),
             _ => Err(self.parse_error(format!("Unexpected token in type expression: {:?}", t))),
         }
     }
@@ -487,7 +508,23 @@ impl Parser {
         self.advance();
         self.advance();
 
-        let assigned_type = self.parse_type_expression(type_table)?;
+        let assigned_type = self.parse_type_expression(type_table, None)?;
+
+        let mut sorted_tvs: Vec<String> = assigned_type
+                .get_tvs_set()
+                .iter()
+                .map(|tv| tv.clone())
+                .collect();
+
+        sorted_tvs.sort();
+        
+        let assigned_type = Type::fa(
+            sorted_tvs,
+            assigned_type,
+        );
+
+        #[cfg(debug_assertions)]
+        let _assigned_type_str = assigned_type.to_string();
         self.type_assignment_map.insert(name, assigned_type);
 
         Ok(())
@@ -500,7 +537,11 @@ impl Parser {
         }
     }
 
-    fn parse_assignment(&mut self, ast: &mut AST) -> Result<usize, ParserError> {
+    fn parse_assignment(
+        &mut self,
+        ast: &mut AST,
+        type_table: &HashMap<String, Type>,
+    ) -> Result<usize, ParserError> {
         assert_eq!(self.peek(0)?.tt, TokenType::Id);
 
         let assid = self.peek(0)?;
@@ -518,10 +559,10 @@ impl Parser {
         let expr = match t.tt {
             TokenType::Assignment => {
                 self.advance();
-                self.parse_expression(ast)?
+                self.parse_expression(ast, type_table)?
             }
             TokenType::Id | TokenType::LParen => {
-                let (expr, abst_vars) = self.parse_abstraction(ast, true)?;
+                let (expr, abst_vars) = self.parse_abstraction(ast, true, type_table)?;
                 for var in abst_vars.into_iter().rev() {
                     ast.fancy_assign_abst_syntax(var);
                     ast.wait_for_args(var);
@@ -579,7 +620,10 @@ impl Parser {
             }
         }
 
-        Ok((name, self.parse_type_expression(type_table)?))
+        Ok((
+            name,
+            self.parse_type_expression(type_table, Some(&HashSet::new()))?,
+        ))
     }
 
     fn parse_multiple_constructors(
@@ -589,13 +633,14 @@ impl Parser {
         union_type: &Type,
     ) -> Result<HashMap<String, Type>, ParserError> {
         let mut constructors = HashMap::new();
+        let bound_type_vars: HashSet<String> = params.iter().cloned().collect();
 
         loop {
             let t = self.peek(0)?;
             match t.tt {
                 TokenType::UppercaseId => {
                     let (constructor_name, constructor_params) =
-                        self.parse_constructor(type_table, &params)?;
+                        self.parse_constructor(type_table, &bound_type_vars)?;
 
                     let mut constructor_type = union_type.clone();
                     for param in constructor_params.iter().rev() {
@@ -632,7 +677,7 @@ impl Parser {
     fn parse_constructor(
         &mut self,
         type_table: &HashMap<String, Type>,
-        params: &Vec<String>,
+        bound_type_vars: &HashSet<String>,
     ) -> Result<(String, Vec<Type>), ParserError> {
         let t = self.consume()?;
         if t.tt != TokenType::UppercaseId {
@@ -646,7 +691,7 @@ impl Parser {
             match t.tt {
                 TokenType::Id => {
                     self.advance();
-                    if params.contains(&t.value) {
+                    if bound_type_vars.contains(&t.value) {
                         constructor_params.push(Type::TypeVariable(t.value));
                     } else {
                         return Err(
@@ -664,6 +709,14 @@ impl Parser {
                         );
                     }
                 }
+                TokenType::LParen => {
+                    self.advance();
+
+                    let type_ = self.parse_type_expression(type_table, Some(bound_type_vars))?;
+                    constructor_params.push(type_);
+                    assert_eq!(self.consume()?.tt, TokenType::RParen);
+                }
+
                 _ => return Ok((constructor_name, constructor_params)),
             }
         }
@@ -735,10 +788,10 @@ impl Parser {
                     let next = self.peek(1)?;
                     match next.tt {
                         TokenType::Assignment | TokenType::Id | TokenType::LParen => {
-                            let assignment = self.parse_assignment(&mut ast)?;
+                            let assignment = self.parse_assignment(&mut ast, &tm.types)?;
                             ast.add_to_module(module, assignment);
                         }
-                        TokenType::DoubleColon => self.parse_type_assignment(&ast.type_decls)?,
+                        TokenType::DoubleColon => self.parse_type_assignment(&tm.types)?,
                         _ => {
                             return Err(self.parse_error(format!(
                                 "Unexpected Token: {:?}. Expected assignment operator: =",
@@ -748,22 +801,23 @@ impl Parser {
                     }
                 }
                 TokenType::KWType => {
-                    let (decl_name, decl_type) = self.parse_type_alias_decl(&ast.type_decls)?;
-                    if let Some(_) = tm.aliases.get(&decl_name) {
+                    let (decl_name, decl_type) = self.parse_type_alias_decl(&tm.types)?;
+                    if let Some(_) = tm.types.get(&decl_name) {
                         return Err(self
                             .parse_error(format!("Type {} declared more than once", &decl_name)));
                     }
-                    tm.aliases.insert(decl_name, decl_type);
+                    tm.types.insert(decl_name, decl_type);
                 }
                 TokenType::KWData => {
-                    let (data_name, union_type, constructors) = self.parse_data_decl(&ast.type_decls)?;
-                    if let Some(_) = tm.aliases.get(&data_name) {
+                    let (data_name, union_type, constructors) = self.parse_data_decl(&tm.types)?;
+                    if let Some(_) = tm.types.get(&data_name) {
                         return Err(self
                             .parse_error(format!("Type {} declared more than once", &data_name)));
                     }
-                    tm.unions.insert(data_name.clone(), union_type);
+                    tm.types.insert(data_name.clone(), union_type);
                     for (constructor_name, constructor_type) in constructors {
-                        lt.add(constructor_name, constructor_type);
+                        lt.add(constructor_name.clone(), constructor_type);
+                        self.bound.add_binding(constructor_name);
                     }
                 }
                 TokenType::Newline => {
@@ -781,7 +835,7 @@ impl Parser {
 
     pub fn parse_tl_expression(&mut self) -> Result<AST, ParserError> {
         let mut ast = AST::new();
-        ast.root = self.parse_expression(&mut ast)?;
+        ast.root = self.parse_expression(&mut ast, &TypeMap::new().types)?;
         Ok(ast)
     }
 }
