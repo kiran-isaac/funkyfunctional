@@ -94,6 +94,7 @@ impl Type {
             Type::Forall(_, t) => t.contains_existential(ex),
             Type::Union(_, s) => s.iter().any(|f| f.contains_existential(ex)),
             Type::Unit => false,
+            Type::Alias(_, t) => t.contains_existential(ex),
         }
     }
 
@@ -117,7 +118,7 @@ impl Type {
             }
             Type::Forall(var2, t2) => {
                 if var2 == to_replace {
-                    unreachable!("Duplicate forall")
+                    panic!("Duplicate forall")
                 }
                 Ok(Type::fa(
                     vec![var2.clone()],
@@ -225,16 +226,10 @@ impl Type {
         match self {
             Type::Function(t1, t2) => t1.is_monotype() && t2.is_monotype(),
             Type::Product(t1, t2) => t1.is_monotype() && t2.is_monotype(),
-            Self::Forall(_, _) => false,
+            Type::Forall(_, _) => false,
+            Type::Union(_, vars) => vars.iter().all(|f| f.is_monotype()),
+            Type::Alias(_, t) => t.is_monotype(),
             _ => true,
-        }
-    }
-
-    pub fn is_concrete(&self) -> bool {
-        match self {
-            Type::Primitive(_) => true,
-            Type::Function(t1, t2) => t1.is_concrete() && t2.is_concrete(),
-            _ => false,
         }
     }
 
@@ -342,6 +337,9 @@ impl Type {
                     t1.to_string_internal(full_braces),
                     t2.to_string_internal(full_braces)
                 )
+            }
+            Type::Alias(s, t) => {
+                format!("type {} = {}", s, t.to_string_internal(full_braces))
             }
         }
     }

@@ -4,7 +4,7 @@ use crate::{find_all_redex_contraction_pairs, Parser};
 fn tc_test_should_pass(program: &str) {
     let mut ast = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap();
+        .unwrap().ast;
     let module = ast.root;
     infer_or_check_assignment_types(&mut ast, module).unwrap();
 }
@@ -12,7 +12,7 @@ fn tc_test_should_pass(program: &str) {
 fn tc_test_should_fail(program: &str) {
     let mut ast = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap();
+        .unwrap().ast;
     let module = ast.root;
     infer_or_check_assignment_types(&mut ast, module).unwrap_err();
 }
@@ -131,7 +131,7 @@ fn inference_test(program: &str, type_str: &str) {
 fn mod_inference_should_fail(program: &str) {
     let mut ast = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap();
+        .unwrap().ast;
     let module = ast.root;
     infer_or_check_assignment_types(&mut ast, module).unwrap_err();
 }
@@ -165,7 +165,7 @@ fn infer() {
 fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
     let mut ast = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap();
+        .unwrap().ast;
     let mut main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
     let module = ast.root;
     let lt = &infer_or_check_assignment_types(&mut ast, module)?;

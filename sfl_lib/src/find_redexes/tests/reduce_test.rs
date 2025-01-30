@@ -53,8 +53,8 @@ fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
 //         let program = format!("main = neg {}", rnd_i);
 //         let programf = format!("main = negf {}", rnd_f);
 
-//         let ast = Parser::from_string(program).parse_module().unwrap();
-//         let astf = Parser::from_string(programf).parse_module().unwrap();
+//         let ast = Parser::from_string(program).parse_module().unwrap().ast;
+//         let astf = Parser::from_string(programf).parse_module().unwrap().ast;
 
 //         let module = ast.root;
 //         let exp = ast.get_assign_exp(ast.get_main(module));
@@ -86,7 +86,7 @@ fn basic_add_test() {
     let program = "main = add 5 1";
     let ast = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap();
+        .unwrap().ast;
 
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
@@ -101,7 +101,7 @@ fn waits_for_eval() {
     let program = "func x = x\n  main = func (add 5 1)";
     let mut ast = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap();
+        .unwrap().ast;
 
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
@@ -118,7 +118,7 @@ fn correct_abst_order() {
     // let program = "main = (\\f x y z. f x) id 1 2 3";
     let mut ast = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap();
+        .unwrap().ast;
 
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
@@ -139,7 +139,7 @@ fn correct_abst_order() {
 //         "main = sub (add {} {}) (mul {} {})",
 //         a_int, b_int, c_int, d_int
 //     );
-//     let mut ast = Parser::from_string(program).parse_module().unwrap();
+//     let mut ast = Parser::from_string(program).parse_module().unwrap().ast;
 
 //     let module = ast.root;
 //     let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
@@ -179,7 +179,7 @@ fn correct_abst_order() {
 // fn inc_test() {
 //     let program = "inc::Int -> Int\ninc = \\x.add 1 x\nmain::Int\nmain = inc 2".to_string();
 
-//     let ast = Parser::from_string(program).parse_module().unwrap();
+//     let ast = Parser::from_string(program).parse_module().unwrap().ast;
 
 //     TypeChecker::new().check_module(&ast, ast.root).unwrap();
 
@@ -201,7 +201,7 @@ fn correct_abst_order() {
 //     let program =
 //         "myadd::Int -> Int -> Int\nmyadd = \\x y.add x y\nmain::Int\nmain = myadd 2 3".to_string();
 
-//     let ast = Parser::from_string(program).parse_module().unwrap();
+//     let ast = Parser::from_string(program).parse_module().unwrap().ast;
 
 //     let module = ast.root;
 //     let exp = ast.get_assign_exp(ast.get_main(module));

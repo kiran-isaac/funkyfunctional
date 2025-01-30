@@ -23,8 +23,8 @@ pub struct ParserError {
 }
 
 pub struct TypeMap {
-    aliases: HashMap<String, Type>,
-    unions: HashMap<String, Vec<Type>>,
+    pub aliases: HashMap<String, Type>,
+    pub unions: HashMap<String, Type>,
 }
 
 impl TypeMap {
@@ -586,16 +586,12 @@ impl Parser {
         &mut self,
         type_table: &HashMap<String, Type>,
         params: &Vec<String>,
-        union_name: &String,
+        union_type: &Type,
     ) -> Result<HashMap<String, Type>, ParserError> {
         let mut constructors = HashMap::new();
-        let union_type = Type::Union(
-            union_name.clone(),
-            params.iter().map(|v| Type::tv(v.clone())).collect(),
-        );
 
         loop {
-            let t = self.consume()?;
+            let t = self.peek(0)?;
             match t.tt {
                 TokenType::UppercaseId => {
                     let (constructor_name, constructor_params) =
@@ -608,10 +604,19 @@ impl Parser {
 
                     // forall-ify it
                     constructor_type = Type::fa(params.clone(), constructor_type);
+
+                    #[cfg(debug_assertions)]
+                    let _constructor_type_str = constructor_type.to_string();
+
                     constructors.insert(constructor_name, constructor_type);
                 }
-                TokenType::Bar => {}
-                TokenType::Newline | TokenType::EOF => break,
+                TokenType::Bar => {
+                    self.advance();
+                }
+                TokenType::Newline | TokenType::EOF => {
+                    self.advance();
+                    break;
+                }
                 _ => {
                     return Err(self.parse_error(format!(
                         "Unexpected token during data declaration: {}",
@@ -620,6 +625,7 @@ impl Parser {
                 }
             }
         }
+
         Ok(constructors)
     }
 
@@ -636,9 +642,10 @@ impl Parser {
 
         let mut constructor_params = vec![];
         loop {
-            let t = self.consume()?;
+            let t = self.peek(0)?;
             match t.tt {
                 TokenType::Id => {
+                    self.advance();
                     if params.contains(&t.value) {
                         constructor_params.push(Type::TypeVariable(t.value));
                     } else {
@@ -648,6 +655,7 @@ impl Parser {
                     }
                 }
                 TokenType::UppercaseId => {
+                    self.advance();
                     if let Some(type_) = type_table.get(&t.value) {
                         constructor_params.push(type_.clone());
                     } else {
@@ -664,7 +672,7 @@ impl Parser {
     fn parse_data_decl(
         &mut self,
         type_table: &HashMap<String, Type>,
-    ) -> Result<(String, HashMap<String, Type>), ParserError> {
+    ) -> Result<(String, Type, HashMap<String, Type>), ParserError> {
         assert_eq!(self.consume()?.tt, TokenType::KWData);
 
         let t = self.consume()?;
@@ -695,7 +703,6 @@ impl Parser {
             t = self.consume()?;
         }
 
-        let t = self.consume()?;
         if t.tt != TokenType::Assignment {
             return Err(self.parse_error(format!(
                 "Expected \"=\" after data keyword, got {}",
@@ -703,8 +710,14 @@ impl Parser {
             )));
         }
 
-        let constructors = self.parse_multiple_constructors(type_table, tparams, &name)?;
-        Ok((name, constructors))
+        let union_type = Type::Union(
+            name.clone(),
+            tparams.iter().map(|v| Type::tv(v.clone())).collect(),
+        );
+
+        let constructors = self.parse_multiple_constructors(type_table, &tparams, &union_type)?;
+        let union_type = Type::fa(tparams.clone(), union_type);
+        Ok((name, union_type, constructors))
     }
 
     pub fn parse_module(&mut self) -> Result<ModuleParseResult, ParserError> {
@@ -736,13 +749,23 @@ impl Parser {
                 }
                 TokenType::KWType => {
                     let (decl_name, decl_type) = self.parse_type_alias_decl(&ast.type_decls)?;
-                    if let Some(_) = ast.get_type_decl(&decl_name) {
+                    if let Some(_) = tm.aliases.get(&decl_name) {
                         return Err(self
                             .parse_error(format!("Type {} declared more than once", &decl_name)));
                     }
                     tm.aliases.insert(decl_name, decl_type);
                 }
-                TokenType::KWData => {}
+                TokenType::KWData => {
+                    let (data_name, union_type, constructors) = self.parse_data_decl(&ast.type_decls)?;
+                    if let Some(_) = tm.aliases.get(&data_name) {
+                        return Err(self
+                            .parse_error(format!("Type {} declared more than once", &data_name)));
+                    }
+                    tm.unions.insert(data_name.clone(), union_type);
+                    for (constructor_name, constructor_type) in constructors {
+                        lt.add(constructor_name, constructor_type);
+                    }
+                }
                 TokenType::Newline => {
                     self.advance();
                 }

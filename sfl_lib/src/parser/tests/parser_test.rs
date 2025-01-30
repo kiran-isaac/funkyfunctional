@@ -5,7 +5,7 @@ fn assign() -> Result<(), ParserError> {
     let str = "x = add 2 5";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?;
+    let ast = parser.parse_module()?.ast;
     let module = 0;
     let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
     let exp = ast.get_assign_exp(assign);
@@ -27,7 +27,7 @@ fn assign_2() -> Result<(), ParserError> {
     parser.bind("y".to_string());
     parser.bind("z".to_string());
 
-    let ast = parser.parse_module()?;
+    let ast = parser.parse_module()?.ast;
     let module = 0;
     let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
     let exp = ast.get_assign_exp(assign);
@@ -51,7 +51,7 @@ fn multi_assign() -> Result<(), ParserError> {
     let str = "x = 5\n\n//Hello\ny = 6\nz = 7";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?;
+    let ast = parser.parse_module()?.ast;
     let module = 0;
 
     let ass1 = ast.get_assign_to(module, "x".to_string()).unwrap();
@@ -72,24 +72,23 @@ fn multi_assign() -> Result<(), ParserError> {
 fn bound() -> Result<(), ParserError> {
     // recursive
     let str = "x = x 5";
-    Parser::from_string(str.to_string()).parse_module()?;
+    Parser::from_string(str.to_string()).parse_module()?.ast;
 
     // add is an inbuilt
     let str = "x = add 2 x";
-    Parser::from_string(str.to_string()).parse_module()?;
+    Parser::from_string(str.to_string()).parse_module()?.ast;
 
     // y is unbound
     let str = "x = add 2 y";
-    Parser::from_string(str.to_string())
-        .parse_module()
-        .unwrap_err();
+    assert!(Parser::from_string(str.to_string())
+        .parse_module().is_err());
 
     Ok(())
 }
 
 fn unchanged_parse_output_str_test(program_str: &str, types: bool) -> Result<(), ParserError> {
     let mut parser = Parser::from_string(program_str.to_string());
-    let ast = parser.parse_module()?;
+    let ast = parser.parse_module()?.ast;
     assert_eq!(program_str, ast.to_string_sugar(ast.root, types));
     Ok(())
 }
@@ -121,7 +120,7 @@ fn abstraction() -> Result<(), ParserError> {
     let str = "x = \\y :: Int. add y 5";
     let mut parser = Parser::from_string(str.to_string());
 
-    let _ = parser.parse_module()?;
+    let _ = parser.parse_module()?.ast;
 
     // Should error because y is not bound
     let unbound_str = "x = (\\y . add y 5) y";
@@ -131,15 +130,15 @@ fn abstraction() -> Result<(), ParserError> {
     // Should be same for both
     let multi_abstr = "x = \\y :: Int z :: Int . add y 5";
     let multi_abstr2 = "x = \\y :: Int . \\z :: Int . add y 5";
-    let ast = Parser::from_string(multi_abstr.to_string()).parse_module()?;
-    let ast2 = Parser::from_string(multi_abstr2.to_string()).parse_module()?;
+    let ast = Parser::from_string(multi_abstr.to_string()).parse_module()?.ast;
+    let ast2 = Parser::from_string(multi_abstr2.to_string()).parse_module()?.ast;
     assert_eq!(
         ast.to_string_sugar(ast.root, false),
         ast2.to_string_sugar(ast2.root, false)
     );
 
     let ignore_directive = "x = \\_ :: Int . 1.5";
-    Parser::from_string(ignore_directive.to_string()).parse_module()?;
+    Parser::from_string(ignore_directive.to_string()).parse_module()?.ast;
 
     Ok(())
 }
@@ -149,7 +148,7 @@ fn type_assignment() -> Result<(), ParserError> {
     let str = "x :: Int\nx = 5";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?;
+    let ast = parser.parse_module()?.ast;
     let module = 0;
     let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
 
@@ -159,7 +158,7 @@ fn type_assignment() -> Result<(), ParserError> {
 
     let str = "id2 :: forall var . var -> var\nid2 = \\x.x";
     let mut parser = Parser::from_string(str.to_string());
-    let ast = parser.parse_module()?;
+    let ast = parser.parse_module()?.ast;
     let module = ast.root;
     let assign = ast.get_assign_to(module, "id2".to_string()).unwrap();
     let type_assignment = ast.get(assign).type_assignment.clone();
@@ -177,7 +176,7 @@ fn type_assignment_right_assoc() -> Result<(), ParserError> {
     let str = "x :: (Int -> Int) -> (Int -> Float) -> Int\nx = 5";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?;
+    let ast = parser.parse_module()?.ast;
     let module = 0;
     let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
 
@@ -196,7 +195,7 @@ fn ite() -> Result<(), ParserError> {
     let str = "x = if true then 1 else 2";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?;
+    let ast = parser.parse_module()?.ast;
     let module = 0;
 
     assert_eq!(ast.to_string_sugar(module, false), str);
@@ -204,7 +203,7 @@ fn ite() -> Result<(), ParserError> {
     let str = "x = \\_ :: Int . add (if true then 1 else 2) (if true then 2 else 3)";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?;
+    let ast = parser.parse_module()?.ast;
     let module = 0;
     assert_eq!(ast.to_string_sugar(module, false), str);
 
@@ -225,7 +224,7 @@ fn pair() -> Result<(), ParserError> {
 
     let str = "pair :: a -> b -> (a, b)\npair x y = (x, y)";
     let mut parser = Parser::from_string(str.to_string());
-    let ast = parser.parse_module()?;
+    let ast = parser.parse_module()?.ast;
     let module = 0;
     assert_eq!(ast.to_string_sugar(module, true), str);
     Ok(())
@@ -233,8 +232,21 @@ fn pair() -> Result<(), ParserError> {
 
 #[test]
 fn type_decl() -> Result<(), ParserError> {
-    let str = "type Alias = Int\nmain :: Bingus -> Int\nmain = \\x.x";
-    let ast = Parser::from_string(str.to_string()).parse_module()?;
+    let str = "type Bingus = Int\nmain :: Bingus -> Int\nmain = \\x.x";
+    let ast = Parser::from_string(str.to_string()).parse_module()?.ast;
+
+    Ok(())
+}
+
+#[test]
+fn data_decl() -> Result<(), ParserError> {
+    let str = "data Maybe a = Some a | None\nmain :: Int -> Int\nmain = \\x.x";
+    let pr = Parser::from_string(str.to_string()).parse_module()?;
+    let lt = pr.lt;
+    let tm = pr.tm;
+
+    assert_eq!(format!("{}", lt.get_type("Some").unwrap()), "∀a. a -> Maybe a");
+    assert_eq!(format!("{}", tm.unions.get("Maybe").unwrap().to_string()), "∀a. Maybe a");
 
     Ok(())
 }

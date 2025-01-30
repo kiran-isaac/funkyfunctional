@@ -1,7 +1,7 @@
 use super::*;
 
 fn full_run_test(program: String) -> String {
-    let mut ast = Parser::from_string(program).parse_module().unwrap();
+    let mut ast = Parser::from_string(program).parse_module().unwrap().ast;
     let module = ast.root;
     let lt = infer_or_check_assignment_types(&mut ast, module).unwrap();
     let mut exp = ast.get_assign_exp(ast.get_main(ast.root).unwrap());

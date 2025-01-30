@@ -35,7 +35,7 @@ fn main() {
         eprintln!("{:?}", e);
         std::process::exit(1);
     }
-    let mut ast = ast.unwrap();
+    let mut ast = ast.unwrap().ast;
 
     // Typecheck
     let lt = if typechecked {
