@@ -24,10 +24,6 @@ function App() {
         return;
       }
 
-      if (!multiple && wasm.get_rcs_len(rcs) > 1) {
-        alert("WTF")
-      }
-
       const rc_callback = (rc_index: number) => {
         const from_string = wasm.get_rcs_from(rcs, rc_index);
         const to_string = wasm.get_rcs_to(rcs, rc_index);
