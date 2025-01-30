@@ -3,14 +3,14 @@ mod utils;
 
 use sfl_lib::{
     find_all_redex_contraction_pairs, find_single_redex_contraction_pair,
-    infer_or_check_assignment_types, LabelTable, Parser, RCPair, AST,
+    infer_or_check_assignment_types, KnownTypeLabelTable, Parser, RCPair, AST,
 };
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct RawASTInfo {
     pub ast: *mut AST,
-    pub lt: *mut LabelTable,
+    pub lt: *mut KnownTypeLabelTable,
 }
 
 #[wasm_bindgen]

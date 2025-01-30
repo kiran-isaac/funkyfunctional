@@ -95,56 +95,34 @@ impl Lexer {
             self.advance();
         }
 
-        match str.as_str() {
-            "true" | "false" => {
-                return Ok(Token {
-                    tt: TokenType::BoolLit,
-                    value: str,
-                });
-            }
-            "if" => {
-                return Ok(Token {
-                    tt: TokenType::If,
-                    value: str,
-                })
-            }
-            "then" => {
-                return Ok(Token {
-                    tt: TokenType::Then,
-                    value: str,
-                })
-            }
-            "else" => {
-                return Ok(Token {
-                    tt: TokenType::Else,
-                    value: str,
-                })
-            }
-            "forall" => {
-                return Ok(Token {
-                    tt: TokenType::Forall,
-                    value: str,
-                })
-            }
-            _ => {}
-        }
+        // catch KWs
+        let tt = match str.as_str() {
+            "true" | "false" => TokenType::BoolLit,
+            "if" => TokenType::If,
+            "then" => TokenType::Then,
+            "else" => TokenType::Else,
+            "forall" => TokenType::Forall,
+            "type" => TokenType::KWType,
+            "data" => TokenType::KWData,
+            _ => TokenType::Id
+        };
 
         Ok(Token {
-            tt: TokenType::Id,
+            tt,
             value: str,
         })
     }
 
     /// Hijack the parse_id function to parse type ids and then
     /// change the TokenType to TypeId
-    fn parse_type_id(&mut self) -> Result<Token, LexerError> {
+    fn lex_type_id(&mut self) -> Result<Token, LexerError> {
         Ok(Token {
-            tt: TokenType::TypeId,
+            tt: TokenType::UppercaseId,
             value: self.parse_id()?.value,
         })
     }
 
-    fn parse_num_lit(&mut self) -> Result<Token, LexerError> {
+    fn lex_num_lit(&mut self) -> Result<Token, LexerError> {
         let mut str = String::new();
 
         let mut has_point = false;
@@ -201,7 +179,7 @@ impl Lexer {
         }
     }
 
-    fn parse_char_lit(&mut self) -> Result<Token, LexerError> {
+    fn lex_char_lit(&mut self) -> Result<Token, LexerError> {
         let mut str = String::new();
 
         self.advance();
@@ -273,8 +251,8 @@ impl Lexer {
 
         match c {
             'a'..='z' | '_' | '+' | '*' | '%' => self.parse_id(),
-            'A'..='Z' => self.parse_type_id(),
-            '0'..='9' => self.parse_num_lit(),
+            'A'..='Z' => self.lex_type_id(),
+            '0'..='9' => self.lex_num_lit(),
             '-' => match self.file[self.i + 1] {
                 '>' => {
                     self.advance();
@@ -284,11 +262,11 @@ impl Lexer {
                         value: "->".to_string(),
                     })
                 }
-                '0'..='9' | '.' => self.parse_num_lit(),
+                '0'..='9' | '.' => self.lex_num_lit(),
                 _ => self.parse_id(),
             },
             '.' => match self.file[self.i + 1] {
-                '0'..='9' => self.parse_num_lit(),
+                '0'..='9' => self.lex_num_lit(),
                 _ => {
                     self.advance();
                     Ok(Token {
@@ -302,6 +280,13 @@ impl Lexer {
                 Ok(Token {
                     tt: TokenType::LParen,
                     value: "(".to_string(),
+                })
+            }
+            '|' => {
+                self.advance();
+                Ok(Token {
+                    tt: TokenType::Bar,
+                    value: "|".to_string()
                 })
             }
             '/' => {
@@ -415,7 +400,7 @@ impl Lexer {
                     }),
                 }
             }
-            '\'' => self.parse_char_lit(),
+            '\'' => self.lex_char_lit(),
             '\0' => Ok(Token {
                 tt: TokenType::EOF,
                 value: "".to_string(),

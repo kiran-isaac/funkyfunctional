@@ -39,11 +39,7 @@ impl Debug for ASTNode {
         if let Some(tk) = &self.info {
             s.push_str(&format!("{:?} ", tk.value));
         }
-        // s.push_str(&format!("{}:{} ", self.line, self.col));
-        // if let Some(t) = &self.type_assignment {
-        //     s.push_str(&format!("Type: {:?} ", t));
-        // }
-        // s.push_str(&format!("Children: {:?}", self.children));
+
         write!(f, "{}", s)
     }
 }
@@ -530,7 +526,7 @@ impl AST {
         self.vec[abst].children[1]
     }
 
-    pub fn get_all_instances_of_var_in_exp(&self, exp: usize, var: &String) -> Vec<usize> {
+    pub fn get_all_free_instances_of_var_in_exp(&self, exp: usize, var: &String) -> Vec<usize> {
         match self.get(exp).t {
             ASTNodeType::Literal => {
                 vec![]
@@ -543,20 +539,22 @@ impl AST {
                 }
             }
             ASTNodeType::Application => {
-                let mut left = self.get_all_instances_of_var_in_exp(self.get_func(exp), &var);
-                let right = self.get_all_instances_of_var_in_exp(self.get_arg(exp), &var);
+                let mut left = self.get_all_free_instances_of_var_in_exp(self.get_func(exp), &var);
+                let right = self.get_all_free_instances_of_var_in_exp(self.get_arg(exp), &var);
                 left.extend(right);
                 left
             }
             ASTNodeType::Abstraction => {
-                let abst_var = self.get_abstr_var(exp);
-                assert_ne!(&self.get(abst_var).get_value(), var);
-
-                self.get_all_instances_of_var_in_exp(self.get_abstr_expr(exp), var)
+                // If equal then it will not be free in abst expression so dont bother
+                if &self.get(self.get_abstr_var(exp)).get_value() != var {
+                    self.get_all_free_instances_of_var_in_exp(self.get_abstr_expr(exp), var)
+                } else {
+                    vec![]
+                }
             }
             ASTNodeType::Pair => {
-                let mut left = self.get_all_instances_of_var_in_exp(self.get_first(exp), &var);
-                let right = self.get_all_instances_of_var_in_exp(self.get_second(exp), &var);
+                let mut left = self.get_all_free_instances_of_var_in_exp(self.get_first(exp), &var);
+                let right = self.get_all_free_instances_of_var_in_exp(self.get_second(exp), &var);
                 left.extend(right);
                 left
             }
@@ -566,7 +564,7 @@ impl AST {
 
     pub fn get_abst_var_usages(&self, abst: usize) -> Vec<usize> {
         let var_name = self.get(self.get_abstr_var(abst)).get_value();
-        self.get_all_instances_of_var_in_exp(self.get_abstr_expr(abst), &var_name)
+        self.get_all_free_instances_of_var_in_exp(self.get_abstr_expr(abst), &var_name)
     }
 
     pub fn get_n_abstr_vars(&self, abstr: usize, n: usize) -> Vec<usize> {
@@ -604,7 +602,7 @@ impl AST {
             ASTNodeType::Identifier => {
                 let var_name = self.get(var).get_value();
                 let usages =
-                    self.get_all_instances_of_var_in_exp(self.get_abstr_expr(self.root), &var_name);
+                    self.get_all_free_instances_of_var_in_exp(self.get_abstr_expr(self.root), &var_name);
                 for usage in usages {
                     self.replace(usage, subst);
                 }

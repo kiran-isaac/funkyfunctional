@@ -24,10 +24,6 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
         const list: JSX.Element[] = [];
         const prev_to_this = rcToHistory[i - 1];
 
-        // let next_from = "";
-        // if (i < rcFromHistory.length - 1) {
-        //     next_from = rcFromHistory[i + 1];
-        // }
         const current = astStrings[i];
 
         // Get all occurences of rc_from in current, and make them bold

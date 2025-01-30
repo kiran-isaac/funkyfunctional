@@ -1,4 +1,4 @@
-use sfl_lib::{self as lib, infer_or_check_assignment_types, LabelTable};
+use sfl_lib::{self as lib, infer_or_check_assignment_types, KnownTypeLabelTable};
 use std::{
     env, fs,
     io::{self, Write},
@@ -35,7 +35,7 @@ fn main() {
         eprintln!("{:?}", e);
         std::process::exit(1);
     }
-    let mut ast = ast.unwrap();
+    let mut ast = ast.unwrap().ast;
 
     // Typecheck
     let lt = if typechecked {
@@ -50,7 +50,7 @@ fn main() {
             std::process::exit(1)
         })
     } else {
-        let mut lt = LabelTable::new();
+        let mut lt = KnownTypeLabelTable::new();
         match &lt.consume_from_module(&ast, ast.root) {
             Ok(()) => lt,
             Err(e) => panic!("Cannot run this program without typechecking: {:?}", e),

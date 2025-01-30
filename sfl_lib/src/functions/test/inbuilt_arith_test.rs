@@ -6,7 +6,7 @@ use crate::AST;
 #[test]
 fn test_basic_int_arith() {
     let mut ast = AST::new();
-    let labels = LabelTable::new();
+    let labels = KnownTypeLabelTable::new();
     let add = labels.get(2, "add".to_string()).unwrap();
     let sub = labels.get(2, "sub".to_string()).unwrap();
     let mul = labels.get(2, "mul".to_string()).unwrap();
@@ -87,7 +87,7 @@ fn test_basic_int_arith() {
 #[test]
 fn test_basic_float_arith() {
     let mut ast = AST::new();
-    let labels = LabelTable::new();
+    let labels = KnownTypeLabelTable::new();
     let add = labels.get(2, "addf".to_string()).unwrap();
     let sub = labels.get(2, "subf".to_string()).unwrap();
     let mul = labels.get(2, "mulf".to_string()).unwrap();

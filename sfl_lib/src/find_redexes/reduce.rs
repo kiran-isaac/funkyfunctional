@@ -1,4 +1,4 @@
-use crate::functions::LabelTable;
+use crate::functions::KnownTypeLabelTable;
 use std::collections::HashMap;
 use super::*;
 
@@ -16,7 +16,7 @@ use super::*;
 fn check_for_ready_call(
     ast: &AST,
     exp: usize,
-    lt: &LabelTable,
+    lt: &KnownTypeLabelTable,
     am: HashMap<String, usize>,
 ) -> Option<AST> {
     let mut f = ast.get_func(exp);
@@ -122,7 +122,7 @@ pub fn find_all_redex_contraction_pairs(
     ast: &AST,
     module: Option<usize>,
     expr: usize,
-    lt: &LabelTable,
+    lt: &KnownTypeLabelTable,
 ) -> Vec<(usize, AST)> {
     let mut pairs: Vec<(usize, AST)> = vec![];
 
@@ -187,7 +187,7 @@ pub fn find_single_redex_contraction_pair(
     ast: &AST,
     module: Option<usize>,
     expr: usize,
-    lt: &LabelTable,
+    lt: &KnownTypeLabelTable,
 ) -> Option<RCPair> {
     #[cfg(debug_assertions)]
     let _exp_str = ast.to_string_sugar(expr, false);

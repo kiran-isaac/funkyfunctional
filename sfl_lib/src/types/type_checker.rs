@@ -1,4 +1,6 @@
-use crate::{functions::LabelTable, ASTNodeType, AST};
+use std::iter::zip;
+
+use crate::{functions::KnownTypeLabelTable, ASTNodeType, AST};
 
 use super::{Type, TypeError};
 
@@ -36,7 +38,7 @@ struct Context {
 
 impl std::fmt::Debug for Context {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let inbuilt_map = LabelTable::new().get_type_map();
+        let inbuilt_map = KnownTypeLabelTable::new().get_type_map();
         write!(f, "[")?;
         for item in &self.vec {
             match item {
@@ -53,7 +55,7 @@ impl std::fmt::Debug for Context {
 }
 
 impl Context {
-    fn from_labels(labels: &LabelTable) -> Self {
+    fn from_labels(labels: &KnownTypeLabelTable) -> Self {
         let mut vec = vec![];
 
         for (k, v) in labels.get_type_map() {
@@ -365,20 +367,45 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
             }
         }
 
-        (Type::Product(ut1_1, ut1_2), a) | (a, Type::Product(ut1_1, ut1_2)) => {
+        (Type::Product(pt1_1, pt1_2), a) | (a, Type::Product(pt1_1, pt1_2)) => {
             let (ut2_1, ut2_2) = match a {
                 Type::Product(a, b) => (a, b),
                 _ => {
                     return Err(format!(
-                        "Type {} is not a subtype of union {}",
+                        "Type {} is not a subtype of product {}",
                         a,
-                        Type::Product(ut1_1.clone(), ut1_1.clone())
+                        Type::Product(pt1_1.clone(), pt1_2.clone())
                     ))
                 }
             };
-            let ut_1_st = subtype(c, ut1_1, ut2_1)?;
-            subtype(ut_1_st, ut1_2, ut2_2)
+            let ut_1_st = subtype(c, pt1_1, ut2_1)?;
+            subtype(ut_1_st, pt1_2, ut2_2)
         }
+
+        (Type::Union(name1, uargs1), a) | (a, Type::Union(name1, uargs1)) => {
+            let (name2, uargs2) = match a {
+                Type::Union(name2, uargs2) => (name2, uargs2),
+                _ => {
+                    return Err(format!(
+                        "Type {} is not a subtype of union {}",
+                        a,
+                        Type::Union(name1.clone(), uargs1.clone())
+                    ))
+                }
+            };
+            if uargs1.len() != uargs2.len() || name1 != name2 {
+                return Err(format!(
+                    "Type {} is not a subtype of union {}",
+                    a,
+                    Type::Union(name1.clone(), uargs1.clone())
+                ))
+            }
+            let mut c = c;
+            for (t1, t2) in zip(uargs1, uargs2) {
+                c = subtype(c, t1, t2)?;
+            }
+            Ok(c)
+        },
 
         // <:Unit
         (Type::Unit, Type::Unit) => Ok(c),
@@ -856,7 +883,7 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
 
 pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), TypeError> {
     match check_type(
-        Context::from_labels(&LabelTable::new()),
+        Context::from_labels(&KnownTypeLabelTable::new()),
         expected,
         ast,
         expr,
@@ -879,7 +906,7 @@ fn infer_type_with_context(
 
 #[cfg(test)]
 pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
-    let lt = LabelTable::new();
+    let lt = KnownTypeLabelTable::new();
     let c = Context::from_labels(&lt);
 
     Ok(infer_type_with_context(c, ast, expr)?.0.forall_ify())
@@ -888,8 +915,8 @@ pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
 pub fn infer_or_check_assignment_types(
     ast: &mut AST,
     module: usize,
-) -> Result<LabelTable, TypeError> {
-    let mut lt = LabelTable::new();
+) -> Result<KnownTypeLabelTable, TypeError> {
+    let mut lt = KnownTypeLabelTable::new();
     let mut c = Context::from_labels(&lt);
 
     for assign_var in &ast.get_assignee_names(module) {

@@ -159,11 +159,11 @@ fn lex_type_stuff() {
         vec![
             TokenType::Id,
             TokenType::DoubleColon,
-            TokenType::TypeId,
+            TokenType::UppercaseId,
             TokenType::RArrow,
-            TokenType::TypeId,
+            TokenType::UppercaseId,
             TokenType::RArrow,
-            TokenType::TypeId,
+            TokenType::UppercaseId,
             TokenType::EOF
         ]
     );

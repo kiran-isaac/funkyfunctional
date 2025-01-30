@@ -1,5 +1,6 @@
 mod type_checker;
 
+use std::collections::btree_set::Union;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::hash::Hash;
@@ -26,6 +27,8 @@ pub enum Type {
     Existential(usize),
     Forall(String, Box<Type>),
     Product(Box<Type>, Box<Type>),
+    Union(String, Vec<Type>),
+    Alias(String, Box<Type>)
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -89,41 +92,60 @@ impl Type {
             Type::TypeVariable(_) => false,
             Type::Existential(e) => *e == ex,
             Type::Forall(_, t) => t.contains_existential(ex),
+            Type::Union(_, s) => s.iter().any(|f| f.contains_existential(ex)),
             Type::Unit => false,
+            Type::Alias(_, t) => t.contains_existential(ex),
         }
     }
 
     pub fn substitute_type_variable(
         &self,
-        var: &String,
+        to_replace: &String,
         replacement: &Type,
     ) -> Result<Self, String> {
         match self {
             Type::Primitive(p) => Ok(Type::Primitive(*p)),
             Type::Function(t1, t2) => Ok(Type::Function(
-                Box::new(t1.substitute_type_variable(var, replacement)?),
-                Box::new(t2.substitute_type_variable(var, replacement)?),
+                Box::new(t1.substitute_type_variable(to_replace, replacement)?),
+                Box::new(t2.substitute_type_variable(to_replace, replacement)?),
             )),
             Type::TypeVariable(n) => {
-                if n == var {
+                if n == to_replace {
                     Ok(replacement.clone())
                 } else {
                     Ok(Type::TypeVariable(n.clone()))
                 }
             }
             Type::Forall(var2, t2) => {
-                if var2 == var {
+                if var2 == to_replace {
                     panic!("Duplicate forall")
                 }
                 Ok(Type::fa(
                     vec![var2.clone()],
-                    t2.substitute_type_variable(var, replacement)?,
+                    t2.substitute_type_variable(to_replace, replacement)?,
                 ))
             }
             Type::Product(t1, t2) => {
-                Ok(Type::pr(t1.substitute_type_variable(var, replacement)?, t2.substitute_type_variable(var, replacement)?))
+                Ok(Type::pr(t1.substitute_type_variable(to_replace, replacement)?, t2.substitute_type_variable(to_replace, replacement)?))
+            }
+            Type::Union(s, vars) => {
+                let mut new_var = vec![];
+                for var in vars {
+                    new_var.push(var.substitute_type_variable(to_replace, replacement)?);
+                }
+                return Ok(Type::Union(s.clone(), new_var))
             }
             _ => Ok(self.clone()),
+        }
+    }
+
+    pub fn type_app(&self, t: &Type) -> Result<Type, String> {
+        match self {
+            Type::Forall(var, t2) => {
+                let new_t = t2.substitute_type_variable(var, t)?;
+                Ok(new_t)
+            }
+            _ => Err(format!("Type application error: {} is not a forall, so cannot substitute {}", self, t)),
         }
     }
 
@@ -149,6 +171,13 @@ impl Type {
                 t1.extend(t2);
                 Self::remove_duplicates(&t1)
             }
+            Type::Union(_, vars) => {
+                let mut exsts = vec![];
+                for var in vars {
+                    exsts.extend(var.ordered_existentials());
+                }
+                exsts
+            }
             _ => vec![],
         }
     }
@@ -173,6 +202,13 @@ impl Type {
                 let lhs = t1.exist_to_tv(ext, str);
                 let rhs = t2.exist_to_tv(ext, str);
                 Type::Product(Box::new(lhs), Box::new(rhs))
+            }
+            Type::Union(s, vars) => {
+                let mut new_var = vec![];
+                for var in vars {
+                    new_var.push(var.exist_to_tv(ext, str));
+                }
+                Type::Union(s.clone(), new_var)
             }
             _ => self.clone(),
         }
@@ -200,16 +236,10 @@ impl Type {
         match self {
             Type::Function(t1, t2) => t1.is_monotype() && t2.is_monotype(),
             Type::Product(t1, t2) => t1.is_monotype() && t2.is_monotype(),
-            Self::Forall(_, _) => false,
+            Type::Forall(_, _) => false,
+            Type::Union(_, vars) => vars.iter().all(|f| f.is_monotype()),
+            Type::Alias(_, t) => t.is_monotype(),
             _ => true,
-        }
-    }
-
-    pub fn is_concrete(&self) -> bool {
-        match self {
-            Type::Primitive(_) => true,
-            Type::Function(t1, t2) => t1.is_concrete() && t2.is_concrete(),
-            _ => false,
         }
     }
 
@@ -225,23 +255,7 @@ impl Type {
         }
     }
 
-    pub fn concrete_eq(&self, other: &Type) -> bool {
-        #[cfg(debug_assertions)]
-        {
-            assert!(self.is_concrete());
-            assert!(other.is_concrete());
-        }
-        match (self, other) {
-            (Type::Primitive(p1), Type::Primitive(p2)) => p1 == p2,
-            (Type::Function(t1, t2), Type::Function(t3, t4)) => {
-                t1.concrete_eq(t3) && t2.concrete_eq(t4)
-            }
-            (Type::TypeVariable(_), _) | (_, Type::TypeVariable(_)) => unreachable!(),
-            _ => false,
-        }
-    }
-
-    fn get_tvs_set(&self) -> HashSet<String> {
+    pub fn get_tvs_set(&self) -> HashSet<String> {
         match self {
             Type::Function(t1, t2) => {
                 let mut t1 = t1.get_tvs_set();
@@ -252,6 +266,13 @@ impl Type {
             Type::Forall(str1, t1) => {
                 let mut t1 = t1.get_tvs_set();
                 t1.insert(str1.clone());
+                t1
+            }
+            Type::Union(_, vars) => {
+                let mut t1 = HashSet::new();
+                for var in vars {
+                    t1.extend(var.get_tvs_set());
+                }
                 t1
             }
             Type::TypeVariable(str) => HashSet::from_iter(vec![str.clone()]),
@@ -287,6 +308,14 @@ impl Type {
                 Primitive::Bool => "Bool".to_string(),
                 _ => unimplemented!(),
             },
+            Type::Union(s, vars) => {
+                let mut s = s.clone();
+                for var in vars {
+                    s.push_str(" ");
+                    s.push_str(&var.to_string_internal(full_braces));
+                }
+                s
+            }
             Type::Function(t1, t2) => {
                 let t1_string = t1.to_string_internal(full_braces);
                 let t1_string = match t1.as_ref() {
@@ -318,6 +347,9 @@ impl Type {
                     t1.to_string_internal(full_braces),
                     t2.to_string_internal(full_braces)
                 )
+            }
+            Type::Alias(s, t) => {
+                format!("type {} = {}", s, t.to_string_internal(full_braces))
             }
         }
     }
@@ -391,5 +423,11 @@ mod tests {
 
         let t6 = Type::Existential(26 * 2);
         assert_eq!(t6.to_string(), "Eba");
+
+        let t = Type::Union("List".to_string(), vec![Type::Primitive(Primitive::Int64)]);
+        assert_eq!(t.to_string(), "List Int");
+
+        let t = Type::Union("Either".to_string(), vec![Type::int64(), Type::float64()]);
+        assert_eq!(t.to_string(), "Either Int Float");
     }
 }
