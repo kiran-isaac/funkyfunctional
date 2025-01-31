@@ -104,13 +104,10 @@ impl Lexer {
             "forall" => TokenType::Forall,
             "type" => TokenType::KWType,
             "data" => TokenType::KWData,
-            _ => TokenType::Id
+            _ => TokenType::Id,
         };
 
-        Ok(Token {
-            tt,
-            value: str,
-        })
+        Ok(Token { tt, value: str })
     }
 
     /// Hijack the parse_id function to parse type ids and then
@@ -137,7 +134,8 @@ impl Lexer {
             _ => {}
         }
 
-        while !(self.c().is_whitespace() || self.c() == '\0' || self.c() == ')' || self.c() == ',') {
+        while !(self.c().is_whitespace() || self.c() == '\0' || self.c() == ')' || self.c() == ',')
+        {
             match self.c() {
                 '0'..='9' => {
                     if has_point {
@@ -286,7 +284,7 @@ impl Lexer {
                 self.advance();
                 Ok(Token {
                     tt: TokenType::Bar,
-                    value: "|".to_string()
+                    value: "|".to_string(),
                 })
             }
             '/' => {

@@ -433,14 +433,14 @@ impl Parser {
                 }
 
                 TokenType::UppercaseId | TokenType::Id => {
-                    // If this is in an abstraction, and the next token is a double colon, then we're done because 
+                    // If this is in an abstraction, and the next token is a double colon, then we're done because
                     // the next ID is another abst variable
                     if next.tt == TokenType::Id {
                         if self.peek(1)?.tt == TokenType::DoubleColon {
                             return Ok(left);
                         }
                     }
-                    
+
                     let t2 = self.parse_type_expression_primary(type_table, bound_type_vars)?;
                     left = match left.type_app(&t2) {
                         Ok(t) => t,
@@ -469,7 +469,7 @@ impl Parser {
         match t.tt {
             TokenType::Id => {
                 if let None = bound_type_vars {
-                    return Ok(Type::TypeVariable(t.value))
+                    return Ok(Type::TypeVariable(t.value));
                 }
 
                 let id = t.value;
@@ -511,17 +511,14 @@ impl Parser {
         let assigned_type = self.parse_type_expression(type_table, None)?;
 
         let mut sorted_tvs: Vec<String> = assigned_type
-                .get_tvs_set()
-                .iter()
-                .map(|tv| tv.clone())
-                .collect();
+            .get_tvs_set()
+            .iter()
+            .map(|tv| tv.clone())
+            .collect();
 
         sorted_tvs.sort();
-        
-        let assigned_type = Type::fa(
-            sorted_tvs,
-            assigned_type,
-        );
+
+        let assigned_type = Type::fa(sorted_tvs, assigned_type);
 
         #[cfg(debug_assertions)]
         let _assigned_type_str = assigned_type.to_string();
@@ -769,14 +766,12 @@ impl Parser {
         );
 
         if let Some(_) = type_table.get(&name) {
-            return Err(self
-                .parse_error(format!("Type {} declared more than once", &name)));
+            return Err(self.parse_error(format!("Type {} declared more than once", &name)));
         }
 
         type_table.insert(name.clone(), Type::fa(tparams.clone(), union_type.clone()));
 
         let constructors = self.parse_multiple_constructors(type_table, &tparams, &union_type)?;
-        let union_type = Type::fa(tparams.clone(), union_type);
         Ok(constructors)
     }
 
@@ -816,7 +811,10 @@ impl Parser {
                     #[cfg(debug_assertions)]
                     let _decl_type_str = decl_type.to_string();
 
-                    tm.types.insert(decl_name.clone(), Type::Alias(decl_name, Box::new(decl_type)));
+                    tm.types.insert(
+                        decl_name.clone(),
+                        Type::Alias(decl_name, Box::new(decl_type)),
+                    );
                 }
                 TokenType::KWData => {
                     let constructors = self.parse_data_decl(&mut tm.types)?;

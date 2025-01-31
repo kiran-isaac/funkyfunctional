@@ -143,7 +143,11 @@ fn mod_main_inference_test(program: &str, type_str: &str) {
     let tm = pr.tm;
     let module = ast.root;
     infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
-    let main_expr_type = ast.get(ast.get_main(ast.root).unwrap()).clone().type_assignment.unwrap();
+    let main_expr_type = ast
+        .get(ast.get_main(ast.root).unwrap())
+        .clone()
+        .type_assignment
+        .unwrap();
     assert_eq!(main_expr_type.to_string(), type_str);
 }
 
@@ -243,16 +247,20 @@ fn maybe_test() -> Result<(), TypeError> {
 
 #[test]
 fn either_test() -> Result<(), TypeError> {
-    tc_test_should_fail("data Either a b = Left a | Right b\nmain :: a -> Either a b\nmain = \\x. Right x");
-    tc_test_should_pass("data Either a b = Left a | Right b\nmain :: a -> Either a b\nmain = \\x. Left x");
+    tc_test_should_fail(
+        "data Either a b = Left a | Right b\nmain :: a -> Either a b\nmain = \\x. Right x",
+    );
+    tc_test_should_pass(
+        "data Either a b = Left a | Right b\nmain :: a -> Either a b\nmain = \\x. Left x",
+    );
 
     mod_main_inference_test(
         "data Either a b = Left a | Right b\nmain = \\x. Left x",
-        "∀a. ∀b. a -> Either a b"
+        "∀a. ∀b. a -> Either a b",
     );
     mod_main_inference_test(
         "data Either a b = Left a | Right b\nmain = \\x. Right x",
-        "∀a. ∀b. a -> Either b a"
+        "∀a. ∀b. a -> Either b a",
     );
 
     Ok(())
