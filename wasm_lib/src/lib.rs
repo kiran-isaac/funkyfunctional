@@ -86,10 +86,10 @@ pub unsafe fn pick_rc_and_free(
     // clone to cleanup and remove orphan nodes
     let ast2 = ast2.clone_node(ast2.root);
 
-    return RawASTInfo {
+    RawASTInfo {
         ast: Box::into_raw(Box::new(ast2)),
         lt: Box::into_raw(Box::new(lt.clone())),
-    };
+    }
 }
 
 #[wasm_bindgen]
@@ -140,13 +140,16 @@ pub unsafe fn get_one_redex(info: &RawASTInfo) -> *mut Vec<RawRC> {
 
 #[wasm_bindgen]
 pub fn parse(str: &str) -> Result<RawASTInfo, String> {
-    let mut ast = match Parser::from_string(str.to_string()).parse_module() {
+    let pr = match Parser::from_string(str.to_string()).parse_module() {
         Ok(ast) => ast,
         Err(e) => return Err(format!("{:?}", e)),
     };
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
     let module = ast.root;
-    let lt = match infer_or_check_assignment_types(&mut ast, module) {
-        Ok(lt) => lt,
+    match infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm) {
+        Ok(_) => {},
         Err(e) => return Err(format!("{:?}", e)),
     };
     Ok(RawASTInfo {
