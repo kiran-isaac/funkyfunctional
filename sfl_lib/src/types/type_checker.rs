@@ -332,7 +332,7 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
             if ex1 == ex2 {
                 Ok(c)
             } else {
-                instantiate_l(c, *ex1, b)
+                instantiate_l(c, *ex1, b, type_map)
             }
         }
 
@@ -344,7 +344,7 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
                 return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", a, b));
             }
 
-            instantiate_l(c, *ex, b)
+            instantiate_l(c, *ex, b, type_map)
         }
 
         // <:InstantiateR
@@ -355,7 +355,7 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
                 return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", b, a));
             }
 
-            instantiate_r(c, *ex, a)
+            instantiate_r(c, *ex, a, type_map)
         }
 
         // <:Var
@@ -453,7 +453,7 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
     }
 }
 
-fn instantiate_l(c: Context, exst: usize, b: &Type) -> Result<Context, String> {
+fn instantiate_l(c: Context, exst: usize, b: &Type, type_map: &TypeMap) -> Result<Context, String> {
     #[cfg(debug_assertions)]
     let _c_str = format!("{:?}", &c);
     #[cfg(debug_assertions)]
@@ -479,20 +479,20 @@ fn instantiate_l(c: Context, exst: usize, b: &Type) -> Result<Context, String> {
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            let pred1_c = instantiate_r(c, exst, from.as_ref())?;
+            let pred1_c = instantiate_r(c, exst, from.as_ref(), type_map)?;
             let to_subst = pred1_c.substitute(to);
 
             #[cfg(debug_assertions)]
             let _to_subst_str = format!("{:?}", &to_subst);
 
-            let pred2 = instantiate_l(pred1_c, a2n, &to_subst)?;
+            let pred2 = instantiate_l(pred1_c, a2n, &to_subst, type_map)?;
             Ok(pred2)
         }
 
         // InstLAllR
         Type::Forall(var, t) => {
             let new_c = c.append(ContextItem::TypeVariable(var.clone()));
-            let pred = instantiate_l(new_c, exst, t.as_ref())?;
+            let pred = instantiate_l(new_c, exst, t.as_ref(), type_map)?;
             Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
         }
 
@@ -501,13 +501,19 @@ fn instantiate_l(c: Context, exst: usize, b: &Type) -> Result<Context, String> {
                 return Err("Failed Substitution".to_string());
             }
 
+            if let Some(existential) = c.get_existential(exst) {
+                if let Some(existential_type_assignment) = existential {
+                    subtype(c.clone(), &existential_type_assignment, &b.clone(), type_map)?;
+                }
+            }
+
             // InstLSolve
             Ok(c.set_existential_definition(exst, b.clone()))
         }
     }
 }
 
-fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
+fn instantiate_r(c: Context, exst: usize, a: &Type, type_map: &TypeMap) -> Result<Context, String> {
     #[cfg(debug_assertions)]
     let _c_str = format!("{:?}", &c);
     #[cfg(debug_assertions)]
@@ -545,13 +551,13 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
             #[cfg(debug_assertions)]
             let _c_str2 = format!("{:?}", &c);
 
-            let pred1_c = instantiate_l(c, a1n, from.as_ref())?;
+            let pred1_c = instantiate_l(c, a1n, from.as_ref(), type_map)?;
             let to_subst = pred1_c.substitute(to.as_ref());
 
             #[cfg(debug_assertions)]
             let _to_subst_str = to_subst.to_string();
 
-            let pred2 = instantiate_r(pred1_c, a2n, &to_subst)?;
+            let pred2 = instantiate_r(pred1_c, a2n, &to_subst, type_map)?;
             Ok(pred2)
         }
 
@@ -566,13 +572,19 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
             let _c_str = format!("{:?}", &c);
 
             let t = t.substitute_type_variable(var, &Type::Existential(next_ext))?;
-            let pred1 = instantiate_l(c, exst, &t)?;
+            let pred1 = instantiate_l(c, exst, &t, type_map)?;
             Ok(pred1.get_before_item(ContextItem::Marker(next_ext)))
         }
 
         _ => {
             if !a.is_monotype() {
                 return Err("Failed Substitution".to_string());
+            }
+
+            if let Some(existential) = c.get_existential(exst) {
+                if let Some(existential_type_assignment) = existential {
+                    subtype(c.clone(), &existential_type_assignment, &a.clone(), type_map)?;
+                }
             }
 
             // InstRSolve

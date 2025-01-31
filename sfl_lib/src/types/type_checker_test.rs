@@ -230,10 +230,8 @@ fn maybe_test() -> Result<(), TypeError> {
 
 #[test]
 fn either_test() -> Result<(), TypeError> {
+    tc_test_should_fail("data Either a b = Left a | Right b\nmain :: a -> Either a b\nmain = \\x. Right x");
     tc_test_should_pass("data Either a b = Left a | Right b\nmain :: a -> Either a b\nmain = \\x. Left x");
-
-    // TODO shoudlnt pass
-    tc_test_should_pass("data Either a b = Left a | Right b\nmain :: a -> Either a b\nmain = \\x. Right x");
 
     Ok(())
 }

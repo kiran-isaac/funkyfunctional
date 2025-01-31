@@ -268,3 +268,21 @@ fn data_decl2() -> Result<(), ParserError> {
 
     Ok(())
 }
+
+#[test]
+fn list_decl() -> Result<(), ParserError> {
+    let str = "data List a = Cons a (List a) | Nil\ndata IntListEither a = Left (List Int) | Right a\nmain :: Int -> (IntListEither a)\nmain = Left (Cons 10 Nil)";
+    let pr = Parser::from_string(str.to_string()).parse_module()?;
+    let lt = pr.lt;
+    let tm = pr.tm;
+
+    assert_eq!(format!("{}", lt.get_type("Cons").unwrap()), "∀a. a -> List a -> List a");
+    assert_eq!(format!("{}", lt.get_type("Nil").unwrap()), "∀a. List a");
+    assert_eq!(format!("{}", tm.types.get("List").unwrap().to_string()), "∀a. List a");
+    assert_eq!(format!("{}", tm.types.get("IntListEither").unwrap().to_string()), "∀a. IntListEither a");
+    assert_eq!(format!("{}", lt.get_type("Left").unwrap()), "∀a. List Int -> IntListEither a");
+    assert_eq!(format!("{}", lt.get_type("Right").unwrap()), "∀a. a -> IntListEither a");
+
+
+    Ok(())
+}
