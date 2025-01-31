@@ -1,6 +1,6 @@
 use std::iter::zip;
 
-use crate::{functions::KnownTypeLabelTable, ASTNodeType, AST};
+use crate::{functions::KnownTypeLabelTable, parser::TypeMap, ASTNodeType, AST};
 
 use super::{Type, TypeError};
 
@@ -328,6 +328,7 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
                 instantiate_l(c, *ex1, b)
             }
         }
+
         // <:InstantiateL
         (Type::Existential(ex), _) => {
             if b.contains_existential(*ex) {
@@ -915,8 +916,9 @@ pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
 pub fn infer_or_check_assignment_types(
     ast: &mut AST,
     module: usize,
-) -> Result<KnownTypeLabelTable, TypeError> {
-    let mut lt = KnownTypeLabelTable::new();
+    lt : &mut KnownTypeLabelTable,
+    tm: &TypeMap
+) -> Result<(), TypeError> {
     let mut c = Context::from_labels(&lt);
 
     for assign_var in &ast.get_assignee_names(module) {
@@ -957,5 +959,5 @@ pub fn infer_or_check_assignment_types(
         lt.add(assign_var.clone(), type_of_assignment.clone());
     }
 
-    Ok(lt)
+    Ok(())
 }

@@ -1,4 +1,4 @@
-use crate::{infer_or_check_assignment_types, parser::*};
+use crate::parser::*;
 
 #[test]
 fn assign() -> Result<(), ParserError> {
@@ -200,7 +200,7 @@ fn ite() -> Result<(), ParserError> {
 
     assert_eq!(ast.to_string_sugar(module, false), str);
 
-    let str = "x = \\_ :: Int . add (if true then 1 else 2) (if true then 2 else 3)";
+    let str = "x = \\_ :: Int. add (if true then 1 else 2) (if true then 2 else 3)";
     let mut parser = Parser::from_string(str.to_string());
 
     let ast = parser.parse_module()?.ast;
@@ -234,6 +234,7 @@ fn pair() -> Result<(), ParserError> {
 fn type_decl() -> Result<(), ParserError> {
     let str = "type Bingus = Int\nmain :: Bingus -> Int\nmain = \\x.x";
     let ast = Parser::from_string(str.to_string()).parse_module()?.ast;
+    assert_eq!(format!("{}", ast.to_string_sugar(ast.root, true)), "main :: Bingus -> Int\nmain = \\x. x");
 
     Ok(())
 }

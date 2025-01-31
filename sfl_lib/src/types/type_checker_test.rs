@@ -2,19 +2,25 @@ use super::*;
 use crate::{find_all_redex_contraction_pairs, Parser};
 
 fn tc_test_should_pass(program: &str) {
-    let mut ast = Parser::from_string(program.to_string())
+    let pr = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap().ast;
+        .unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
     let module = ast.root;
-    infer_or_check_assignment_types(&mut ast, module).unwrap();
+    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
 }
 
 fn tc_test_should_fail(program: &str) {
-    let mut ast = Parser::from_string(program.to_string())
+    let pr = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap().ast;
+        .unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
     let module = ast.root;
-    infer_or_check_assignment_types(&mut ast, module).unwrap_err();
+    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap_err();
 }
 
 #[test]
@@ -129,11 +135,14 @@ fn inference_test(program: &str, type_str: &str) {
 }
 
 fn mod_inference_should_fail(program: &str) {
-    let mut ast = Parser::from_string(program.to_string())
+    let pr = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap().ast;
+        .unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
     let module = ast.root;
-    infer_or_check_assignment_types(&mut ast, module).unwrap_err();
+    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap_err();
 }
 
 fn expr_inference_should_fail(program: &str) {
@@ -163,13 +172,16 @@ fn infer() {
 
 /// Test a program is well typed throughout evaluation
 fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
-    let mut ast = Parser::from_string(program.to_string())
+    let pr = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap().ast;
+        .unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
     let mut main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
     let module = ast.root;
-    let lt = &infer_or_check_assignment_types(&mut ast, module)?;
-    let mut rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, lt);
+    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm)?;
+    let mut rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &lt);
     while rcs.len() > 0 {
         #[cfg(debug_assertions)]
         let _module_str = ast.to_string_sugar(ast.root, true);
@@ -180,8 +192,8 @@ fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
 
         main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
         let module = ast.root;
-        let lt = &infer_or_check_assignment_types(&mut ast, module)?;
-        rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, lt);
+        infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm)?;
+        rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &lt);
     }
     Ok(())
 }

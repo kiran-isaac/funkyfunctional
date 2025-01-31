@@ -1,6 +1,5 @@
 mod type_checker;
 
-use std::collections::btree_set::Union;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::hash::Hash;
@@ -348,8 +347,8 @@ impl Type {
                     t2.to_string_internal(full_braces)
                 )
             }
-            Type::Alias(s, t) => {
-                format!("type {} = {}", s, t.to_string_internal(full_braces))
+            Type::Alias(s, _) => {
+                s.clone()
             }
         }
     }

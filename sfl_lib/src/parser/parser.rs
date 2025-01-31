@@ -2,8 +2,7 @@ use super::ast::AST;
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
-use crate::{ASTNodeType, KnownTypeLabelTable, Type, TypeError};
-use std::any::TypeId;
+use crate::{ASTNodeType, KnownTypeLabelTable, Type};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use std::fs::File;
@@ -483,6 +482,7 @@ impl Parser {
             TokenType::UppercaseId => {
                 let id = t.value;
                 if let Some(t_match) = type_table.get(&id) {
+                    // Ok(Type::Alias(id, Box::new(t_match.clone())))
                     Ok(t_match.clone())
                 } else {
                     Err(self.parse_error(format!("Type {} is not defined", id)))
@@ -806,7 +806,10 @@ impl Parser {
                         return Err(self
                             .parse_error(format!("Type {} declared more than once", &decl_name)));
                     }
-                    tm.types.insert(decl_name, decl_type);
+                    #[cfg(debug_assertions)]
+                    let _decl_type_str = decl_type.to_string();
+
+                    tm.types.insert(decl_name.clone(), Type::Alias(decl_name, Box::new(decl_type)));
                 }
                 TokenType::KWData => {
                     let (data_name, union_type, constructors) = self.parse_data_decl(&tm.types)?;

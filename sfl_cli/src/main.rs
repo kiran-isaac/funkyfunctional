@@ -71,7 +71,7 @@ fn main() {
         },
     });
 
-    let mut rcs = lib::find_redex_contraction_pairs(&ast, Some(ast.root), expr, &lt);
+    let mut rcs = lib::find_all_redex_contraction_pairs(&ast, Some(ast.root), expr, &lt);
     let mut rcs_filtered = ast.filter_identical_rcs(&rcs);
 
     println!("{}", ast.to_string_sugar(expr, false));
@@ -119,7 +119,7 @@ fn main() {
             },
         });
 
-        rcs = lib::find_redex_contraction_pairs(&ast, Some(ast.root), expr, &lt);
+        rcs = lib::find_all_redex_contraction_pairs(&ast, Some(ast.root), expr, &lt);
         rcs_filtered = ast.filter_identical_rcs(&rcs);
         println!("\n{}", ast.to_string_sugar(expr, false));
     }

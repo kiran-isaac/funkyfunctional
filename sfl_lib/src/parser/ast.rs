@@ -853,7 +853,7 @@ impl AST {
 
                 let mut res = "\\".to_string();
                 res.push_str(&var_str);
-                res.push_str(" . ");
+                res.push_str(". ");
                 res.push_str(&expr_str);
                 res
             }
