@@ -601,8 +601,10 @@ impl AST {
         match var_n.t {
             ASTNodeType::Identifier => {
                 let var_name = self.get(var).get_value();
-                let usages =
-                    self.get_all_free_instances_of_var_in_exp(self.get_abstr_expr(self.root), &var_name);
+                let usages = self.get_all_free_instances_of_var_in_exp(
+                    self.get_abstr_expr(self.root),
+                    &var_name,
+                );
                 for usage in usages {
                     self.replace(usage, subst);
                 }

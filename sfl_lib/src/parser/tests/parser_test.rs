@@ -80,8 +80,7 @@ fn bound() -> Result<(), ParserError> {
 
     // y is unbound
     let str = "x = add 2 y";
-    assert!(Parser::from_string(str.to_string())
-        .parse_module().is_err());
+    assert!(Parser::from_string(str.to_string()).parse_module().is_err());
 
     Ok(())
 }
@@ -130,15 +129,21 @@ fn abstraction() -> Result<(), ParserError> {
     // Should be same for both
     let multi_abstr = "x = \\y :: Int z :: Int . add y 5";
     let multi_abstr2 = "x = \\y :: Int . \\z :: Int . add y 5";
-    let ast = Parser::from_string(multi_abstr.to_string()).parse_module()?.ast;
-    let ast2 = Parser::from_string(multi_abstr2.to_string()).parse_module()?.ast;
+    let ast = Parser::from_string(multi_abstr.to_string())
+        .parse_module()?
+        .ast;
+    let ast2 = Parser::from_string(multi_abstr2.to_string())
+        .parse_module()?
+        .ast;
     assert_eq!(
         ast.to_string_sugar(ast.root, false),
         ast2.to_string_sugar(ast2.root, false)
     );
 
     let ignore_directive = "x = \\_ :: Int . 1.5";
-    Parser::from_string(ignore_directive.to_string()).parse_module()?.ast;
+    Parser::from_string(ignore_directive.to_string())
+        .parse_module()?
+        .ast;
 
     Ok(())
 }
@@ -226,7 +231,10 @@ fn pair() -> Result<(), ParserError> {
     let mut parser = Parser::from_string(str.to_string());
     let ast = parser.parse_module()?.ast;
     let module = 0;
-    assert_eq!(ast.to_string_sugar(module, true), "pair :: ∀a. ∀b. a -> b -> (a, b)\npair x y = (x, y)");
+    assert_eq!(
+        ast.to_string_sugar(module, true),
+        "pair :: ∀a. ∀b. a -> b -> (a, b)\npair x y = (x, y)"
+    );
     Ok(())
 }
 
@@ -234,7 +242,10 @@ fn pair() -> Result<(), ParserError> {
 fn type_decl() -> Result<(), ParserError> {
     let str = "type Bingus = Int\nmain :: Bingus -> Int\nmain = \\x.x";
     let ast = Parser::from_string(str.to_string()).parse_module()?.ast;
-    assert_eq!(format!("{}", ast.to_string_sugar(ast.root, true)), "main :: Bingus -> Int\nmain = \\x. x");
+    assert_eq!(
+        format!("{}", ast.to_string_sugar(ast.root, true)),
+        "main :: Bingus -> Int\nmain = \\x. x"
+    );
 
     Ok(())
 }
@@ -246,9 +257,15 @@ fn data_decl() -> Result<(), ParserError> {
     let lt = pr.lt;
     let tm = pr.tm;
 
-    assert_eq!(format!("{}", lt.get_type("Some").unwrap()), "∀a. a -> Maybe a");
+    assert_eq!(
+        format!("{}", lt.get_type("Some").unwrap()),
+        "∀a. a -> Maybe a"
+    );
     assert_eq!(format!("{}", lt.get_type("None").unwrap()), "∀a. Maybe a");
-    assert_eq!(format!("{}", tm.types.get("Maybe").unwrap().to_string()), "∀a. Maybe a");
+    assert_eq!(
+        format!("{}", tm.types.get("Maybe").unwrap().to_string()),
+        "∀a. Maybe a"
+    );
 
     Ok(())
 }
@@ -260,11 +277,23 @@ fn data_decl2() -> Result<(), ParserError> {
     let lt = pr.lt;
     let tm = pr.tm;
 
-    assert_eq!(format!("{}", lt.get_type("Some").unwrap()), "∀a. a -> Maybe a");
+    assert_eq!(
+        format!("{}", lt.get_type("Some").unwrap()),
+        "∀a. a -> Maybe a"
+    );
     assert_eq!(format!("{}", lt.get_type("None").unwrap()), "∀a. Maybe a");
-    assert_eq!(format!("{}", lt.get_type("Bingus").unwrap()), "∀maybevar. Maybe maybevar -> DataTest maybevar");
-    assert_eq!(format!("{}", tm.types.get("Maybe").unwrap().to_string()), "∀a. Maybe a");
-    assert_eq!(format!("{}", tm.types.get("DataTest").unwrap().to_string()), "∀maybevar. DataTest maybevar");
+    assert_eq!(
+        format!("{}", lt.get_type("Bingus").unwrap()),
+        "∀maybevar. Maybe maybevar -> DataTest maybevar"
+    );
+    assert_eq!(
+        format!("{}", tm.types.get("Maybe").unwrap().to_string()),
+        "∀a. Maybe a"
+    );
+    assert_eq!(
+        format!("{}", tm.types.get("DataTest").unwrap().to_string()),
+        "∀maybevar. DataTest maybevar"
+    );
 
     Ok(())
 }
@@ -276,13 +305,27 @@ fn list_decl() -> Result<(), ParserError> {
     let lt = pr.lt;
     let tm = pr.tm;
 
-    assert_eq!(format!("{}", lt.get_type("Cons").unwrap()), "∀a. a -> List a -> List a");
+    assert_eq!(
+        format!("{}", lt.get_type("Cons").unwrap()),
+        "∀a. a -> List a -> List a"
+    );
     assert_eq!(format!("{}", lt.get_type("Nil").unwrap()), "∀a. List a");
-    assert_eq!(format!("{}", tm.types.get("List").unwrap().to_string()), "∀a. List a");
-    assert_eq!(format!("{}", tm.types.get("IntListEither").unwrap().to_string()), "∀a. IntListEither a");
-    assert_eq!(format!("{}", lt.get_type("Left").unwrap()), "∀a. List Int -> IntListEither a");
-    assert_eq!(format!("{}", lt.get_type("Right").unwrap()), "∀a. a -> IntListEither a");
-
+    assert_eq!(
+        format!("{}", tm.types.get("List").unwrap().to_string()),
+        "∀a. List a"
+    );
+    assert_eq!(
+        format!("{}", tm.types.get("IntListEither").unwrap().to_string()),
+        "∀a. IntListEither a"
+    );
+    assert_eq!(
+        format!("{}", lt.get_type("Left").unwrap()),
+        "∀a. List Int -> IntListEither a"
+    );
+    assert_eq!(
+        format!("{}", lt.get_type("Right").unwrap()),
+        "∀a. a -> IntListEither a"
+    );
 
     Ok(())
 }

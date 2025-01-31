@@ -1,6 +1,6 @@
+use super::*;
 use crate::functions::KnownTypeLabelTable;
 use std::collections::HashMap;
-use super::*;
 
 /// This will check for applications to functions:
 /// - lables with func types
@@ -23,7 +23,7 @@ fn check_for_ready_call(
     let mut x = ast.get_arg(exp);
     let mut argv = vec![];
     let mut argv_ids = vec![];
-    
+
     #[cfg(debug_assertions)]
     let mut argv_strs = vec![];
 
@@ -76,7 +76,7 @@ fn check_for_ready_call(
                             // Stop it being a ready call when a pair is expected but we dont have it
                             for i in 0..argv.len() {
                                 match (&argv[i].t, &ast.get(n_args[i]).t) {
-                                    (ASTNodeType::Pair, ASTNodeType::Pair) => {},
+                                    (ASTNodeType::Pair, ASTNodeType::Pair) => {}
                                     (_, ASTNodeType::Pair) => return None,
                                     _ => {}
                                 }
@@ -98,7 +98,7 @@ fn check_for_ready_call(
 
                     for i in 0..argv.len() {
                         match (&argv[i].t, &ast.get(n_args[i]).t) {
-                            (ASTNodeType::Pair, ASTNodeType::Pair) => {},
+                            (ASTNodeType::Pair, ASTNodeType::Pair) => {}
                             (_, ASTNodeType::Pair) => return None,
                             _ => {}
                         }
@@ -182,7 +182,6 @@ pub fn find_all_redex_contraction_pairs(
     pairs
 }
 
-
 pub fn find_single_redex_contraction_pair(
     ast: &AST,
     module: Option<usize>,
@@ -200,9 +199,11 @@ pub fn find_single_redex_contraction_pair(
     };
 
     match ast.get(expr).t {
-        ASTNodeType::Literal | ASTNodeType::Abstraction => {None}
+        ASTNodeType::Literal | ASTNodeType::Abstraction => None,
         ASTNodeType::Pair => {
-            if let Some(left_rc) = find_single_redex_contraction_pair(ast, module, ast.get_first(expr), lt) {
+            if let Some(left_rc) =
+                find_single_redex_contraction_pair(ast, module, ast.get_first(expr), lt)
+            {
                 Some(left_rc)
             } else {
                 find_single_redex_contraction_pair(ast, module, ast.get_second(expr), lt)
@@ -224,7 +225,9 @@ pub fn find_single_redex_contraction_pair(
                         let assign_exp = ast.get_assign_exp(assign);
                         Some((expr, ast.clone_node(assign_exp)))
                     }
-                } else {None}
+                } else {
+                    None
+                }
             } else {
                 unreachable!("No label match: {}", value);
             }
@@ -232,7 +235,9 @@ pub fn find_single_redex_contraction_pair(
         ASTNodeType::Application => {
             if let Some(ready_call_reduction) = check_for_ready_call(ast, expr, &lt, am) {
                 Some((expr, ready_call_reduction))
-            } else if let Some(f_rc) = find_single_redex_contraction_pair(ast, module, ast.get_func(expr), lt) {
+            } else if let Some(f_rc) =
+                find_single_redex_contraction_pair(ast, module, ast.get_func(expr), lt)
+            {
                 Some(f_rc)
             } else {
                 find_single_redex_contraction_pair(ast, module, ast.get_arg(expr), lt)

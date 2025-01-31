@@ -23,12 +23,12 @@ pub enum TokenType {
     Forall,
     KWType,
     KWData,
-    
+
     LParen,
     RParen,
-    
+
     Lambda,
-    
+
     Dot,
     Comma,
     Bar,

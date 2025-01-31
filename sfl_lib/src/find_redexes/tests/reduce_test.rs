@@ -78,20 +78,24 @@ fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
 //     }
 // }
 
-use crate::{find_all_redex_contraction_pairs, infer_or_check_assignment_types, KnownTypeLabelTable, Parser};
 use crate::find_redexes::reduce::find_single_redex_contraction_pair;
+use crate::{
+    find_all_redex_contraction_pairs, infer_or_check_assignment_types, KnownTypeLabelTable, Parser,
+};
 
 #[test]
 fn basic_add_test() {
     let program = "main = add 5 1";
     let ast = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap().ast;
+        .unwrap()
+        .ast;
 
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
 
-    let rcs = find_all_redex_contraction_pairs(&ast, Some(module), exp, &KnownTypeLabelTable::new());
+    let rcs =
+        find_all_redex_contraction_pairs(&ast, Some(module), exp, &KnownTypeLabelTable::new());
     assert!(rcs.len() == 1);
     println!("{}", ast.rc_to_str(&rcs[0]));
 }

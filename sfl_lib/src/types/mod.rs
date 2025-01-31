@@ -27,7 +27,7 @@ pub enum Type {
     Forall(String, Box<Type>),
     Product(Box<Type>, Box<Type>),
     Union(String, Vec<Type>),
-    Alias(String, Box<Type>)
+    Alias(String, Box<Type>),
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -124,15 +124,16 @@ impl Type {
                     t2.substitute_type_variable(to_replace, replacement)?,
                 ))
             }
-            Type::Product(t1, t2) => {
-                Ok(Type::pr(t1.substitute_type_variable(to_replace, replacement)?, t2.substitute_type_variable(to_replace, replacement)?))
-            }
+            Type::Product(t1, t2) => Ok(Type::pr(
+                t1.substitute_type_variable(to_replace, replacement)?,
+                t2.substitute_type_variable(to_replace, replacement)?,
+            )),
             Type::Union(s, vars) => {
                 let mut new_var = vec![];
                 for var in vars {
                     new_var.push(var.substitute_type_variable(to_replace, replacement)?);
                 }
-                return Ok(Type::Union(s.clone(), new_var))
+                return Ok(Type::Union(s.clone(), new_var));
             }
             _ => Ok(self.clone()),
         }
@@ -144,7 +145,10 @@ impl Type {
                 let new_t = t2.substitute_type_variable(var, t)?;
                 Ok(new_t)
             }
-            _ => Err(format!("Type application error: {} is not a forall, so cannot substitute {}", self, t)),
+            _ => Err(format!(
+                "Type application error: {} is not a forall, so cannot substitute {}",
+                self, t
+            )),
         }
     }
 
@@ -244,12 +248,11 @@ impl Type {
 
     pub fn flatten(&self) -> Vec<Self> {
         match self {
-            Type::Function(t1, t2) => {
-                vec![t1.as_ref().clone()].into_iter().chain(t2.flatten().into_iter()).collect()
-            }
-            Type::Forall(_, t1) => {
-                t1.flatten()
-            }
+            Type::Function(t1, t2) => vec![t1.as_ref().clone()]
+                .into_iter()
+                .chain(t2.flatten().into_iter())
+                .collect(),
+            Type::Forall(_, t1) => t1.flatten(),
             _ => vec![self.clone()],
         }
     }
@@ -352,9 +355,7 @@ impl Type {
                     t2.to_string_internal(full_braces)
                 )
             }
-            Type::Alias(s, _) => {
-                s.clone()
-            }
+            Type::Alias(s, _) => s.clone(),
         }
     }
 }

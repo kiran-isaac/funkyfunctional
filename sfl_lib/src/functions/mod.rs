@@ -52,7 +52,7 @@ impl Label {
 pub struct KnownTypeLabelTable {
     /// Sorted by arity. So inbuilts[0] will be all inbuilts with arity 0
     /// inbuilts[1] will be all inbuilts with arity 1, etc.
-    func_map: Vec<HashMap<String, Label>>
+    func_map: Vec<HashMap<String, Label>>,
 }
 
 impl KnownTypeLabelTable {
