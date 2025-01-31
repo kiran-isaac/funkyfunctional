@@ -210,3 +210,21 @@ fn full_well_typed_tests() -> Result<(), TypeError> {
 
     Ok(())
 }
+
+#[test]
+fn alias_test() -> Result<(), TypeError> {
+    tc_test_should_pass("type IntAlias = Int\nmain :: IntAlias -> Int\nmain = \\x.x");
+    tc_test_should_fail("type IntAlias = Bool\nmain :: IntAlias -> Int\nmain = \\x.x");
+    tc_test_should_fail("type IntAlias = Int\nmain :: IntAlias -> Bool\nmain = \\x.x");
+
+    Ok(())
+}
+
+#[test]
+fn maybe_test() -> Result<(), TypeError> {
+    tc_test_should_pass("data Maybe a = Some a | None\nmain :: a -> Maybe a\nmain = \\x. Some x");
+    tc_test_should_fail("data Maybe a = Some a | None\nmain :: a -> Int\nmain = \\x. Some x");
+
+
+    Ok(())
+}
