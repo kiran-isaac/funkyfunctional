@@ -2,8 +2,7 @@ use super::ast::AST;
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
-use crate::{ASTNodeType, KnownTypeLabelTable, Type, TypeError};
-use std::any::TypeId;
+use crate::{ASTNodeType, KnownTypeLabelTable, Type};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use std::fs::File;
@@ -483,6 +482,7 @@ impl Parser {
             TokenType::UppercaseId => {
                 let id = t.value;
                 if let Some(t_match) = type_table.get(&id) {
+                    // Ok(Type::Alias(id, Box::new(t_match.clone())))
                     Ok(t_match.clone())
                 } else {
                     Err(self.parse_error(format!("Type {} is not defined", id)))
@@ -724,8 +724,8 @@ impl Parser {
 
     fn parse_data_decl(
         &mut self,
-        type_table: &HashMap<String, Type>,
-    ) -> Result<(String, Type, HashMap<String, Type>), ParserError> {
+        type_table: &mut HashMap<String, Type>,
+    ) -> Result<HashMap<String, Type>, ParserError> {
         assert_eq!(self.consume()?.tt, TokenType::KWData);
 
         let t = self.consume()?;
@@ -768,9 +768,16 @@ impl Parser {
             tparams.iter().map(|v| Type::tv(v.clone())).collect(),
         );
 
+        if let Some(_) = type_table.get(&name) {
+            return Err(self
+                .parse_error(format!("Type {} declared more than once", &name)));
+        }
+
+        type_table.insert(name.clone(), Type::fa(tparams.clone(), union_type.clone()));
+
         let constructors = self.parse_multiple_constructors(type_table, &tparams, &union_type)?;
         let union_type = Type::fa(tparams.clone(), union_type);
-        Ok((name, union_type, constructors))
+        Ok(constructors)
     }
 
     pub fn parse_module(&mut self) -> Result<ModuleParseResult, ParserError> {
@@ -806,15 +813,14 @@ impl Parser {
                         return Err(self
                             .parse_error(format!("Type {} declared more than once", &decl_name)));
                     }
-                    tm.types.insert(decl_name, decl_type);
+                    #[cfg(debug_assertions)]
+                    let _decl_type_str = decl_type.to_string();
+
+                    tm.types.insert(decl_name.clone(), Type::Alias(decl_name, Box::new(decl_type)));
                 }
                 TokenType::KWData => {
-                    let (data_name, union_type, constructors) = self.parse_data_decl(&tm.types)?;
-                    if let Some(_) = tm.types.get(&data_name) {
-                        return Err(self
-                            .parse_error(format!("Type {} declared more than once", &data_name)));
-                    }
-                    tm.types.insert(data_name.clone(), union_type);
+                    let constructors = self.parse_data_decl(&mut tm.types)?;
+
                     for (constructor_name, constructor_type) in constructors {
                         lt.add(constructor_name.clone(), constructor_type);
                         self.bound.add_binding(constructor_name);

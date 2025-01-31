@@ -1,4 +1,4 @@
-use crate::{infer_or_check_assignment_types, parser::*};
+use crate::parser::*;
 
 #[test]
 fn assign() -> Result<(), ParserError> {
@@ -200,7 +200,7 @@ fn ite() -> Result<(), ParserError> {
 
     assert_eq!(ast.to_string_sugar(module, false), str);
 
-    let str = "x = \\_ :: Int . add (if true then 1 else 2) (if true then 2 else 3)";
+    let str = "x = \\_ :: Int. add (if true then 1 else 2) (if true then 2 else 3)";
     let mut parser = Parser::from_string(str.to_string());
 
     let ast = parser.parse_module()?.ast;
@@ -234,6 +234,7 @@ fn pair() -> Result<(), ParserError> {
 fn type_decl() -> Result<(), ParserError> {
     let str = "type Bingus = Int\nmain :: Bingus -> Int\nmain = \\x.x";
     let ast = Parser::from_string(str.to_string()).parse_module()?.ast;
+    assert_eq!(format!("{}", ast.to_string_sugar(ast.root, true)), "main :: Bingus -> Int\nmain = \\x. x");
 
     Ok(())
 }
@@ -264,6 +265,24 @@ fn data_decl2() -> Result<(), ParserError> {
     assert_eq!(format!("{}", lt.get_type("Bingus").unwrap()), "∀maybevar. Maybe maybevar -> DataTest maybevar");
     assert_eq!(format!("{}", tm.types.get("Maybe").unwrap().to_string()), "∀a. Maybe a");
     assert_eq!(format!("{}", tm.types.get("DataTest").unwrap().to_string()), "∀maybevar. DataTest maybevar");
+
+    Ok(())
+}
+
+#[test]
+fn list_decl() -> Result<(), ParserError> {
+    let str = "data List a = Cons a (List a) | Nil\ndata IntListEither a = Left (List Int) | Right a\nmain :: Int -> (IntListEither a)\nmain = \\x.Left (Cons x Nil)";
+    let pr = Parser::from_string(str.to_string()).parse_module()?;
+    let lt = pr.lt;
+    let tm = pr.tm;
+
+    assert_eq!(format!("{}", lt.get_type("Cons").unwrap()), "∀a. a -> List a -> List a");
+    assert_eq!(format!("{}", lt.get_type("Nil").unwrap()), "∀a. List a");
+    assert_eq!(format!("{}", tm.types.get("List").unwrap().to_string()), "∀a. List a");
+    assert_eq!(format!("{}", tm.types.get("IntListEither").unwrap().to_string()), "∀a. IntListEither a");
+    assert_eq!(format!("{}", lt.get_type("Left").unwrap()), "∀a. List Int -> IntListEither a");
+    assert_eq!(format!("{}", lt.get_type("Right").unwrap()), "∀a. a -> IntListEither a");
+
 
     Ok(())
 }

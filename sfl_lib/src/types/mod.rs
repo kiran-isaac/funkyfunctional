@@ -1,6 +1,5 @@
 mod type_checker;
 
-use std::collections::btree_set::Union;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::hash::Hash;
@@ -312,7 +311,12 @@ impl Type {
                 let mut s = s.clone();
                 for var in vars {
                     s.push_str(" ");
-                    s.push_str(&var.to_string_internal(full_braces));
+                    let var_str = &var.to_string_internal(full_braces);
+                    if var_str.contains(" ") {
+                        s.push_str(format!("({})", var_str).as_str());
+                    } else {
+                        s.push_str(var_str);
+                    }
                 }
                 s
             }
@@ -348,8 +352,8 @@ impl Type {
                     t2.to_string_internal(full_braces)
                 )
             }
-            Type::Alias(s, t) => {
-                format!("type {} = {}", s, t.to_string_internal(full_braces))
+            Type::Alias(s, _) => {
+                s.clone()
             }
         }
     }

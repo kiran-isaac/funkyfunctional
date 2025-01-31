@@ -2,19 +2,25 @@ use super::*;
 use crate::{find_all_redex_contraction_pairs, Parser};
 
 fn tc_test_should_pass(program: &str) {
-    let mut ast = Parser::from_string(program.to_string())
+    let pr = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap().ast;
+        .unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
     let module = ast.root;
-    infer_or_check_assignment_types(&mut ast, module).unwrap();
+    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
 }
 
 fn tc_test_should_fail(program: &str) {
-    let mut ast = Parser::from_string(program.to_string())
+    let pr = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap().ast;
+        .unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
     let module = ast.root;
-    infer_or_check_assignment_types(&mut ast, module).unwrap_err();
+    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap_err();
 }
 
 #[test]
@@ -128,12 +134,28 @@ fn inference_test(program: &str, type_str: &str) {
     assert_eq!(t.to_string(), type_str);
 }
 
-fn mod_inference_should_fail(program: &str) {
-    let mut ast = Parser::from_string(program.to_string())
+fn mod_main_inference_test(program: &str, type_str: &str) {
+    let pr = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap().ast;
+        .unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
     let module = ast.root;
-    infer_or_check_assignment_types(&mut ast, module).unwrap_err();
+    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
+    let main_expr_type = ast.get(ast.get_main(ast.root).unwrap()).clone().type_assignment.unwrap();
+    assert_eq!(main_expr_type.to_string(), type_str);
+}
+
+fn mod_inference_should_fail(program: &str) {
+    let pr = Parser::from_string(program.to_string())
+        .parse_module()
+        .unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
+    let module = ast.root;
+    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap_err();
 }
 
 fn expr_inference_should_fail(program: &str) {
@@ -163,13 +185,16 @@ fn infer() {
 
 /// Test a program is well typed throughout evaluation
 fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
-    let mut ast = Parser::from_string(program.to_string())
+    let pr = Parser::from_string(program.to_string())
         .parse_module()
-        .unwrap().ast;
+        .unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
     let mut main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
     let module = ast.root;
-    let lt = &infer_or_check_assignment_types(&mut ast, module)?;
-    let mut rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, lt);
+    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm)?;
+    let mut rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &lt);
     while rcs.len() > 0 {
         #[cfg(debug_assertions)]
         let _module_str = ast.to_string_sugar(ast.root, true);
@@ -180,8 +205,8 @@ fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
 
         main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
         let module = ast.root;
-        let lt = &infer_or_check_assignment_types(&mut ast, module)?;
-        rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, lt);
+        infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm)?;
+        rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &lt);
     }
     Ok(())
 }
@@ -195,6 +220,56 @@ fn full_well_typed_tests() -> Result<(), TypeError> {
     main :: Int
     main = fac 5"#;
     full_well_typed_test(program)?;
+
+    Ok(())
+}
+
+#[test]
+fn alias_test() -> Result<(), TypeError> {
+    tc_test_should_pass("type IntAlias = Int\nmain :: IntAlias -> Int\nmain = \\x.x");
+    tc_test_should_fail("type IntAlias = Bool\nmain :: IntAlias -> Int\nmain = \\x.x");
+    tc_test_should_fail("type IntAlias = Int\nmain :: IntAlias -> Bool\nmain = \\x.x");
+
+    Ok(())
+}
+
+#[test]
+fn maybe_test() -> Result<(), TypeError> {
+    tc_test_should_pass("data Maybe a = Some a | None\nmain :: a -> Maybe a\nmain = \\x. Some x");
+    tc_test_should_fail("data Maybe a = Some a | None\nmain :: a -> Int\nmain = \\x. Some x");
+
+    Ok(())
+}
+
+#[test]
+fn either_test() -> Result<(), TypeError> {
+    tc_test_should_fail("data Either a b = Left a | Right b\nmain :: a -> Either a b\nmain = \\x. Right x");
+    tc_test_should_pass("data Either a b = Left a | Right b\nmain :: a -> Either a b\nmain = \\x. Left x");
+
+    mod_main_inference_test(
+        "data Either a b = Left a | Right b\nmain = \\x. Left x",
+        "∀a. ∀b. a -> Either a b"
+    );
+    mod_main_inference_test(
+        "data Either a b = Left a | Right b\nmain = \\x. Right x",
+        "∀a. ∀b. a -> Either b a"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn list_text() -> Result<(), TypeError> {
+    mod_main_inference_test(
+        "data List a = Cons a (List a) | Nil\ndata IntListEither a = Left (List Int) | Right a\nmain = \\x.Left (Cons x Nil)",
+        "∀a. Int -> IntListEither a"
+    );
+    mod_main_inference_test(
+        "data List a = Cons a (List a) | Nil\ndata IntListEither a = Left (List Int) | Right a\nmain = \\x.Left (Cons x (Cons 10 Nil))",
+        "∀a. Int -> IntListEither a"
+    );
+
+    tc_test_should_pass("data List a = Cons a (List a) | Nil\ndata IntListEither a = Left (List Int) | Right a\nmain :: Int -> (IntListEither a)\nmain = \\x.Left (Cons x (Cons 10 Nil))");
 
     Ok(())
 }

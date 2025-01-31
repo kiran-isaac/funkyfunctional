@@ -1,6 +1,6 @@
 use std::iter::zip;
 
-use crate::{functions::KnownTypeLabelTable, ASTNodeType, AST};
+use crate::{functions::KnownTypeLabelTable, parser::TypeMap, ASTNodeType, AST};
 
 use super::{Type, TypeError};
 
@@ -285,7 +285,7 @@ impl Context {
                     None => t.clone(),
                 },
                 None => {
-                    unimplemented!()
+                    t.clone()
                 }
             },
             Type::Function(from, to) => Type::Function(
@@ -297,6 +297,13 @@ impl Context {
             }
             Type::Forall(var, t) => {
                 Type::Forall(var.clone(), Box::new(self.substitute(t.as_ref())))
+            }
+            Type::Union(name, types) => {
+                let mut new_types = vec![];
+                for t in types {
+                    new_types.push(self.substitute(t));
+                }
+                Type::Union(name.clone(), new_types)
             }
             _ => t.clone(),
         }
@@ -312,7 +319,7 @@ fn type_error(msg: String, ast: &AST, expr: usize) -> TypeError {
     }
 }
 
-fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
+fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context, String> {
     #[cfg(debug_assertions)]
     let _c_str = format!("{:?}", &c);
     #[cfg(debug_assertions)]
@@ -321,22 +328,31 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
     let _b_str = b.to_string();
 
     match (a, b) {
-        (Type::Existential(ex1), Type::Existential(ex2)) => {
-            if ex1 == ex2 {
-                Ok(c)
-            } else {
-                instantiate_l(c, *ex1, b)
-            }
+        (Type::Alias(_, a_type), _) => {
+            subtype(c, a_type, b, type_map)
         }
+        (_, Type::Alias(_, a_type)) => {
+            subtype(c, a, a_type, type_map)
+        }
+
         // <:InstantiateL
         (Type::Existential(ex), _) => {
+            match b {
+                Type::Existential(ex2) => {
+                    if ex == ex2 {
+                        return Ok(c)
+                    }
+                }
+                _ => {}
+            }
+
             if b.contains_existential(*ex) {
                 let a = c.substitute(a);
                 let b = c.substitute(b);
                 return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", a, b));
             }
 
-            instantiate_l(c, *ex, b)
+            instantiate_l(c, *ex, b, type_map)
         }
 
         // <:InstantiateR
@@ -347,7 +363,7 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
                 return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", b, a));
             }
 
-            instantiate_r(c, *ex, a)
+            instantiate_r(c, *ex, a, type_map)
         }
 
         // <:Var
@@ -367,46 +383,6 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
             }
         }
 
-        (Type::Product(pt1_1, pt1_2), a) | (a, Type::Product(pt1_1, pt1_2)) => {
-            let (ut2_1, ut2_2) = match a {
-                Type::Product(a, b) => (a, b),
-                _ => {
-                    return Err(format!(
-                        "Type {} is not a subtype of product {}",
-                        a,
-                        Type::Product(pt1_1.clone(), pt1_2.clone())
-                    ))
-                }
-            };
-            let ut_1_st = subtype(c, pt1_1, ut2_1)?;
-            subtype(ut_1_st, pt1_2, ut2_2)
-        }
-
-        (Type::Union(name1, uargs1), a) | (a, Type::Union(name1, uargs1)) => {
-            let (name2, uargs2) = match a {
-                Type::Union(name2, uargs2) => (name2, uargs2),
-                _ => {
-                    return Err(format!(
-                        "Type {} is not a subtype of union {}",
-                        a,
-                        Type::Union(name1.clone(), uargs1.clone())
-                    ))
-                }
-            };
-            if uargs1.len() != uargs2.len() || name1 != name2 {
-                return Err(format!(
-                    "Type {} is not a subtype of union {}",
-                    a,
-                    Type::Union(name1.clone(), uargs1.clone())
-                ))
-            }
-            let mut c = c;
-            for (t1, t2) in zip(uargs1, uargs2) {
-                c = subtype(c, t1, t2)?;
-            }
-            Ok(c)
-        },
-
         // <:Unit
         (Type::Unit, Type::Unit) => Ok(c),
 
@@ -421,31 +397,61 @@ fn subtype(c: Context, a: &Type, b: &Type) -> Result<Context, String> {
             let _c_str = format!("{:?}", &c);
 
             let new_body = t.substitute_type_variable(var, &Type::Existential(exst))?;
-            let pred = subtype(c, &new_body, b)?;
+            let pred = subtype(c, &new_body, b, type_map)?;
             Ok(pred.get_before_item(ContextItem::Marker(exst)))
         }
 
         // <:ForallR
         (_, Type::Forall(var, t)) => {
             let c = c.append(ContextItem::TypeVariable(var.clone()));
-            let pred = subtype(c, a, t.as_ref())?;
+            let pred = subtype(c, a, t.as_ref(), type_map)?;
             Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
         }
 
         // <:->
         (Type::Function(a1, a2), Type::Function(b1, b2)) => {
-            let pred1 = subtype(c, b1.as_ref(), a1)?;
+            let pred1 = subtype(c, b1.as_ref(), a1, type_map)?;
             let a2 = &pred1.substitute(a2);
             let b2 = &pred1.substitute(b2);
-            let pred2 = subtype(pred1, a2, b2)?;
+            let pred2 = subtype(pred1, a2, b2, type_map)?;
             Ok(pred2)
         }
+
+        (Type::Product(pt1_1, pt1_2), a) | (a, Type::Product(pt1_1, pt1_2)) => {
+            let (ut2_1, ut2_2) = match a {
+                Type::Product(a, b) => (a, b),
+                _ => {
+                    return Err(format!(
+                        "Type {} is not a subtype of product {}",
+                        a,
+                        Type::Product(pt1_1.clone(), pt1_2.clone())
+                    ))
+                }
+            };
+            let ut_1_st = subtype(c, pt1_1, ut2_1, type_map)?;
+            subtype(ut_1_st, pt1_2, ut2_2, type_map)
+        }
+
+        (Type::Union(name1, uargs1), Type::Union(name2, uargs2)) => {
+            if uargs1.len() != uargs2.len() || name1 != name2 {
+                return Err(format!(
+                    "Type {} is not a subtype of union {}",
+                    a,
+                    Type::Union(name1.clone(), uargs1.clone())
+                ))
+            }
+            let mut c = c;
+            for (t1, t2) in zip(uargs1, uargs2) {
+                c = subtype(c, t1, t2, type_map)?;
+            }
+            Ok(c)
+        },
 
         _ => Err("Subtype failiure".to_string()),
     }
 }
 
-fn instantiate_l(c: Context, exst: usize, b: &Type) -> Result<Context, String> {
+fn instantiate_l(c: Context, exst: usize, b: &Type, type_map: &TypeMap) -> Result<Context, String> {
     #[cfg(debug_assertions)]
     let _c_str = format!("{:?}", &c);
     #[cfg(debug_assertions)]
@@ -471,20 +477,20 @@ fn instantiate_l(c: Context, exst: usize, b: &Type) -> Result<Context, String> {
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            let pred1_c = instantiate_r(c, exst, from.as_ref())?;
+            let pred1_c = instantiate_r(c, exst, from.as_ref(), type_map)?;
             let to_subst = pred1_c.substitute(to);
 
             #[cfg(debug_assertions)]
             let _to_subst_str = format!("{:?}", &to_subst);
 
-            let pred2 = instantiate_l(pred1_c, a2n, &to_subst)?;
+            let pred2 = instantiate_l(pred1_c, a2n, &to_subst, type_map)?;
             Ok(pred2)
         }
 
         // InstLAllR
         Type::Forall(var, t) => {
             let new_c = c.append(ContextItem::TypeVariable(var.clone()));
-            let pred = instantiate_l(new_c, exst, t.as_ref())?;
+            let pred = instantiate_l(new_c, exst, t.as_ref(), type_map)?;
             Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
         }
 
@@ -493,13 +499,19 @@ fn instantiate_l(c: Context, exst: usize, b: &Type) -> Result<Context, String> {
                 return Err("Failed Substitution".to_string());
             }
 
+            if let Some(existential) = c.get_existential(exst) {
+                if let Some(existential_type_assignment) = existential {
+                    subtype(c.clone(), &existential_type_assignment, &b.clone(), type_map)?;
+                }
+            }
+
             // InstLSolve
             Ok(c.set_existential_definition(exst, b.clone()))
         }
     }
 }
 
-fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
+fn instantiate_r(c: Context, exst: usize, a: &Type, type_map: &TypeMap) -> Result<Context, String> {
     #[cfg(debug_assertions)]
     let _c_str = format!("{:?}", &c);
     #[cfg(debug_assertions)]
@@ -537,13 +549,13 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
             #[cfg(debug_assertions)]
             let _c_str2 = format!("{:?}", &c);
 
-            let pred1_c = instantiate_l(c, a1n, from.as_ref())?;
+            let pred1_c = instantiate_l(c, a1n, from.as_ref(), type_map)?;
             let to_subst = pred1_c.substitute(to.as_ref());
 
             #[cfg(debug_assertions)]
             let _to_subst_str = to_subst.to_string();
 
-            let pred2 = instantiate_r(pred1_c, a2n, &to_subst)?;
+            let pred2 = instantiate_r(pred1_c, a2n, &to_subst, type_map)?;
             Ok(pred2)
         }
 
@@ -558,13 +570,19 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
             let _c_str = format!("{:?}", &c);
 
             let t = t.substitute_type_variable(var, &Type::Existential(next_ext))?;
-            let pred1 = instantiate_l(c, exst, &t)?;
+            let pred1 = instantiate_l(c, exst, &t, type_map)?;
             Ok(pred1.get_before_item(ContextItem::Marker(next_ext)))
         }
 
         _ => {
             if !a.is_monotype() {
                 return Err("Failed Substitution".to_string());
+            }
+
+            if let Some(existential) = c.get_existential(exst) {
+                if let Some(existential_type_assignment) = existential {
+                    subtype(c.clone(), &existential_type_assignment, &a.clone(), type_map)?;
+                }
             }
 
             // InstRSolve
@@ -574,7 +592,7 @@ fn instantiate_r(c: Context, exst: usize, a: &Type) -> Result<Context, String> {
 }
 
 // "Γ ⊢ e ⇒ A ⊣ ∆: Under input context Γ, e synthesizes output type A, with output context ∆"
-fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context), TypeError> {
+fn synthesize_type(c: Context, ast: &AST, expr: usize, type_map: &TypeMap) -> Result<(Type, Context), TypeError> {
     #[cfg(debug_assertions)]
     let _expr_str = ast.to_string_sugar(expr, false);
 
@@ -599,8 +617,8 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
         ASTNodeType::Pair => {
             let expr1 = ast.get_first(expr);
             let expr2 = ast.get_second(expr);
-            let (expr1t, c) = synthesize_type(c, ast, expr1)?;
-            let (expr2t, c) = synthesize_type(c, ast, expr2)?;
+            let (expr1t, c) = synthesize_type(c, ast, expr1, type_map)?;
+            let (expr2t, c) = synthesize_type(c, ast, expr2, type_map)?;
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
@@ -633,6 +651,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
                 &Type::Existential(next_exst + 1),
                 ast,
                 ast.get_abstr_expr(expr),
+                type_map
             )?;
 
             #[cfg(debug_assertions)]
@@ -660,7 +679,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
             let lhs = ast.get_func(expr);
             let rhs = ast.get_arg(expr);
 
-            let (f_type, f_c) = synthesize_type(c, ast, lhs)?;
+            let (f_type, f_c) = synthesize_type(c, ast, lhs, type_map)?;
 
             #[cfg(debug_assertions)]
             let _f_c_str = format!("{:?}", &f_c);
@@ -672,7 +691,7 @@ fn synthesize_type(c: Context, ast: &AST, expr: usize) -> Result<(Type, Context)
 
             #[cfg(debug_assertions)]
             let _f_type_str = f_type.to_string();
-            synthesize_app_type(f_c, &f_type, ast, rhs)
+            synthesize_app_type(f_c, &f_type, ast, rhs, type_map)
         }
 
         _ => unreachable!("Non expression"),
@@ -685,6 +704,7 @@ fn synthesize_app_type(
     applied_type: &Type,
     ast: &AST,
     expr: usize,
+    type_map: &TypeMap
 ) -> Result<(Type, Context), TypeError> {
     #[cfg(debug_assertions)]
     let _expr_str = ast.to_string_sugar(expr, false);
@@ -712,12 +732,12 @@ fn synthesize_app_type(
                     panic!("Failed to substitute in forall app: {}", s)
                 }
             };
-            synthesize_app_type(new_c, &a_subst, ast, expr)
+            synthesize_app_type(new_c, &a_subst, ast, expr, type_map)
         }
 
         // -> App
         Type::Function(from, to) => {
-            let pred = check_type(c, &from, ast, expr)?;
+            let pred = check_type(c, &from, ast, expr, type_map)?;
 
             Ok((to.as_ref().clone(), pred))
         }
@@ -737,7 +757,7 @@ fn synthesize_app_type(
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            let c = check_type(c, &a2t, ast, expr)?;
+            let c = check_type(c, &a2t, ast, expr, type_map)?;
 
             Ok((a2t.clone(), c))
         }
@@ -797,7 +817,7 @@ fn recurse_add_to_context(c: Context, expected: &Type, ast: &AST, expr: usize) -
 }
 
 // "Γ ⊢ e ⇐ A ⊣ ∆: Under input context Γ, e checks against input type A, with output context ∆"
-fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Context, TypeError> {
+fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize, type_map: &TypeMap) -> Result<Context, TypeError> {
     let node = ast.get(expr);
 
     #[cfg(debug_assertions)]
@@ -820,6 +840,7 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
                 t,
                 ast,
                 expr,
+                type_map
             )?;
             Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
         }
@@ -830,20 +851,20 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
 
             let (c, before) = recurse_add_to_context(c, from, &ast, var)?;
 
-            let pred = check_type(c, to, ast, ast.get_abstr_expr(expr))?;
+            let pred = check_type(c, to, ast, ast.get_abstr_expr(expr), type_map)?;
             Ok(pred.get_before_assignment(before))
         }
 
         (Type::Product(pt1, pt2), ASTNodeType::Pair) => {
-            let pair1 = check_type(c, pt1, ast, ast.get_first(expr))?;
-            let pair2 = check_type(pair1, pt2, ast, ast.get_second(expr))?;
+            let pair1 = check_type(c, pt1, ast, ast.get_first(expr), type_map)?;
+            let pair2 = check_type(pair1, pt2, ast, ast.get_second(expr), type_map)?;
 
             Ok(pair2)
         }
 
         // Sub
         _ => {
-            let (synth_t, c) = synthesize_type(c, ast, expr)?;
+            let (synth_t, c) = synthesize_type(c, ast, expr, type_map)?;
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
@@ -854,7 +875,7 @@ fn check_type(c: Context, expected: &Type, ast: &AST, expr: usize) -> Result<Con
             let a = c.substitute(&synth_t);
             let b = c.substitute(&expected);
 
-            let st = subtype(c, &a, &b);
+            let st = subtype(c, &a, &b, type_map);
 
             match st {
                 Ok(new_c) => {
@@ -887,6 +908,7 @@ pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), 
         expected,
         ast,
         expr,
+        &TypeMap::new(),
     ) {
         Ok(_) => Ok(()),
         Err(e) => Err(e),
@@ -897,8 +919,9 @@ fn infer_type_with_context(
     c: Context,
     ast: &AST,
     expr: usize,
+    type_map: &TypeMap
 ) -> Result<(Type, Context), TypeError> {
-    let (t, c) = synthesize_type(c, ast, expr)?;
+    let (t, c) = synthesize_type(c, ast, expr, type_map)?;
 
     let t = c.substitute(&t);
     Ok((t, c))
@@ -909,14 +932,15 @@ pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
     let lt = KnownTypeLabelTable::new();
     let c = Context::from_labels(&lt);
 
-    Ok(infer_type_with_context(c, ast, expr)?.0.forall_ify())
+    Ok(infer_type_with_context(c, ast, expr, &TypeMap::new())?.0.forall_ify())
 }
 
 pub fn infer_or_check_assignment_types(
     ast: &mut AST,
     module: usize,
-) -> Result<KnownTypeLabelTable, TypeError> {
-    let mut lt = KnownTypeLabelTable::new();
+    lt : &mut KnownTypeLabelTable,
+    type_map: &TypeMap
+) -> Result<(), TypeError> {
     let mut c = Context::from_labels(&lt);
 
     for assign_var in &ast.get_assignee_names(module) {
@@ -936,7 +960,7 @@ pub fn infer_or_check_assignment_types(
                     assign_var.clone(),
                     Ok(type_assignment.clone()),
                 ));
-                c = check_type(c, &type_assignment, ast, assign_expr)?;
+                c = check_type(c, &type_assignment, ast, assign_expr, type_map)?;
                 type_assignment.clone()
             }
             None => {
@@ -944,7 +968,7 @@ pub fn infer_or_check_assignment_types(
                     assign_var.clone(),
                     Err(type_error(format!("Cannot infer type of expression containing recursive call. Assign a type to label '{}'", &assign_var), ast, assign_expr)),
                 ));
-                let (t, new_c) = infer_type_with_context(c.clone(), &ast, assign_expr)?;
+                let (t, new_c) = infer_type_with_context(c.clone(), &ast, assign_expr, type_map)?;
                 let t = t.forall_ify();
                 c = new_c.assigns_only().remove_assignment(assign_var).append(
                     ContextItem::TypeAssignment(assign_var.clone(), Ok(t.clone())),
@@ -957,5 +981,5 @@ pub fn infer_or_check_assignment_types(
         lt.add(assign_var.clone(), type_of_assignment.clone());
     }
 
-    Ok(lt)
+    Ok(())
 }

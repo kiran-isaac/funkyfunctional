@@ -1,9 +1,12 @@
 use super::*;
 
 fn full_run_test(program: String) -> String {
-    let mut ast = Parser::from_string(program).parse_module().unwrap().ast;
+    let pr = Parser::from_string(program).parse_module().unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
     let module = ast.root;
-    let lt = infer_or_check_assignment_types(&mut ast, module).unwrap();
+    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
     let mut exp = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
 
     let mut rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), exp, &lt);
