@@ -134,6 +134,19 @@ fn inference_test(program: &str, type_str: &str) {
     assert_eq!(t.to_string(), type_str);
 }
 
+fn mod_main_inference_test(program: &str, type_str: &str) {
+    let pr = Parser::from_string(program.to_string())
+        .parse_module()
+        .unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
+    let module = ast.root;
+    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
+    let main_expr_type = ast.get(ast.get_main(ast.root).unwrap()).clone().type_assignment.unwrap();
+    assert_eq!(main_expr_type.to_string(), type_str);
+}
+
 fn mod_inference_should_fail(program: &str) {
     let pr = Parser::from_string(program.to_string())
         .parse_module()
@@ -233,12 +246,30 @@ fn either_test() -> Result<(), TypeError> {
     tc_test_should_fail("data Either a b = Left a | Right b\nmain :: a -> Either a b\nmain = \\x. Right x");
     tc_test_should_pass("data Either a b = Left a | Right b\nmain :: a -> Either a b\nmain = \\x. Left x");
 
+    mod_main_inference_test(
+        "data Either a b = Left a | Right b\nmain = \\x. Left x",
+        "∀a. ∀b. a -> Either a b"
+    );
+    mod_main_inference_test(
+        "data Either a b = Left a | Right b\nmain = \\x. Right x",
+        "∀a. ∀b. a -> Either b a"
+    );
+
     Ok(())
 }
 
 #[test]
 fn list_text() -> Result<(), TypeError> {
-    tc_test_should_pass("data List a = Cons a (List a) | Nil\ndata IntListEither a = Left (List Int) | Right a\nmain :: Int -> (IntListEither a)\nmain = \\x.Left (Cons x Nil)");
+    mod_main_inference_test(
+        "data List a = Cons a (List a) | Nil\ndata IntListEither a = Left (List Int) | Right a\nmain = \\x.Left (Cons x Nil)",
+        "∀a. Int -> IntListEither a"
+    );
+    mod_main_inference_test(
+        "data List a = Cons a (List a) | Nil\ndata IntListEither a = Left (List Int) | Right a\nmain = \\x.Left (Cons x (Cons 10 Nil))",
+        "∀a. Int -> IntListEither a"
+    );
+
+    tc_test_should_pass("data List a = Cons a (List a) | Nil\ndata IntListEither a = Left (List Int) | Right a\nmain :: Int -> (IntListEither a)\nmain = \\x.Left (Cons x (Cons 10 Nil))");
 
     Ok(())
 }

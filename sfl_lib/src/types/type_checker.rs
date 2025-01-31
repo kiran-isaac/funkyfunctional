@@ -285,7 +285,7 @@ impl Context {
                     None => t.clone(),
                 },
                 None => {
-                    unimplemented!()
+                    t.clone()
                 }
             },
             Type::Function(from, to) => Type::Function(
@@ -335,16 +335,17 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
             subtype(c, a, a_type, type_map)
         }
 
-        (Type::Existential(ex1), Type::Existential(ex2)) => {
-            if ex1 == ex2 {
-                Ok(c)
-            } else {
-                instantiate_l(c, *ex1, b, type_map)
-            }
-        }
-
         // <:InstantiateL
         (Type::Existential(ex), _) => {
+            match b {
+                Type::Existential(ex2) => {
+                    if ex == ex2 {
+                        return Ok(c)
+                    }
+                }
+                _ => {}
+            }
+
             if b.contains_existential(*ex) {
                 let a = c.substitute(a);
                 let b = c.substitute(b);
@@ -431,17 +432,7 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
             subtype(ut_1_st, pt1_2, ut2_2, type_map)
         }
 
-        (Type::Union(name1, uargs1), a) | (a, Type::Union(name1, uargs1)) => {
-            let (name2, uargs2) = match a {
-                Type::Union(name2, uargs2) => (name2, uargs2),
-                _ => {
-                    return Err(format!(
-                        "Type {} is not a subtype of union {}",
-                        a,
-                        Type::Union(name1.clone(), uargs1.clone())
-                    ))
-                }
-            };
+        (Type::Union(name1, uargs1), Type::Union(name2, uargs2)) => {
             if uargs1.len() != uargs2.len() || name1 != name2 {
                 return Err(format!(
                     "Type {} is not a subtype of union {}",
