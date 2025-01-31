@@ -271,7 +271,7 @@ fn data_decl2() -> Result<(), ParserError> {
 
 #[test]
 fn list_decl() -> Result<(), ParserError> {
-    let str = "data List a = Cons a (List a) | Nil\ndata IntListEither a = Left (List Int) | Right a\nmain :: Int -> (IntListEither a)\nmain = Left (Cons 10 Nil)";
+    let str = "data List a = Cons a (List a) | Nil\ndata IntListEither a = Left (List Int) | Right a\nmain :: Int -> (IntListEither a)\nmain = \\x.Left (Cons x Nil)";
     let pr = Parser::from_string(str.to_string()).parse_module()?;
     let lt = pr.lt;
     let tm = pr.tm;

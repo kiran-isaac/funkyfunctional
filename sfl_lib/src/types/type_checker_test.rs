@@ -235,3 +235,10 @@ fn either_test() -> Result<(), TypeError> {
 
     Ok(())
 }
+
+#[test]
+fn list_text() -> Result<(), TypeError> {
+    tc_test_should_pass("data List a = Cons a (List a) | Nil\ndata IntListEither a = Left (List Int) | Right a\nmain :: Int -> (IntListEither a)\nmain = \\x.Left (Cons x Nil)");
+
+    Ok(())
+}

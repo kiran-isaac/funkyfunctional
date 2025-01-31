@@ -298,6 +298,13 @@ impl Context {
             Type::Forall(var, t) => {
                 Type::Forall(var.clone(), Box::new(self.substitute(t.as_ref())))
             }
+            Type::Union(name, types) => {
+                let mut new_types = vec![];
+                for t in types {
+                    new_types.push(self.substitute(t));
+                }
+                Type::Union(name.clone(), new_types)
+            }
             _ => t.clone(),
         }
     }
@@ -375,6 +382,40 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
             }
         }
 
+        // <:Unit
+        (Type::Unit, Type::Unit) => Ok(c),
+
+        // <:ForallL
+        (Type::Forall(var, t), _) => {
+            let exst = c.get_next_existential_identifier();
+            let c = c
+                .append(ContextItem::Marker(exst))
+                .append(ContextItem::Existential(exst, None));
+
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
+
+            let new_body = t.substitute_type_variable(var, &Type::Existential(exst))?;
+            let pred = subtype(c, &new_body, b, type_map)?;
+            Ok(pred.get_before_item(ContextItem::Marker(exst)))
+        }
+
+        // <:ForallR
+        (_, Type::Forall(var, t)) => {
+            let c = c.append(ContextItem::TypeVariable(var.clone()));
+            let pred = subtype(c, a, t.as_ref(), type_map)?;
+            Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
+        }
+
+        // <:->
+        (Type::Function(a1, a2), Type::Function(b1, b2)) => {
+            let pred1 = subtype(c, b1.as_ref(), a1, type_map)?;
+            let a2 = &pred1.substitute(a2);
+            let b2 = &pred1.substitute(b2);
+            let pred2 = subtype(pred1, a2, b2, type_map)?;
+            Ok(pred2)
+        }
+
         (Type::Product(pt1_1, pt1_2), a) | (a, Type::Product(pt1_1, pt1_2)) => {
             let (ut2_1, ut2_2) = match a {
                 Type::Product(a, b) => (a, b),
@@ -414,40 +455,6 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
             }
             Ok(c)
         },
-
-        // <:Unit
-        (Type::Unit, Type::Unit) => Ok(c),
-
-        // <:ForallL
-        (Type::Forall(var, t), _) => {
-            let exst = c.get_next_existential_identifier();
-            let c = c
-                .append(ContextItem::Marker(exst))
-                .append(ContextItem::Existential(exst, None));
-
-            #[cfg(debug_assertions)]
-            let _c_str = format!("{:?}", &c);
-
-            let new_body = t.substitute_type_variable(var, &Type::Existential(exst))?;
-            let pred = subtype(c, &new_body, b, type_map)?;
-            Ok(pred.get_before_item(ContextItem::Marker(exst)))
-        }
-
-        // <:ForallR
-        (_, Type::Forall(var, t)) => {
-            let c = c.append(ContextItem::TypeVariable(var.clone()));
-            let pred = subtype(c, a, t.as_ref(), type_map)?;
-            Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
-        }
-
-        // <:->
-        (Type::Function(a1, a2), Type::Function(b1, b2)) => {
-            let pred1 = subtype(c, b1.as_ref(), a1, type_map)?;
-            let a2 = &pred1.substitute(a2);
-            let b2 = &pred1.substitute(b2);
-            let pred2 = subtype(pred1, a2, b2, type_map)?;
-            Ok(pred2)
-        }
 
         _ => Err("Subtype failiure".to_string()),
     }
