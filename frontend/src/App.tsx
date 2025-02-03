@@ -7,8 +7,8 @@ import { DefinitionWindow, DefinitionSpawnButton } from './help';
 import ASTHistory from './ASTHistory';
 
 function App() {
-  const [typeAssignsString, setTypeAssignsToString] = useState<JSX.Element>();
-  const [originalAstString, setOriginalAstString] = useState("");
+  const [typeAssignsString, setTypeAssignsToString] = useState("");
+  const [originalExprString, setOriginalExprString] = useState("");
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
   const [selectedRcFromStringHistory, setSelectedRcFromStringHistory] = useState<string[]>([]);
   const [selectedRcToStringHistory, setSelectedRcToStringHistory] = useState<string[]>([]);
@@ -44,7 +44,7 @@ function App() {
           return newRcToString;
         });
         ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
-        setOriginalAstString(wasm.main_to_string(ast));
+        setOriginalExprString(wasm.main_to_string(ast));
         generateRCs(ast, multiple);
       };
 
@@ -57,8 +57,14 @@ function App() {
 
       setRcs(rc_elems);
     } catch (e) {
+      console.log(e);
       setErrorString(e as string)
       setRcs([])
+      setAstHistory([])
+      setOriginalExprString("")
+      setSelectedRcFromStringHistory([])
+      setSelectedRcToStringHistory([])
+      setTypeAssignsToString("")
     }
   }
 
@@ -66,16 +72,21 @@ function App() {
     try {
       const ast = wasm.parse(programInput);
       setAstHistory([ast]);
-      setOriginalAstString(wasm.main_to_string(ast));
+      setOriginalExprString(wasm.main_to_string(ast));
       setSelectedRcFromStringHistory([]);
       setSelectedRcToStringHistory([]);
       setTypeAssignsToString(wasm.types_to_string(ast));
       generateRCs(ast, multiple);
-
+      
       setErrorString("")
     } catch (e) {
       setErrorString(e as string)
       setRcs([])
+      setAstHistory([])
+      setOriginalExprString("")
+      setSelectedRcFromStringHistory([])
+      setSelectedRcToStringHistory([])
+      setTypeAssignsToString("")
     };
   };
 
@@ -95,15 +106,15 @@ function App() {
           {typeAssignsString && (
             <>
               <h4>Types:</h4>
+              <pre>{typeAssignsString}</pre>
             </>
           )}
-          <pre>{typeAssignsString}</pre>
-          {originalAstString && (
+          {originalExprString && (
             <>
               <h4>Main Expression:</h4>
+              <pre>{originalExprString}</pre>
             </>
           )}
-          <pre>{originalAstString}</pre>
         </div>
         <div id="Error">
           <pre>{errorString}</pre>
