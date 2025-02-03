@@ -7,6 +7,7 @@ import { DefinitionWindow, DefinitionSpawnButton } from './help';
 import ASTHistory from './ASTHistory';
 
 function App() {
+  const [typeAssignsString, setTypeAssignsToString] = useState<JSX.Element>();
   const [originalAstString, setOriginalAstString] = useState("");
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
   const [selectedRcFromStringHistory, setSelectedRcFromStringHistory] = useState<string[]>([]);
@@ -43,7 +44,7 @@ function App() {
           return newRcToString;
         });
         ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
-        setOriginalAstString(wasm.to_string(ast));
+        setOriginalAstString(wasm.main_to_string(ast));
         generateRCs(ast, multiple);
       };
 
@@ -65,9 +66,10 @@ function App() {
     try {
       const ast = wasm.parse(programInput);
       setAstHistory([ast]);
-      setOriginalAstString(wasm.to_string(ast));
+      setOriginalAstString(wasm.main_to_string(ast));
       setSelectedRcFromStringHistory([]);
       setSelectedRcToStringHistory([]);
+      setTypeAssignsToString(wasm.types_to_string(ast));
       generateRCs(ast, multiple);
 
       setErrorString("")
@@ -90,6 +92,17 @@ function App() {
       <div id="Spacer"></div>
       <div id="TextArea">
         <div id="ASTArea">
+          {typeAssignsString && (
+            <>
+              <h4>Types:</h4>
+            </>
+          )}
+          <pre>{typeAssignsString}</pre>
+          {originalAstString && (
+            <>
+              <h4>Main Expression:</h4>
+            </>
+          )}
           <pre>{originalAstString}</pre>
         </div>
         <div id="Error">

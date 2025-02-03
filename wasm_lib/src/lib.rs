@@ -166,6 +166,13 @@ pub unsafe fn to_string(info: &RawASTInfo) -> String {
 }
 
 #[wasm_bindgen]
+pub unsafe fn types_to_string(info: &RawASTInfo) -> String {
+    let info = info;
+    let ast = &*info.ast;
+    ast.type_assigns_to_string(ast.root)
+}
+
+#[wasm_bindgen]
 pub unsafe fn main_to_string(info: &RawASTInfo) -> String {
     let info = info;
     let ast = &*info.ast;
