@@ -391,4 +391,19 @@ impl KnownTypeLabelTable {
 
         type_map
     }
+
+    pub fn get_non_builtin_type_map(&self) -> HashMap<String, Type> {
+        let builtin_type_map = Self::new().get_type_map();
+        let mut type_map = HashMap::new();
+        for inbuilt_map in &self.func_map {
+            for (name, inbuilt) in inbuilt_map {
+                if builtin_type_map.contains_key(name) {
+                    continue;
+                }
+                type_map.insert(name.clone(), inbuilt.label_type.clone());
+            }
+        }
+
+        type_map
+    }
 }

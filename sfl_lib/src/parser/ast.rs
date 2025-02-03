@@ -867,6 +867,18 @@ impl AST {
         }
     }
 
+    pub fn type_assigns_to_string(&self, module: usize) -> String {
+        let n = self.get(module);
+        let mut s = String::new();
+        for c in &n.children {
+            let type_assign = self.get(*c).type_assignment.clone().unwrap();
+            let assign_name = self.get_assignee(*c);
+            s.push_str(format!("{} :: {}\n", assign_name, type_assign.to_string()).as_str());
+        }
+
+        s.trim().to_string()
+    }
+
     pub fn to_string_desugar_and_type(&self, node: usize) -> String {
         let n = self.get(node);
         match n.t {

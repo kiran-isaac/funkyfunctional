@@ -17,7 +17,7 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
     }
 
     // Get diffs between each string
-    console.log(astStrings, rcFromHistory, rcToHistory);
+    // console.log(astStrings, rcFromHistory, rcToHistory);
 
     const astLIs = [];
     for (let i = astStrings.length - 1; i >= 0; i--) {

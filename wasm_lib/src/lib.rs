@@ -6,6 +6,7 @@ use sfl_lib::{
     infer_or_check_assignment_types, KnownTypeLabelTable, Parser, RCPair, AST,
 };
 use wasm_bindgen::prelude::*;
+use std::collections::BTreeMap;
 
 #[wasm_bindgen]
 pub struct RawASTInfo {
@@ -120,7 +121,13 @@ pub unsafe fn get_one_redex(info: &RawASTInfo) -> *mut Vec<RawRC> {
     let ast = &mut *info.ast;
     let lt = &*info.lt;
     let module = ast.root;
-    let main_assign = ast.get_assign_to(module, "main".to_string()).unwrap();
+
+    let main_assign = if let Some(main) = ast.get_assign_to(module, "main".to_string()) {
+        main
+    } else {
+        return Box::into_raw(Box::new(vec![]));
+    };
+
     let main_expr = ast.get_assign_exp(main_assign);
 
     Box::into_raw(Box::new(
@@ -166,10 +173,42 @@ pub unsafe fn to_string(info: &RawASTInfo) -> String {
 }
 
 #[wasm_bindgen]
+pub unsafe fn types_to_string(info: &RawASTInfo) -> String {
+    let lt = &*info.lt;
+
+    let mut capitals_map = BTreeMap::new();
+    let mut lowercase_map = BTreeMap::new();
+    
+    for (name, type_) in lt.get_non_builtin_type_map() {
+        let first_name_char = name.chars().next().unwrap();
+        if first_name_char.is_uppercase() {
+            capitals_map.insert(name, type_);
+        } else {
+            lowercase_map.insert(name, type_);
+        }
+    }
+
+    let mut s = String::new();
+    for (name, type_) in capitals_map {
+        s.push_str(&format!("{} :: {}\n", name, type_));
+    }
+    s.push('\n');
+    for (name, type_) in lowercase_map {
+        s.push_str(&format!("{} :: {}\n", name, type_));
+    }
+    s
+}
+
+#[wasm_bindgen]
 pub unsafe fn main_to_string(info: &RawASTInfo) -> String {
     let info = info;
     let ast = &*info.ast;
-    let main_assign = ast.get_assign_to(ast.root, "main".to_string()).unwrap();
+    let main_assign = if let Some(main) = ast.get_assign_to(ast.root, "main".to_string()) {
+        main
+    } else {
+        return String::new();
+    };
+
     let main_expr = ast.get_assign_exp(main_assign);
     ast.to_string_sugar(main_expr, true)
 }

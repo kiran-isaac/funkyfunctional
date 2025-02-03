@@ -1,0 +1,11 @@
+first (x, _) = x
+second (_, y) = y
+pair x y = (x, y)
+
+data Either a b = Left a | Right b
+data Maybe a = Just a | Nothing
+
+fac :: Int -> Int
+fac n = if n <= 1 then 1 else n * (fac (n - 1))
+
+main = fac 5
