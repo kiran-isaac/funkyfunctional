@@ -30,32 +30,27 @@ fn main() {
         std::process::exit(1);
     };
 
-    let ast = lib::Parser::from_string(file_string).parse_module();
-    if let Err(e) = &ast {
+    let pr = lib::Parser::from_string(file_string).parse_module();
+    if let Err(e) = &pr {
         eprintln!("{:?}", e);
         std::process::exit(1);
     }
-    let mut ast = ast.unwrap().ast;
+    let pr = pr.unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
 
     // Typecheck
-    let lt = if typechecked {
-        let module = ast.root;
-        println!(
-            "INPUT:\n\n{}\n{}",
-            ast.to_string_sugar(ast.root, true),
-            HORIZONTAL_SEPARATOR
-        );
-        infer_or_check_assignment_types(&mut ast, module).unwrap_or_else(|e| {
-            eprintln!("{:?}", e);
-            std::process::exit(1)
-        })
-    } else {
-        let mut lt = KnownTypeLabelTable::new();
-        match &lt.consume_from_module(&ast, ast.root) {
-            Ok(()) => lt,
-            Err(e) => panic!("Cannot run this program without typechecking: {:?}", e),
-        }
-    };
+    let module = ast.root;
+    println!(
+        "INPUT:\n\n{}\n{}",
+        ast.to_string_sugar(ast.root, true),
+        HORIZONTAL_SEPARATOR
+    );
+    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap_or_else(|e| {
+        eprintln!("{:?}", e);
+        std::process::exit(1)
+    });
 
     println!(
         "Typed: \n{}\n{}\n",

@@ -67,7 +67,10 @@ fn check_for_ready_call(
                         }
                     } else {
                         if !(f_node.wait_for_args && literals_only) {
-                            let assign = *am.get(&name).unwrap();
+                            let assign = match am.get(&name) {
+                                Some(a) => *a,
+                                None => return None,
+                            };
 
                             let assign_exp = ast.get_assign_exp(assign);
                             let n_args = ast.get_n_abstr_vars(assign_exp, argv.len());
@@ -229,7 +232,7 @@ pub fn find_single_redex_contraction_pair(
                     None
                 }
             } else {
-                unreachable!("No label match: {}", value);
+                None
             }
         }
         ASTNodeType::Application => {
@@ -243,6 +246,6 @@ pub fn find_single_redex_contraction_pair(
                 find_single_redex_contraction_pair(ast, module, ast.get_arg(expr), lt)
             }
         }
-        _ => unreachable!("Expected expression"),
+        _ => None //unreachable!("Expected expression"),
     }
 }
