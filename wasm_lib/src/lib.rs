@@ -122,24 +122,34 @@ pub unsafe fn get_one_redex(info: &RawASTInfo) -> *mut Vec<RawRC> {
     let lt = &*info.lt;
     let module = ast.root;
 
+    log!("0");
+
     let main_assign = if let Some(main) = ast.get_assign_to(module, "main".to_string()) {
         main
     } else {
         return Box::into_raw(Box::new(vec![]));
     };
 
+    log!("1");
+
     let main_expr = ast.get_assign_exp(main_assign);
 
+    log!("2");
+    
     Box::into_raw(Box::new(
         if let Some(rc) = find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt) {
+            log!("3");
+
             let from_str = Box::into_raw(Box::new(ast.to_string_sugar(rc.0, false).clone()));
             let to_string = Box::into_raw(Box::new(rc.1.to_string_sugar(rc.1.root, false).clone()));
+            log!("4");
             vec![RawRC {
                 from_str: from_str,
                 to_str: to_string,
                 redex: Box::into_raw(Box::new(rc)),
             }]
         } else {
+            log!("5");
             vec![]
         },
     ))

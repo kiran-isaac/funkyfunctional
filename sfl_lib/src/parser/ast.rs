@@ -53,11 +53,11 @@ impl ASTNode {
                     TokenType::FloatLit => Type::Primitive(Primitive::Float64),
                     TokenType::BoolLit => Type::Primitive(Primitive::Bool),
                     TokenType::StringLit => unimplemented!("String literal type"),
-                    _ => unreachable!("Literal node with bad token"),
+                    _ => panic!("Literal node with bad token"),
                 },
-                None => unreachable!("Literal node with no token"),
+                None => panic!("Literal node with no token"),
             },
-            _ => unreachable!("get_lit_type called on non-literal node"),
+            _ => panic!("get_lit_type called on non-literal node"),
         }
     }
 
@@ -67,7 +67,7 @@ impl ASTNode {
         assert!(self.t == ASTNodeType::Identifier || self.t == ASTNodeType::Literal);
         match &self.info {
             Some(tk) => tk.value.clone(),
-            None => unreachable!(),
+            None => panic!("Cannot get value of node {:?}", self),
         }
     }
 
@@ -558,7 +558,7 @@ impl AST {
                 left.extend(right);
                 left
             }
-            _ => unreachable!("Cannot find var instances in non exp"),
+            _ => panic!("Cannot find var instances in non exp"),
         }
     }
 
@@ -615,7 +615,7 @@ impl AST {
                 self.replace_var_usages(self.get_first(var), subst_first);
                 self.replace_var_usages(self.get_second(var), subst_second);
             }
-            _ => unreachable!("WTF HOW DID THIS HAPPEN"),
+            _ => panic!("WTF HOW DID THIS HAPPEN"),
         }
     }
 
