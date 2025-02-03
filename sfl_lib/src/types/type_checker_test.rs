@@ -172,6 +172,8 @@ fn expr_inference_should_fail(program: &str) {
 
 #[test]
 fn infer() {
+    mod_main_inference_test("main f x = f x", "∀a. ∀b. (a -> b) -> a -> b");
+    
     inference_test(
         "\\b . if true then (\\x . x) else (\\x . x)",
         "∀a. ∀b. a -> b -> b",

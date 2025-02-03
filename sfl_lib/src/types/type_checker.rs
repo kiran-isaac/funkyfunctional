@@ -794,12 +794,12 @@ fn synthesize_app_type(
                 .add_before_existential(*var, a1);
             let a1t = Type::Existential(a1n);
             let a2t = Type::Existential(a2n);
-            let c = c.set_existential_definition(*var, Type::f(a1t, a2t.clone()));
+            let c = c.set_existential_definition(*var, Type::f(a1t.clone(), a2t.clone()));
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            let c = check_type(c, &a2t, ast, expr, type_map)?;
+            let c = check_type(c, &a1t, ast, expr, type_map)?;
 
             Ok((a2t.clone(), c))
         }

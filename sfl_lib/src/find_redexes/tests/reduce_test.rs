@@ -5,6 +5,7 @@
 // };
 
 /// O(n^2) so only use for small things
+#[allow(unused)]
 fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
     for x in a {
         let mut found = false;
