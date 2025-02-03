@@ -121,7 +121,7 @@ pub unsafe fn get_one_redex(info: &RawASTInfo) -> *mut Vec<RawRC> {
     let ast = &mut *info.ast;
     let lt = &*info.lt;
     let module = ast.root;
-    
+
     let main_assign = if let Some(main) = ast.get_assign_to(module, "main".to_string()) {
         main
     } else {
@@ -190,11 +190,11 @@ pub unsafe fn types_to_string(info: &RawASTInfo) -> String {
 
     let mut s = String::new();
     for (name, type_) in capitals_map {
-        s.push_str(&format!("{}: {}\n", name, type_));
+        s.push_str(&format!("{} :: {}\n", name, type_));
     }
     s.push('\n');
     for (name, type_) in lowercase_map {
-        s.push_str(&format!("{}: {}\n", name, type_));
+        s.push_str(&format!("{} :: {}\n", name, type_));
     }
     s
 }

@@ -3,12 +3,49 @@ This is an interactive term rewrite system for a simple functional language. The
 
 This is a Bachelors disertation project written by Kiran Sturt, at University of Bristol. Please get in touch with any feedback or questions at kiran.sturt@bristol.ac.uk.
 
+---
+
+## Programming
+The language is a lambda calculus with integers, floats, booleans, pairs and if-then-else expressions. The expression labled "main" will be evaluated. 
+
 ## How to use
-Enter your program into the code editor, and press "run". Your program will be type checked, and types inferred where not provided. The type checked program will be displayed below the box, showing what types have been inferred. An error may appear here instead, apologies for the type errors being awful I am working on it!
+Enter your program into the code editor, and press "run". Your program will be type checked, and types inferred where not provided. The types of all lables will be displayed below the input box. An error may appear here instead, apologies for the type errors being awful I am working on it!
 
-After this, you will be presented with some buttons, representing the "next steps" the system has detected for you. The left hand size is the current expression, and the right hand side is the next step for this expression.
+Next to the text input box, you are presented with some buttons: Lazy and Free Choice. Pressing either will start the evaluation of your progra. These buttons mean
+- "Lazy" : you will be presented with the laziest next step
+- "Free Choice" : you will be presented with all possible next evaluation steps. Note that the first option in the list will be the laziest next step. 
 
-You can click on these buttons to step through the evaluation of your program. The top button is labled "laziest" and it will automatically take the laziest step for you.
+Once evaluation has begun, you will see some buttons if a next step is possible. You can click on these buttons to step through the evaluation of your program. 
+
+### Syntax
+Terms
+- **Integers** are written as `1`, `2`, `3`, etc.
+- **Floats** are written as `1.1`, `2.2`, `3.3`, etc.
+- **Booleans** are written as `true` or `false`.
+- **Identifiers** are written as `x`, `y`, `z`, etc. Identifiers must start with a lowercase letter.
+- **Pairs** are written as `(e1, e2)`.
+- **If-then-else** expressions are written as `if e1 then e2 else e3`. `if` is typed as `if : Bool -> a -> a -> a`.
+- **Lambda Abstraction** is written as `\x.e`, where `x` is the variable name and `e` is the expression. `\x y.e` is syntax sugar for `\x.\y.e`.
+
+Types
+- Inbuilt Types:
+  - **Int**: 64 bit integer.
+  - **Float**: 64 bit floating point number.
+  - **Bool**: Boolean value.
+- More Types
+  - **(T1, T2)**: A pair of types.
+  - **T1 -> T2**: A function from type `T1` to type `T2`.
+  - **Any Lowercase Identifier**, Type variables. 
+  - **Any Uppercase Identifier**: A type, or a type constructor (see user defined types).
+- User Defined Types
+  - **Type Aliases** : `type UppercaseIdentifier = Type`. This is syntax sugar for replacing all instances of `UppercaseIdentifier` with `Type`.
+  - **Union Types** : Examples
+    - `data Maybe a = Just a | Nothing`
+    - `data Either a b = Left a | Right b`
+    - `data List a = Nil | Cons a (List a)`
+    - `data Tree a = Leaf a | Node (Tree a) (Tree a)`
+
+---
 
 ## Language Specification
 

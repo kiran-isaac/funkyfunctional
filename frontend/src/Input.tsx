@@ -2,11 +2,8 @@ import "./input.css";
 import CodeMirror from '@uiw/react-codemirror';
 import { SetStateAction, useCallback, useState } from "react";
 import { okaidia } from '@uiw/codemirror-theme-okaidia';
+import starterProgram from './../../starter_program.sfl?raw';
 
-const examples = {
-    fac: "fac :: Int -> Int\nfac n = if n <= 1 then 1 else n * (fac (n - 1))\nmain = fac 15",
-    pair: "second (x, y) = y\nfirst (x, y) = x\npair x y = (x, y)\n\nfac:: Int -> (Int, Int)\nfac n = pair 5 (if n <= 1 then 1 else n * (second (fac (n - 1))))\nmain = second (fac 5)"
-}
 
 interface InputProps {
     onRunMultiple: (editorValue: string) => void;
@@ -14,10 +11,16 @@ interface InputProps {
 }
 
 function Input({ onRunMultiple, onRunSingle }: InputProps) {
-    const [editorValue, setEditorValue] = useState(examples.fac);
+    let program = localStorage.getItem("program");
+    if (program === null) {
+        program = starterProgram;
+    }    
+    const [editorValue, setEditorValue] = useState(program);
 
-    // eslint-disable-next-line 
+    // eslint-disable-next-line
     const editorOnChange = useCallback((val: SetStateAction<string>, _: any) => {
+        // override local storage 
+        localStorage.setItem("program", val.toString());
         setEditorValue(val);
     }, []);
     return (
