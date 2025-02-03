@@ -217,7 +217,7 @@ impl Type {
         }
     }
 
-    pub fn forall_ify(&self) -> Self {
+    fn all_exists_to_tvs(&self) -> (Vec<String>, Self) {
         let mut tv_set = self.get_tvs_set();
         let mut exsts = vec![];
         let mut new_self = self.clone();
@@ -232,7 +232,16 @@ impl Type {
             exsts.push(str.clone());
             new_self = new_self.exist_to_tv(exst, &str);
         }
+        (exsts, new_self)
+    }
+
+    pub fn forall_ify(&self) -> Self {
+        let (exsts, new_self) = self.all_exists_to_tvs();
         Type::fa(exsts, new_self)
+    }
+
+    pub fn tv_ify(&self) -> Self {
+        self.all_exists_to_tvs().1
     }
 
     pub fn is_monotype(&self) -> bool {

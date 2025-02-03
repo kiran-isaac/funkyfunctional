@@ -369,9 +369,12 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
             }
 
             if b.contains_existential(*ex) {
-                let a = c.substitute(a);
-                let b = c.substitute(b);
-                return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", a, b));
+                let a = c.substitute(a).tv_ify();
+                let b = c.substitute(b).tv_ify();
+                return Err(format!(
+                    "Cannot instantiate {} to the type {}: the type contains itself",
+                    b, a
+                ));
             }
 
             instantiate_l(c, *ex, b, type_map)
@@ -380,9 +383,12 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
         // <:InstantiateR
         (_, Type::Existential(ex)) => {
             if a.contains_existential(*ex) {
-                let a = c.substitute(a);
-                let b = c.substitute(b);
-                return Err(format!("Cannot instantiate existential variable {} to the type {}: the type contains the existential type variable in question!", b, a));
+                let a = c.substitute(a).tv_ify();
+                let b = c.substitute(b).tv_ify();
+                return Err(format!(
+                    "Cannot instantiate {} to the type {}: the type contains itself",
+                    b, a
+                ));
             }
 
             instantiate_r(c, *ex, a, type_map)
@@ -445,8 +451,8 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
                 _ => {
                     return Err(format!(
                         "Type {} is not a subtype of product {}",
-                        a,
-                        Type::Product(pt1_1.clone(), pt1_2.clone())
+                        a.tv_ify(),
+                        Type::Product(pt1_1.clone(), pt1_2.clone()).tv_ify()
                     ))
                 }
             };
@@ -458,8 +464,8 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
             if uargs1.len() != uargs2.len() || name1 != name2 {
                 return Err(format!(
                     "Type {} is not a subtype of union {}",
-                    a,
-                    Type::Union(name1.clone(), uargs1.clone())
+                    a.tv_ify(),
+                    Type::Union(name1.clone(), uargs1.clone()).tv_ify()
                 ));
             }
             let mut c = c;
@@ -468,7 +474,6 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
             }
             Ok(c)
         }
-
         _ => Err("Subtype failiure".to_string()),
     }
 }
@@ -733,7 +738,7 @@ fn synthesize_type(
 
             #[cfg(debug_assertions)]
             let _f_type_str = f_type.to_string();
-            synthesize_app_type(f_c, &f_type, ast, rhs, type_map)
+            synthesize_app_type(f_c, &f_type, ast, lhs, rhs, type_map)
         }
 
         _ => unreachable!("Non expression"),
@@ -745,6 +750,7 @@ fn synthesize_app_type(
     c: Context,
     applied_type: &Type,
     ast: &AST,
+    f : usize,
     expr: usize,
     type_map: &TypeMap,
 ) -> Result<(Type, Context), TypeError> {
@@ -774,7 +780,7 @@ fn synthesize_app_type(
                     panic!("Failed to substitute in forall app: {}", s)
                 }
             };
-            synthesize_app_type(new_c, &a_subst, ast, expr, type_map)
+            synthesize_app_type(new_c, &a_subst, ast, f, expr, type_map)
         }
 
         // -> App
@@ -803,6 +809,17 @@ fn synthesize_app_type(
 
             Ok((a2t.clone(), c))
         }
+
+        Type::Product(_, _) | Type::Union(_, _) | Type::Primitive(_) => Err(type_error(
+            format!(
+                "Cannot apply {} (of type {}) to {}",
+                ast.to_string_sugar(f, false),
+                applied_type.tv_ify(),
+                ast.to_string_sugar(expr, false)
+            ),
+            ast,
+            expr,
+        )),
 
         _ => Err(type_error("App synthesis error".to_string(), ast, expr)),
     }
@@ -889,6 +906,9 @@ fn check_type(
         // Unit always checks
         (Type::Unit, _) => Ok(c),
 
+        // Follow Alias
+        (Type::Alias(_, type_), _) => check_type(c, &type_, ast, expr, type_map),
+
         // Forall Introduction
         (Type::Forall(var, t), _) => {
             let pred = check_type(
@@ -946,8 +966,8 @@ fn check_type(
                 Err(e) => Err(type_error(
                     format!(
                         "Cannot figure out how {} could be subtype of {}: {}",
-                        a.to_string(),
-                        b.to_string(),
+                        a.tv_ify().to_string(),
+                        b.tv_ify().to_string(),
                         e
                     ),
                     ast,

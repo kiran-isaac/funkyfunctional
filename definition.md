@@ -5,9 +5,6 @@ This is a Bachelors disertation project written by Kiran Sturt, at University of
 
 ---
 
-## Programming
-The language is a lambda calculus with integers, floats, booleans, pairs and if-then-else expressions. The expression labled "main" will be evaluated. 
-
 ## How to use
 Enter your program into the code editor, and press "run". Your program will be type checked, and types inferred where not provided. The types of all lables will be displayed below the input box. An error may appear here instead, apologies for the type errors being awful I am working on it!
 
@@ -16,6 +13,10 @@ Next to the text input box, you are presented with some buttons: Lazy and Free C
 - "Free Choice" : you will be presented with all possible next evaluation steps. Note that the first option in the list will be the laziest next step. 
 
 Once evaluation has begun, you will see some buttons if a next step is possible. You can click on these buttons to step through the evaluation of your program. 
+
+
+## Programming
+The language is a lambda calculus with integers, floats, booleans, pairs and if-then-else expressions. The expression labled "main" will be evaluated. 
 
 ### Syntax
 Terms
