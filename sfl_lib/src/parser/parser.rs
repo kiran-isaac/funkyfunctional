@@ -418,9 +418,10 @@ impl Parser {
             let next = self.peek(0)?;
 
             match next.tt {
-                TokenType::RArrow | TokenType::LParen => {
+                TokenType::RArrow => {
                     self.advance();
                     let right = self.parse_type_expression(type_table, bound_type_vars)?;
+
                     left = Type::Function(Box::new(left), Box::new(right));
                 }
 
@@ -432,13 +433,16 @@ impl Parser {
                     );
                 }
 
-                TokenType::UppercaseId | TokenType::Id => {
-                    // If this is in an abstraction, and the next token is a double colon, then we're done because
-                    // the next ID is another abst variable
-                    if next.tt == TokenType::Id {
-                        if self.peek(1)?.tt == TokenType::DoubleColon {
-                            return Ok(left);
+                TokenType::UppercaseId | TokenType::Id | TokenType::LParen => {
+                    match next.tt {
+                        // If this is in an abstraction, and the next token is a double colon, then we're done because
+                        // the next ID is another abst variable
+                        TokenType::Id => {
+                            if self.peek(1)?.tt == TokenType::DoubleColon {
+                                return Ok(left);
+                            }
                         }
+                        _ => {}
                     }
 
                     let t2 = self.parse_type_expression_primary(type_table, bound_type_vars)?;
@@ -451,6 +455,7 @@ impl Parser {
                 TokenType::RParen | TokenType::Newline | TokenType::EOF | TokenType::Dot => {
                     return Ok(left)
                 }
+
                 _ => {
                     return Err(self
                         .parse_error(format!("Unexpected token in type expression: {:?}", next)))
@@ -493,7 +498,10 @@ impl Parser {
                 self.advance();
                 Ok(inner)
             }
-            _ => Err(self.parse_error(format!("Unexpected token in type expression: {:?}", t))),
+            _ => Err(self.parse_error(format!(
+                "Unexpected token in type expression primary: {:?}",
+                t
+            ))),
         }
     }
 
@@ -791,6 +799,10 @@ impl Parser {
                     match next.tt {
                         TokenType::Assignment | TokenType::Id | TokenType::LParen => {
                             let assignment = self.parse_assignment(&mut ast, &tm.types)?;
+                            let ass_name = ast.get_assignee(assignment);
+                            if let Some(ass_type) = &ast.get(assignment).type_assignment {
+                                lt.add(ass_name.clone(), ass_type.clone())
+                            }
                             ast.add_to_module(module, assignment);
                         }
                         TokenType::DoubleColon => self.parse_type_assignment(&tm.types)?,

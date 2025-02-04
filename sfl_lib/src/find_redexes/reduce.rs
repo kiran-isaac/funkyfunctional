@@ -246,6 +246,6 @@ pub fn find_single_redex_contraction_pair(
                 find_single_redex_contraction_pair(ast, module, ast.get_arg(expr), lt)
             }
         }
-        _ => None //unreachable!("Expected expression"),
+        _ => None, //unreachable!("Expected expression"),
     }
 }
