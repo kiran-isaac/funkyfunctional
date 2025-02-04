@@ -329,3 +329,25 @@ fn list_decl() -> Result<(), ParserError> {
 
     Ok(())
 }
+
+#[test]
+fn list_maybe() -> Result<(), ParserError> {
+    let program = r#"
+    data Either a b = Left a | Right b
+    data Maybe a = Just a | Nothing
+    data List a = Cons a (List a) | Nil
+
+    fac :: Int -> Int
+    fac n = if n <= 1 then 1 else n * (fac (n - 1))
+
+    fromMaybes :: Either a (Maybe a) -> List a
+    fromMaybes a = a
+    
+    main = Just (fac 5)"#;
+
+    let pr = Parser::from_string(program.to_string()).parse_module()?;
+    // println!("{:?}", pr.lt);
+    println!("{:?}", pr.lt.get_type("fromMaybes").unwrap());
+
+    Ok(())
+}

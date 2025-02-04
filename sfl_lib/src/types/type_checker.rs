@@ -750,7 +750,7 @@ fn synthesize_app_type(
     c: Context,
     applied_type: &Type,
     ast: &AST,
-    f : usize,
+    f: usize,
     expr: usize,
     type_map: &TypeMap,
 ) -> Result<(Type, Context), TypeError> {
