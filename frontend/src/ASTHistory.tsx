@@ -35,7 +35,7 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
                     list.push(<span className="new" key={`${i}-${j}-new`}>{prev_to_this}</span>);
                 }
             }
-        } else {
+        } else if (i == astStrings.length - 2) {
             const next_from_this = rcFromHistory[i];
             const parts = current.split(next_from_this);
             
@@ -45,6 +45,8 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
                     list.push(<span className="old" key={`${i}-${j}-old`}>{next_from_this}</span>);
                 }
             }
+        } else {
+            list.push(<span key={i}>{current}</span>);
         }
 
         astLIs.push(<li className='expr_history' key={i}>{list}<br /></li>);
