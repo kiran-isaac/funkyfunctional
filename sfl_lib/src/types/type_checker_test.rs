@@ -283,3 +283,18 @@ fn list_text() -> Result<(), TypeError> {
 
     Ok(())
 }
+
+#[test]
+fn triple_test() -> Result<(), TypeError> {
+    mod_main_inference_test(
+        "data Triple a b c = Triple a b c | NoTriple\nmain = \\x y z. Triple x y z",
+        "∀a. ∀b. ∀c. a -> b -> c -> Triple a b c",
+    );
+
+    mod_main_inference_test(
+        "data Triple a b c = Triple a b c | NoTriple\nmain = NoTriple",
+        "∀a. ∀b. ∀c. Triple a b c",
+    );
+
+    Ok(())
+}

@@ -159,13 +159,14 @@ pub fn find_all_redex_contraction_pairs(
                         let inbuilt = label.call_inbuilt(&ast.get(expr), vec![]);
                         pairs.push((expr, inbuilt));
                     } else {
-                        let assign = *am.get(&value).unwrap();
-                        let assign_exp = ast.get_assign_exp(assign);
-                        pairs.push((expr, ast.clone_node(assign_exp)));
+                        if let Some(assign) = am.get(&value) {
+                            let assign_exp = ast.get_assign_exp(*assign);
+                            pairs.push((expr, ast.clone_node(assign_exp)));
+                        }
                     }
                 }
             } else {
-                unreachable!("No label match: {}", value);
+                // unreachable!("No label match: {}", value);
             }
         }
         ASTNodeType::Application => {
@@ -179,7 +180,7 @@ pub fn find_all_redex_contraction_pairs(
             pairs.extend(find_all_redex_contraction_pairs(ast, module, f, &lt));
             pairs.extend(find_all_redex_contraction_pairs(ast, module, x, &lt));
         }
-        _ => unreachable!("Expected expression"),
+        _ => panic!("Expected expression"),
     }
 
     pairs
@@ -224,7 +225,12 @@ pub fn find_single_redex_contraction_pair(
                         let inbuilt = label.call_inbuilt(&ast.get(expr), vec![]);
                         Some((expr, inbuilt))
                     } else {
-                        let assign = *am.get(&value).unwrap();
+                        let assign = if let Some(assign) = am.get(&value) {
+                            *assign
+                        } else {
+                            return None;
+                        };
+
                         let assign_exp = ast.get_assign_exp(assign);
                         Some((expr, ast.clone_node(assign_exp)))
                     }
@@ -246,6 +252,6 @@ pub fn find_single_redex_contraction_pair(
                 find_single_redex_contraction_pair(ast, module, ast.get_arg(expr), lt)
             }
         }
-        _ => None, //unreachable!("Expected expression"),
+        _ => None,
     }
 }

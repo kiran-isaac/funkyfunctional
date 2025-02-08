@@ -5,6 +5,7 @@ use sfl_lib::{
     find_all_redex_contraction_pairs, find_single_redex_contraction_pair,
     infer_or_check_assignment_types, KnownTypeLabelTable, Parser, RCPair, AST,
 };
+
 use wasm_bindgen::prelude::*;
 use std::collections::BTreeMap;
 
@@ -223,16 +224,7 @@ pub unsafe fn main_to_string(info: &RawASTInfo) -> String {
     ast.to_string_sugar(main_expr, true)
 }
 
-// #[wasm_bindgen]
-// pub unsafe fn get_highlight_regions(
-//     info: &RawASTInfo,
-//     rcs: *mut Vec<RawRC>,
-//     to_subst: usize,
-// ) -> String {
-//     let info = info;
-//     let ast = &*info.ast;
-//     let main_assign = ast.get_assign_to(ast.root, "main".to_string()).unwrap();
-//     let main_expr = ast.get_assign_exp(main_assign);
-//     let rc_expr = (&*(&*rcs)[to_subst].redex).0;
-
-// }
+#[wasm_bindgen]
+pub fn my_init() {
+    utils::set_panic_hook();
+}
