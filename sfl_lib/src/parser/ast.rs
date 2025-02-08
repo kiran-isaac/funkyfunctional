@@ -817,6 +817,7 @@ impl AST {
                 let unpack_pattern = self.get_match_unpack_pattern(node);
                 s.push_str(&self.to_string_sugar(unpack_pattern, false));
                 s.push('\n');
+                s.push('{');
                 for (pat, exp) in self.get_match_cases_map(node) {
                     s.push_str("  | ");
                     s.push_str(&self.to_string_sugar(pat, false));
@@ -825,6 +826,7 @@ impl AST {
                     s.push('\n');
                 }
                 s.pop();
+                s.push('}');
                 s
             }
             ASTNodeType::Assignment => {

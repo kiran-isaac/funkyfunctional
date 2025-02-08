@@ -352,6 +352,15 @@ fn list_maybe() -> Result<(), ParserError> {
     Ok(())
 }
 
+fn assert_string_equal_no_whitespace(s1: String, s2: String) {
+    let mut s1 = s1.clone();
+    let mut s2 = s2.clone();
+    s1.retain(|c| !c.is_whitespace());
+    s2.retain(|c| !c.is_whitespace()); 
+    
+    assert_eq!(s1, s2);
+}
+
 #[test]
 fn parse_match_length() -> Result<(), ParserError> {
     let program = r#"
@@ -365,9 +374,34 @@ fn parse_match_length() -> Result<(), ParserError> {
     main = length (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
 
     let pr = Parser::from_string(program.to_string()).parse_module()?;
-    println!("{}", pr.ast.to_string_sugar(pr.ast.root, true));
-    // println!("{:?}", pr.lt);
-    // println!("{:?}", pr.lt.get_type("len").unwrap());
+    assert_string_equal_no_whitespace(pr.ast.to_string_sugar(pr.ast.root, false), r#"
+    length x = match x {
+       | Nil       -> 0
+       | Cons _ xs -> 1 + (length xs)
+    }
+    main = length (Cons 1 (Cons 2 (Cons 3 Nil)))"#.to_string());
+    
+    Ok(())
+}
+#[test]
+fn parse_match_map() -> Result<(), ParserError> {
+    let program = r#"
+    data List a = Cons a (List a) | Nil
+
+    map f lst = match lst {
+       | Nil       -> Nil
+       | Cons x xs -> Cons (f x) (map f xs)
+    }
+
+    main = map (\x. x + 1) (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
+
+    let pr = Parser::from_string(program.to_string()).parse_module()?;
+    assert_string_equal_no_whitespace(pr.ast.to_string_sugar(pr.ast.root, false), r#"
+    map f lst = match lst {
+       | Nil       -> Nil
+       | Cons x xs -> Cons (f x) (map f xs)
+    }
+    main = map (\x. x + 1)  (Cons 1 (Cons 2 (Cons 3 Nil)))"#.to_string());
 
     Ok(())
 }
