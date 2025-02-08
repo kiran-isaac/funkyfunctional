@@ -652,7 +652,7 @@ fn synthesize_type(
             let _var_str = var.clone();
             match c.get_type_assignment(&var) {
                 Some(t) => Ok((t?, c)),
-                None => unreachable!("Unbound type variable"),
+                None => panic!("Unbound variable: {:?}", var),
             }
         }
 
@@ -669,6 +669,34 @@ fn synthesize_type(
         }
 
         ASTNodeType::Literal => Ok((node.get_lit_type(), c)),
+
+        ASTNodeType::Match => {
+            let unpack_expr = ast.get_match_unpack_pattern(expr);
+            let (unpack_type, c) = synthesize_type(c, ast, unpack_expr, type_map)?;
+            
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
+            let _unpack_type_str = format!("{}", &unpack_type);
+            
+            let cases = ast.get_match_cases(expr);
+            let case_expr_existential = c.get_next_existential_identifier();
+
+            let mut c = c.append(
+                ContextItem::Existential(case_expr_existential, None),
+            );
+            
+            for (case_pat, case_expr) in cases {
+                c = check_type(c, &unpack_type, ast, case_pat, type_map)?;
+                #[cfg(debug_assertions)]
+                let _c_str = format!("{:?}", &c);
+                c = check_type(c, &Type::Existential(case_expr_existential), ast, case_expr, type_map)?;
+                #[cfg(debug_assertions)]
+                let _c_str = format!("{:?}", &c);
+            }
+
+            let expr_type = c.get_existential(case_expr_existential).unwrap().unwrap();
+            Ok((expr_type, c))
+        }
 
         // ->I=>
         ASTNodeType::Abstraction => {

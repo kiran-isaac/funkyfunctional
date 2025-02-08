@@ -1,5 +1,6 @@
 use super::*;
 use crate::{find_all_redex_contraction_pairs, Parser};
+use crate::parser::ParserError;
 
 fn tc_test_should_pass(program: &str) {
     let pr = Parser::from_string(program.to_string())
@@ -296,5 +297,22 @@ fn triple_test() -> Result<(), TypeError> {
         "∀a. ∀b. ∀c. Triple a b c",
     );
 
+    Ok(())
+}
+
+#[test]
+fn check_match_length() -> Result<(), ParserError> {
+    let program = r#"
+    data List a = Cons a (List a) | Nil
+
+    length x = match x {
+       | Nil       -> 0
+       | Cons _ xs -> 1 + length xs
+    }
+
+    main = length (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
+
+    mod_main_inference_test(program, "Int");
+    
     Ok(())
 }

@@ -731,7 +731,7 @@ impl AST {
     }
 
     /// returns patterns to expressions
-    pub fn get_match_cases_map(&self, match_: usize) -> Vec<(usize, usize)> {
+    pub fn get_match_cases(&self, match_: usize) -> Vec<(usize, usize)> {
         assert_eq!(self.vec[match_].t, ASTNodeType::Match);
         let new_vec = self.vec[match_].children.clone()[1..].to_vec();
         match new_vec.len() % 2 {
@@ -818,7 +818,7 @@ impl AST {
                 s.push_str(&self.to_string_sugar(unpack_pattern, false));
                 s.push('\n');
                 s.push('{');
-                for (pat, exp) in self.get_match_cases_map(node) {
+                for (pat, exp) in self.get_match_cases(node) {
                     s.push_str("  | ");
                     s.push_str(&self.to_string_sugar(pat, false));
                     s.push_str(" -> ");
@@ -961,7 +961,7 @@ impl AST {
                 let mut s = "match ".to_string();
                 let unpack_pattern = self.get_match_unpack_pattern(node);
                 s.push_str(&self.to_string_desugar_and_type(unpack_pattern));
-                for (pat, exp) in self.get_match_cases_map(node) {
+                for (pat, exp) in self.get_match_cases(node) {
                                         s.push_str(" | ");
                     s.push_str(&self.to_string_desugar_and_type(pat));
                     s.push_str(" -> ");
