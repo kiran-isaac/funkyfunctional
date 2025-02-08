@@ -305,14 +305,31 @@ fn check_match_length() -> Result<(), ParserError> {
     let program = r#"
     data List a = Cons a (List a) | Nil
 
-    length x = match x {
+    length lst = match lst {
        | Nil       -> 0
-       | Cons _ xs -> 1 + length xs
+       | Cons x xs -> 1
     }
 
     main = length (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
 
     mod_main_inference_test(program, "Int");
     
+    Ok(())
+}
+
+#[test]
+fn check_match_map() -> Result<(), ParserError> {
+    let program = r#"
+    data List a = Cons a (List a) | Nil
+
+    map f lst = match lst {
+       | Nil       -> Nil
+       | Cons x xs -> Cons (f x) Nil
+    }
+
+    main = map (\x.x) (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
+
+    mod_main_inference_test(program, "Int");
+
     Ok(())
 }
