@@ -98,6 +98,7 @@ impl Lexer {
         // catch KWs
         let tt = match str.as_str() {
             "true" | "false" => TokenType::BoolLit,
+            "match" => TokenType::Match,
             "if" => TokenType::If,
             "then" => TokenType::Then,
             "else" => TokenType::Else,

@@ -270,7 +270,7 @@ impl Parser {
         ast: &mut AST,
         type_table: &HashMap<String, Type>,
     ) -> Result<usize, ParserError> {
-        let mut left = self.parse_primary(ast, type_table)?;
+        let mut left = self.parse_expr_primary(ast, type_table)?;
 
         #[cfg(debug_assertions)]
         let _t_queue = format!("{:?}", self.t_queue);
@@ -310,22 +310,28 @@ impl Parser {
                     left = ast.add_app(left, ite, line, col);
                 }
 
+                TokenType::Match => {
+                    self.advance();
+                    let match_ = self.parse_match(ast, type_table)?;
+                    left = ast.add_app(left, match_, line, col);
+                }
+
                 TokenType::FloatLit
                 | TokenType::CharLit
                 | TokenType::IntLit
                 | TokenType::BoolLit => {
-                    let right = self.parse_primary(ast, type_table)?;
+                    let right = self.parse_expr_primary(ast, type_table)?;
                     left = ast.add_app(left, right, line, col);
                 }
 
                 TokenType::Id | TokenType::UppercaseId => {
                     if self.peek(0)?.is_infix_id() {
-                        let id_node = self.parse_primary(ast, type_table)?;
+                        let id_node = self.parse_expr_primary(ast, type_table)?;
                         let right = self.parse_expression(ast, type_table)?;
                         left = ast.add_app(id_node, left, line, col);
                         left = ast.add_app(left, right, line, col);
                     } else {
-                        let id_node = self.parse_primary(ast, type_table)?;
+                        let id_node = self.parse_expr_primary(ast, type_table)?;
                         left = ast.add_app(left, id_node, line, col);
                     }
                 }
@@ -339,7 +345,7 @@ impl Parser {
     }
 
     // Parse a primary expression
-    fn parse_primary(
+    fn parse_expr_primary(
         &mut self,
         ast: &mut AST,
         type_table: &HashMap<String, Type>,
@@ -359,6 +365,7 @@ impl Parser {
                 Ok(ast.add_lit(t, line, col))
             }
             TokenType::If => Ok(self.parse_ite(ast, type_table)?),
+            TokenType::Match => Ok(self.parse_match(ast, type_table)?),
             // Removed support for lambda except at the top level
             // for now, untill i figure out type inference
             TokenType::Lambda => {
@@ -372,6 +379,147 @@ impl Parser {
             }
             _ => Err(self.parse_error(format!("Unexpected Token in primary: {:?}", t))),
         }
+    }
+
+    fn parse_pattern(
+        &mut self,
+        ast: &mut AST,
+        type_table: &HashMap<String, Type>,
+        lits: bool,
+    ) -> Result<usize, ParserError> {
+        let mut left = self.parse_pattern_primary(ast, type_table, lits)?;
+
+        #[cfg(debug_assertions)]
+        let _t_queue = format!("{:?}", self.t_queue);
+        loop {
+            let line = self.lexer.line;
+            let col = self.lexer.col;
+            match &self.peek(0)?.tt {
+                // If paren, apply to paren
+                TokenType::LParen => {
+                    self.advance();
+                    let right = self.parse_pattern(ast, type_table, lits)?;
+                    self.advance();
+                    left = ast.add_app(left, right, line, col);
+                }
+                TokenType::RParen
+                | TokenType::EOF
+                | TokenType::Newline => {
+                    return Ok(left);
+                }
+
+                TokenType::Comma => {
+                    self.advance();
+                    let right = self.parse_pattern(ast, type_table, lits)?;
+                    left = ast.add_pair(left, right, line, col);
+                }
+
+                TokenType::FloatLit
+                | TokenType::CharLit
+                | TokenType::IntLit
+                | TokenType::BoolLit => {
+                    let right = self.parse_pattern_primary(ast, type_table, lits)?;
+                    left = ast.add_app(left, right, line, col);
+                }
+
+                TokenType::Id | TokenType::UppercaseId => {
+                    // Will throw if lowercase ID is found
+                    let id_node = self.parse_pattern_primary(ast, type_table, lits)?;
+                    left = ast.add_app(left, id_node, line, col);
+                }
+
+                _ => {
+                    let e = format!("Unexpected token in expression: {:?}", self.peek(0)?);
+                    return Err(self.parse_error(e));
+                }
+            }
+        }
+    }
+
+    // Parse a primary expression
+    fn parse_pattern_primary(
+        &mut self,
+        ast: &mut AST,
+        type_table: &HashMap<String, Type>,
+        lits: bool,
+    ) -> Result<usize, ParserError> {
+        let line = self.lexer.line;
+        let col = self.lexer.col;
+        let t = self.consume()?;
+        match t.tt {
+            TokenType::Id | TokenType::UppercaseId => {
+                let id_name = t.value.clone();
+                if !self.bound.is_bound(&id_name) {
+                    return Err(self.parse_error(format!("Unbound identifier: {}", id_name)));
+                }
+                let first_char_of_id = id_name.chars().next().unwrap();
+                match first_char_of_id {
+                    'A'..='Z' => Ok(ast.add_id(t, line, col)),
+                    'a'..='z' => return Err(self.parse_error("Lowercase ID in pattern, uppercase IDs representing constructor names only".to_string())),
+                    _ => panic!("unexpected char in id"),
+                }
+            }
+            TokenType::IntLit | TokenType::FloatLit | TokenType::BoolLit | TokenType::CharLit => {
+                if !lits {
+                    return Err(self.parse_error("Literal in unpack pattern".to_string()));
+                }
+                Ok(ast.add_lit(t, line, col))
+            }
+            TokenType::LParen => {
+                let exp = self.parse_pattern(ast, type_table, lits)?;
+                self.advance();
+                Ok(exp)
+            }
+            _ => Err(self.parse_error(format!("Unexpected Token in primary: {:?}", t))),
+        }
+    }
+
+    fn parse_match(        
+        &mut self,
+        ast: &mut AST,
+        type_table: &HashMap<String, Type>,
+    ) -> Result<usize, ParserError> {
+        let t = self.consume()?;
+        assert_eq!(t.tt, TokenType::Match);
+
+        // Parse the expression to match on, this does not allow literals
+        let match_unpack = self.parse_pattern(ast, type_table, false)?;
+
+        match self.consume()?.tt {
+            TokenType::LBrace => {}
+            _ => {
+                return Err(self.parse_error("Expected \"{\" after match before cases".to_string()));
+            }
+        };
+
+        let mut children = vec![match_unpack];
+
+        loop {
+            match self.peek(0)?.tt {
+                TokenType::RBrace => {
+                    self.advance();
+                    break;
+                }
+                TokenType::Newline => {
+                    self.advance();
+                }
+                _ => {
+                    let case = self.parse_pattern(ast, type_table, true)?;
+                    let arrow = self.consume()?;
+                    match arrow.tt {
+                        TokenType::RArrow => {}
+                        _ => {
+                            return Err(self.parse_error("Expected \"->\" after case pattern".to_string()));
+                        }
+                    };
+                    let expr = self.parse_expression(ast, type_table)?;
+                    children.push(case);
+                    children.push(expr);
+                }
+            }
+        }
+        
+        Ok(0)
     }
 
     fn parse_ite(

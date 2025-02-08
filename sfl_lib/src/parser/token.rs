@@ -12,6 +12,10 @@ pub enum TokenType {
     Then,
     Else,
 
+    Match, 
+    LBrace,
+    RBrace,
+
     IntLit,
     FloatLit,
     StringLit,
