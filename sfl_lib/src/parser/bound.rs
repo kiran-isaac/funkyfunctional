@@ -20,8 +20,8 @@ impl BoundChecker {
         self.bound.insert(name);
     }
 
-    pub fn remove_binding(&mut self, name: String) {
-        self.bound.remove(&name);
+    pub fn remove_binding(&mut self, name: &String) {
+        self.bound.remove(name);
     }
 
     pub fn is_bound(&self, name: &str) -> bool {

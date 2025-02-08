@@ -351,3 +351,23 @@ fn list_maybe() -> Result<(), ParserError> {
 
     Ok(())
 }
+
+#[test]
+fn parse_match_length() -> Result<(), ParserError> {
+    let program = r#"
+    data List a = Cons a (List a) | Nil
+
+    length x = match x {
+       | Nil       -> 0
+       | Cons _ xs -> 1 + length xs
+    }
+
+    main = length (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
+
+    let pr = Parser::from_string(program.to_string()).parse_module()?;
+    println!("{}", pr.ast.to_string_sugar(pr.ast.root, true));
+    // println!("{:?}", pr.lt);
+    // println!("{:?}", pr.lt.get_type("len").unwrap());
+
+    Ok(())
+}

@@ -351,6 +351,20 @@ impl Lexer {
                     value: ")".to_string(),
                 })
             }
+            '{' => {
+                self.advance();
+                Ok(Token {
+                    tt: TokenType::LBrace,
+                    value: "{".to_string(),
+                })
+            }
+            '}' => {
+                self.advance();
+                Ok(Token {
+                    tt: TokenType::RBrace,
+                    value: "}".to_string(),
+                })
+            }
             '=' => {
                 self.advance();
                 match self.c() {

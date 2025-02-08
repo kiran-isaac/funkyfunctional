@@ -122,9 +122,9 @@ impl Parser {
         let n = ast.get(node);
         match n.t {
             ASTNodeType::Identifier => {
-                let str = n.get_value().clone();
+                let str = n.get_value();
                 if str != "_" {
-                    self.unbind(str);
+                    self.unbind(&str);
                 }
             }
             ASTNodeType::Pair => {
@@ -135,7 +135,7 @@ impl Parser {
         }
     }
 
-    pub fn unbind(&mut self, name: String) {
+    pub fn unbind(&mut self, name: &String) {
         self.bound.remove_binding(name);
     }
 
@@ -381,13 +381,14 @@ impl Parser {
         }
     }
 
-    fn parse_pattern(
+    fn parse_pattern<'a>(
         &mut self,
         ast: &mut AST,
         type_table: &HashMap<String, Type>,
-        lits: bool,
-    ) -> Result<usize, ParserError> {
-        let mut left = self.parse_pattern_primary(ast, type_table, lits)?;
+        unpack: bool,
+        bound_set: &'a mut HashSet<String>,
+    ) -> Result<(usize, &'a mut HashSet<String>), ParserError> {
+        let mut left = self.parse_pattern_primary(ast, type_table, unpack, bound_set)?.0;
 
         #[cfg(debug_assertions)]
         let _t_queue = format!("{:?}", self.t_queue);
@@ -398,19 +399,22 @@ impl Parser {
                 // If paren, apply to paren
                 TokenType::LParen => {
                     self.advance();
-                    let right = self.parse_pattern(ast, type_table, lits)?;
+                    let right = self.parse_pattern(ast, type_table, unpack, bound_set)?.0;
                     self.advance();
                     left = ast.add_app(left, right, line, col);
                 }
+
                 TokenType::RParen
+                | TokenType::RArrow
+                | TokenType::LBrace
                 | TokenType::EOF
                 | TokenType::Newline => {
-                    return Ok(left);
+                    return Ok((left, bound_set));
                 }
 
                 TokenType::Comma => {
                     self.advance();
-                    let right = self.parse_pattern(ast, type_table, lits)?;
+                    let right = self.parse_pattern(ast, type_table, unpack, bound_set)?.0;
                     left = ast.add_pair(left, right, line, col);
                 }
 
@@ -418,18 +422,18 @@ impl Parser {
                 | TokenType::CharLit
                 | TokenType::IntLit
                 | TokenType::BoolLit => {
-                    let right = self.parse_pattern_primary(ast, type_table, lits)?;
+                    let right = self.parse_pattern_primary(ast, type_table, unpack, bound_set)?.0;
                     left = ast.add_app(left, right, line, col);
                 }
 
                 TokenType::Id | TokenType::UppercaseId => {
                     // Will throw if lowercase ID is found
-                    let id_node = self.parse_pattern_primary(ast, type_table, lits)?;
+                    let id_node = self.parse_pattern_primary(ast, type_table, unpack, bound_set)?.0;
                     left = ast.add_app(left, id_node, line, col);
                 }
 
                 _ => {
-                    let e = format!("Unexpected token in expression: {:?}", self.peek(0)?);
+                    let e = format!("Unexpected token in pattern: {:?}", self.peek(0)?);
                     return Err(self.parse_error(e));
                 }
             }
@@ -437,40 +441,50 @@ impl Parser {
     }
 
     // Parse a primary expression
-    fn parse_pattern_primary(
+    fn parse_pattern_primary<'a>(
         &mut self,
         ast: &mut AST,
         type_table: &HashMap<String, Type>,
-        lits: bool,
-    ) -> Result<usize, ParserError> {
+        unpack: bool,
+        bound_set: &'a mut HashSet<String>,
+    ) -> Result<(usize, &'a mut HashSet<String>), ParserError> {
         let line = self.lexer.line;
         let col = self.lexer.col;
         let t = self.consume()?;
         match t.tt {
             TokenType::Id | TokenType::UppercaseId => {
                 let id_name = t.value.clone();
-                if !self.bound.is_bound(&id_name) {
-                    return Err(self.parse_error(format!("Unbound identifier: {}", id_name)));
-                }
-                let first_char_of_id = id_name.chars().next().unwrap();
-                match first_char_of_id {
-                    'A'..='Z' => Ok(ast.add_id(t, line, col)),
-                    'a'..='z' => return Err(self.parse_error("Lowercase ID in pattern, uppercase IDs representing constructor names only".to_string())),
+
+                match id_name.chars().next().unwrap() {
+                    'A'..='Z' | '_' => Ok((ast.add_id(t, line, col), bound_set)),
+                    'a'..='z' => {
+                        if unpack {
+                            if self.bound.is_bound(&id_name) {
+                                return Err(self.parse_error(format!("Cannot rebind already bound identifier: {}", id_name)));
+                            } else {
+                                bound_set.insert(id_name.clone());
+                            }
+                        } else if !unpack && !self.bound.is_bound(&id_name) {
+                            return Err(self.parse_error(format!("Unbound Identifier: {}", id_name)));
+                        }
+                        Ok((ast.add_id(t, line, col), bound_set))
+                    },
                     _ => panic!("unexpected char in id"),
                 }
             }
             TokenType::IntLit | TokenType::FloatLit | TokenType::BoolLit | TokenType::CharLit => {
-                if !lits {
+                if !unpack {
                     return Err(self.parse_error("Literal in unpack pattern".to_string()));
                 }
-                Ok(ast.add_lit(t, line, col))
+                Ok((ast.add_lit(t, line, col), bound_set))
             }
             TokenType::LParen => {
-                let exp = self.parse_pattern(ast, type_table, lits)?;
+                let exp = self.parse_pattern(ast, type_table, unpack, bound_set)?.0;
                 self.advance();
-                Ok(exp)
+                Ok((exp, bound_set))
             }
-            _ => Err(self.parse_error(format!("Unexpected Token in primary: {:?}", t))),
+
+            _ => Err(self.parse_error(format!("Unexpected Token in pattern primary: {:?}", t))),
         }
     }
 
@@ -479,11 +493,8 @@ impl Parser {
         ast: &mut AST,
         type_table: &HashMap<String, Type>,
     ) -> Result<usize, ParserError> {
-        let t = self.consume()?;
-        assert_eq!(t.tt, TokenType::Match);
-
         // Parse the expression to match on, this does not allow literals
-        let match_unpack = self.parse_pattern(ast, type_table, false)?;
+        let match_unpack = self.parse_pattern(ast, type_table, false, &mut HashSet::new())?.0;
 
         match self.consume()?.tt {
             TokenType::LBrace => {}
@@ -495,6 +506,8 @@ impl Parser {
         let mut children = vec![match_unpack];
 
         loop {
+            let t = self.peek(0)?;
+
             match self.peek(0)?.tt {
                 TokenType::RBrace => {
                     self.advance();
@@ -503,8 +516,18 @@ impl Parser {
                 TokenType::Newline => {
                     self.advance();
                 }
-                _ => {
-                    let case = self.parse_pattern(ast, type_table, true)?;
+                TokenType::Bar => {
+                    let mut bound_set = HashSet::new();
+                    let bar = self.consume()?;
+                    match bar.tt {
+                        TokenType::Bar => {}
+                        _ => {
+                            return Err(self.parse_error("Expected \"|\" before case pattern".to_string()));
+                        }
+                    };
+                    
+                    let case = self.parse_pattern(ast, type_table, true, &mut bound_set)?.0;
+                    
                     let arrow = self.consume()?;
                     match arrow.tt {
                         TokenType::RArrow => {}
@@ -512,14 +535,22 @@ impl Parser {
                             return Err(self.parse_error("Expected \"->\" after case pattern".to_string()));
                         }
                     };
+
+                    for item in bound_set.iter() {
+                        self.bound.add_binding(item.clone())
+                    }
                     let expr = self.parse_expression(ast, type_table)?;
+                    for item in bound_set.iter() {
+                        self.bound.remove_binding(item)
+                    }
                     children.push(case);
                     children.push(expr);
                 }
+                _ => return Err(self.parse_error(format!("Unexpected Token in match: expected \"|\", got: {:?}", t))),
             }
         }
         
-        Ok(0)
+        Ok(ast.add_match(children, self.lexer.line, self.lexer.col))
     }
 
     fn parse_ite(

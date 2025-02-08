@@ -1,4 +1,4 @@
-use crate::{find_redexes::RCPair, types::TypeError, Primitive, Type};
+use crate::{find_redexes::RCPair, Primitive, Type};
 use std::collections::HashSet;
 use std::{collections::HashMap, fmt::Debug, vec};
 
@@ -816,8 +816,9 @@ impl AST {
                 let mut s = "match ".to_string();
                 let unpack_pattern = self.get_match_unpack_pattern(node);
                 s.push_str(&self.to_string_sugar(unpack_pattern, false));
+                s.push('\n');
                 for (pat, exp) in self.get_match_cases_map(node) {
-                                        s.push_str(" | ");
+                    s.push_str("  | ");
                     s.push_str(&self.to_string_sugar(pat, false));
                     s.push_str(" -> ");
                     s.push_str(&self.to_string_sugar(exp, show_assigned_types));
