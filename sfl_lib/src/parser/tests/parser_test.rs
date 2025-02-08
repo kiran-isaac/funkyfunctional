@@ -405,3 +405,41 @@ fn parse_match_map() -> Result<(), ParserError> {
 
     Ok(())
 }
+
+#[test]
+fn parse_match_fold() -> Result<(), ParserError> {
+    let program = r#"
+    data List a = Cons a (List a) | Nil
+
+    foldr f acc lst = match lst {
+       | Nil       -> acc
+       | Cons x xs -> f acc (foldr f acc xs)
+    }
+    
+    foldl f acc lst = match lst {
+       | Nil       -> acc
+       | Cons x xs -> foldl f (f acc x) xs
+    }
+
+    foldr_sum = foldr (\x y. x + y) (Cons 1 (Cons 2 (Cons 3 Nil)))
+    foldl_sum = foldl (\x y. x + y) (Cons 1 (Cons 2 (Cons 3 Nil)))
+    "#;
+
+    let pr = Parser::from_string(program.to_string()).parse_module()?;
+    assert_string_equal_no_whitespace(pr.ast.to_string_sugar(pr.ast.root, false), r#"
+    foldr f acc lst = match lst {
+       | Nil       -> acc
+       | Cons x xs -> f acc (foldr f acc xs)
+    }
+    
+    foldl f acc lst = match lst {
+       | Nil       -> acc
+       | Cons x xs -> foldl f (f acc x) xs
+    }
+
+    foldr_sum = foldr (\x . \y. x + y) (Cons 1 (Cons 2 (Cons 3 Nil)))
+    foldl_sum = foldl (\x . \y. x + y) (Cons 1 (Cons 2 (Cons 3 Nil)))
+    "#.to_string());
+
+    Ok(())
+}
