@@ -2,9 +2,9 @@ name: Build image and deploy to GitHub Pages
 
 on:
   push:
-    branches: [ "dev", "main" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "dev", "main" ]
+    branches: [ "main" ]
 
 permissions:
   contents: read
