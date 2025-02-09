@@ -97,6 +97,11 @@ impl Context {
                     new.next_placeholder_assignvar_i += 1;
                 }
             }
+            ContextItem::TypeVariable(name) => {
+                if name.starts_with("_") {
+                    new.next_placeholder_assignvar_i += 1;
+                }
+            }
             ContextItem::Existential(e, _) => {
                 new.next_exid = std::cmp::max(*e, new.next_exid);
             }
@@ -693,16 +698,21 @@ fn synthesize_type(
             let cases = ast.get_match_cases(expr);
             let case_expr_existential = c.get_next_existential_identifier();
 
-            let mut c = c.append(
-                ContextItem::Existential(case_expr_existential, None),
-            );
+            let mut cases_iter = cases.into_iter();
+            let first_case = cases_iter.next().unwrap();
+
+            let c = check_type(c, &unpack_type, ast, first_case.0, type_map, true)?;
+            let (expr_type, mut c) = synthesize_type(c, ast, first_case.1, type_map, false)?;
+
+            #[cfg(debug_assertions)]
+            let _expr_type_str = format!("{}", &expr_type);
             
-            for (case_pat, case_expr) in cases {
+            for (case_pat, case_expr) in cases_iter {
                 c = check_type(c, &unpack_type, ast, case_pat, type_map, true)?;
                 #[cfg(debug_assertions)]
                 let _c_str = format!("{:?}", &c);
 
-                c = check_type(c, &Type::Existential(case_expr_existential), ast, case_expr, type_map, false)?;
+                c = check_type(c, &expr_type, ast, case_expr, type_map, false)?;
                 #[cfg(debug_assertions)]
                 let _c_str = format!("{:?}", &c);
             }
@@ -710,7 +720,6 @@ fn synthesize_type(
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            let expr_type = c.get_existential(case_expr_existential).unwrap().unwrap();
             Ok((expr_type, c))
         }
 
@@ -958,15 +967,23 @@ fn check_type(
 
         // Forall Introduction
         (Type::Forall(var, t), _) => {
+            let placeholder_var = c.get_next_placeholder_assignvar();
+            let t = match t.as_ref().clone().substitute_type_variable(var, &Type::TypeVariable(placeholder_var.clone())) {
+                Ok(t) => t,
+                Err(e) => panic!("{}", e),
+            };
+
+            let c = c.append(ContextItem::TypeVariable(placeholder_var.clone()));
+
             let pred = check_type(
-                c.append(ContextItem::TypeVariable(var.clone())),
-                t,
+                c,
+                &t,
                 ast,
                 expr,
                 type_map,
                 is_pattern
             )?;
-            Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
+            Ok(pred.get_before_item(ContextItem::TypeVariable(placeholder_var)))
         }
 
         // Arrow introduction

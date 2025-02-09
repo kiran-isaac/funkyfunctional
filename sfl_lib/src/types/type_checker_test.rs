@@ -322,6 +322,7 @@ fn check_match_map() -> Result<(), ParserError> {
     let program = r#"
     data List a = Cons a (List a) | Nil
 
+    map :: (a -> b) -> List a -> List b
     map f lst = match lst {
        | Nil       -> Nil
        | Cons x xs -> Cons (f x) Nil
@@ -329,7 +330,7 @@ fn check_match_map() -> Result<(), ParserError> {
 
     main = map (\x.x) (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
 
-    mod_main_inference_test(program, "Int");
+    mod_main_inference_test(program, "List Int");
 
     Ok(())
 }

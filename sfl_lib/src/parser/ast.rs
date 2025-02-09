@@ -816,8 +816,8 @@ impl AST {
                 let mut s = "match ".to_string();
                 let unpack_pattern = self.get_match_unpack_pattern(node);
                 s.push_str(&self.to_string_sugar(unpack_pattern, false));
-                s.push('\n');
                 s.push('{');
+                s.push('\n');
                 for (pat, exp) in self.get_match_cases(node) {
                     s.push_str("  | ");
                     s.push_str(&self.to_string_sugar(pat, false));
@@ -825,7 +825,6 @@ impl AST {
                     s.push_str(&self.to_string_sugar(exp, show_assigned_types));
                     s.push('\n');
                 }
-                s.pop();
                 s.push('}');
                 s
             }
