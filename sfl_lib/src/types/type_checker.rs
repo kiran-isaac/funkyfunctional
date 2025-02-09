@@ -696,7 +696,6 @@ fn synthesize_type(
             let _unpack_type_str = format!("{}", &unpack_type);
             
             let cases = ast.get_match_cases(expr);
-            let case_expr_existential = c.get_next_existential_identifier();
 
             let mut cases_iter = cases.into_iter();
             let first_case = cases_iter.next().unwrap();
