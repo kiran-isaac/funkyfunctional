@@ -1,4 +1,4 @@
-use crate::{ASTNode, ASTNodeType, AST};
+use crate::{ASTNodeType, AST};
 use std::collections::HashMap;
 
 /// Get if pattern is matched, and returns bindings
