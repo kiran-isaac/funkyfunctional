@@ -356,8 +356,8 @@ fn assert_string_equal_no_whitespace(s1: String, s2: String) {
     let mut s1 = s1.clone();
     let mut s2 = s2.clone();
     s1.retain(|c| !c.is_whitespace());
-    s2.retain(|c| !c.is_whitespace()); 
-    
+    s2.retain(|c| !c.is_whitespace());
+
     assert_eq!(s1, s2);
 }
 
@@ -374,13 +374,17 @@ fn parse_match_length() -> Result<(), ParserError> {
     main = length (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
 
     let pr = Parser::from_string(program.to_string()).parse_module()?;
-    assert_string_equal_no_whitespace(pr.ast.to_string_sugar(pr.ast.root, false), r#"
+    assert_string_equal_no_whitespace(
+        pr.ast.to_string_sugar(pr.ast.root, false),
+        r#"
     length x = match x {
        | Nil       -> 0
        | Cons _ xs -> 1 + (length xs)
     }
-    main = length (Cons 1 (Cons 2 (Cons 3 Nil)))"#.to_string());
-    
+    main = length (Cons 1 (Cons 2 (Cons 3 Nil)))"#
+            .to_string(),
+    );
+
     Ok(())
 }
 #[test]
@@ -396,12 +400,16 @@ fn parse_match_map() -> Result<(), ParserError> {
     main = map (\x. x + 1) (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
 
     let pr = Parser::from_string(program.to_string()).parse_module()?;
-    assert_string_equal_no_whitespace(pr.ast.to_string_sugar(pr.ast.root, false), r#"
+    assert_string_equal_no_whitespace(
+        pr.ast.to_string_sugar(pr.ast.root, false),
+        r#"
     map f lst = match lst {
        | Nil       -> Nil
        | Cons x xs -> Cons (f x) (map f xs)
     }
-    main = map (\x. x + 1)  (Cons 1 (Cons 2 (Cons 3 Nil)))"#.to_string());
+    main = map (\x. x + 1)  (Cons 1 (Cons 2 (Cons 3 Nil)))"#
+            .to_string(),
+    );
 
     Ok(())
 }
@@ -426,7 +434,9 @@ fn parse_match_fold() -> Result<(), ParserError> {
     "#;
 
     let pr = Parser::from_string(program.to_string()).parse_module()?;
-    assert_string_equal_no_whitespace(pr.ast.to_string_sugar(pr.ast.root, false), r#"
+    assert_string_equal_no_whitespace(
+        pr.ast.to_string_sugar(pr.ast.root, false),
+        r#"
     foldr f acc lst = match lst {
        | Nil       -> acc
        | Cons x xs -> f acc (foldr f acc xs)
@@ -439,7 +449,9 @@ fn parse_match_fold() -> Result<(), ParserError> {
 
     foldr_sum = foldr (\x . \y. x + y) (Cons 1 (Cons 2 (Cons 3 Nil)))
     foldl_sum = foldl (\x . \y. x + y) (Cons 1 (Cons 2 (Cons 3 Nil)))
-    "#.to_string());
+    "#
+        .to_string(),
+    );
 
     Ok(())
 }

@@ -164,6 +164,13 @@ impl Type {
         new_vec
     }
 
+    pub fn count_foralls(&self) -> usize {
+        match self {
+            Type::Forall(_, t) => t.count_foralls() + 1,
+            _ => 0,
+        }
+    }
+
     fn ordered_existentials(&self) -> Vec<usize> {
         match &self {
             Type::Existential(n) => vec![*n],

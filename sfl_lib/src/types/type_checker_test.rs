@@ -1,6 +1,6 @@
 use super::*;
-use crate::{find_all_redex_contraction_pairs, Parser};
 use crate::parser::ParserError;
+use crate::{find_all_redex_contraction_pairs, Parser};
 
 fn tc_test_should_pass(program: &str) {
     let pr = Parser::from_string(program.to_string())
@@ -306,14 +306,32 @@ fn check_match_length() -> Result<(), ParserError> {
     data List a = Cons a (List a) | Nil
 
     length lst = match lst {
-       | Nil       -> 0
-       | Cons x xs -> 1
+        | Nil       -> 0
+        | Cons x xs -> 1
     }
 
     main = length (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
 
     mod_main_inference_test(program, "Int");
-    
+
+    Ok(())
+}
+
+#[test]
+fn check_match_is_less_than_2_long() -> Result<(), ParserError> {
+    let program = r#"
+    data List a = Cons a (List a) | Nil
+
+    len_less_than_2 lst = match lst {
+        | Nil       -> true
+        | Cons _ (Cons _ Nil) -> true
+        | _ -> false
+    }
+
+    main = len_less_than_2 (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
+
+    mod_main_inference_test(program, "Bool");
+
     Ok(())
 }
 
@@ -331,6 +349,41 @@ fn check_match_map() -> Result<(), ParserError> {
     main = map (\x.x) (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
 
     mod_main_inference_test(program, "List Int");
+
+    Ok(())
+}
+
+#[test]
+fn check_match_map_ifnot_zero() -> Result<(), ParserError> {
+    let program = r#"
+    data List a = Cons a (List a) | Nil
+
+    // Map a function over a list, skipping zeros
+    mapNoZero :: (Int -> b) -> List Int -> List b
+    mapNoZero f lst = match lst {
+        | Nil       -> Nil
+        | Cons 0 xs -> mapNoZero f xs
+        | Cons x xs -> Cons (f x) (mapNoZero f xs)
+    }
+
+    main = mapNoZero (\x.x) (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
+
+    mod_main_inference_test(program, "List Int");
+
+    let program = r#"
+    data List a = Cons a (List a) | Nil
+
+    // Map a function over a list, skipping zeros
+    mapNoZero :: (a -> b) -> List a -> List b
+    mapNoZero f lst = match lst {
+        | Nil       -> Nil
+        | Cons 0 xs -> mapNoZero f xs
+        | Cons x xs -> Cons (f x) (mapNoZero f xs)
+    }
+
+    main = mapNoZero (\x.x) (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
+
+    mod_inference_should_fail(program);
 
     Ok(())
 }

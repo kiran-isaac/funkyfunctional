@@ -352,6 +352,7 @@ fn type_error(msg: String, ast: &AST, expr: usize) -> TypeError {
     }
 }
 
+/// A is subtype of B
 fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context, String> {
     #[cfg(debug_assertions)]
     let _c_str = format!("{:?}", &c);
@@ -663,13 +664,28 @@ fn synthesize_type(
                 None => {
                     if is_pattern && var.chars().next().unwrap().is_lowercase() {
                         let next_exist = Type::Existential(c.get_next_existential_identifier());
-                        Ok((next_exist.clone(), c
-                            .append(ContextItem::Existential(c.get_next_existential_identifier(), None))
-                            .append(ContextItem::TypeAssignment(var.clone(), Ok(next_exist)))))
+                        Ok((
+                            next_exist.clone(),
+                            c.append(ContextItem::Existential(
+                                c.get_next_existential_identifier(),
+                                None,
+                            ))
+                            .append(ContextItem::TypeAssignment(var.clone(), Ok(next_exist))),
+                        ))
                     } else {
+                        if var == "_" {
+                            let next_exist = Type::Existential(c.get_next_existential_identifier());
+                            return Ok((
+                                next_exist.clone(),
+                                c.append(ContextItem::Existential(
+                                    c.get_next_existential_identifier(),
+                                    None,
+                                )),
+                            ));
+                        }
                         panic!("Unbound identifier not in pattern")
                     }
-                },
+                }
             }
         }
 
@@ -690,36 +706,85 @@ fn synthesize_type(
         ASTNodeType::Match => {
             let unpack_expr = ast.get_match_unpack_pattern(expr);
             let (unpack_type, c) = synthesize_type(c, ast, unpack_expr, type_map, is_pattern)?;
-            
+
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
             let _unpack_type_str = format!("{}", &unpack_type);
-            
+
             let cases = ast.get_match_cases(expr);
 
-            let mut cases_iter = cases.into_iter();
-            let first_case = cases_iter.next().unwrap();
+            let mut pattern_types = vec![];
+            let mut expr_types = vec![];
 
-            let c = check_type(c, &unpack_type, ast, first_case.0, type_map, true)?;
-            let (expr_type, mut c) = synthesize_type(c, ast, first_case.1, type_map, false)?;
+            let mut c = c;
+
+            let mut most_specific_pattern = (usize::MAX, None);
+            let mut most_specific_expression = (usize::MAX, None);
+
+            for (case_pat, case_expr) in cases {
+                #[cfg(debug_assertions)]
+                let _pat_str = format!("{}", &ast.to_string_sugar(case_pat, false));
+                #[cfg(debug_assertions)]
+                let _expr_str = format!("{}", &ast.to_string_sugar(case_expr, false));
+
+                let (pattern_type, new_c) =
+                    synthesize_type(c.clone(), ast, case_pat, type_map, true)?;
+                let pattern_type = new_c.substitute(&pattern_type).forall_ify();
+                #[cfg(debug_assertions)]
+                let _pat_type_str = format!("{}", &pattern_type);
+                let pattern_specificity = pattern_type.count_foralls();
+                if pattern_specificity < most_specific_pattern.0 {
+                    most_specific_pattern.0 = pattern_specificity;
+                    most_specific_pattern.1 = Some(pattern_type.clone());
+                }
+                pattern_types.push(pattern_type);
+
+                let (expr_type, new_c) = synthesize_type(new_c, ast, case_expr, type_map, false)?;
+                let expr_type = new_c.substitute(&expr_type).forall_ify();
+                let _expr_type_str = format!("{}", &expr_type);
+
+                let expr_specificity = expr_type.count_foralls();
+                if expr_specificity < most_specific_expression.0 {
+                    most_specific_expression.0 = expr_specificity;
+                    most_specific_expression.1 = Some(expr_type.clone());
+                }
+                expr_types.push(expr_type);
+            }
 
             #[cfg(debug_assertions)]
-            let _expr_type_str = format!("{}", &expr_type);
-            
-            for (case_pat, case_expr) in cases_iter {
-                c = check_type(c, &unpack_type, ast, case_pat, type_map, true)?;
-                #[cfg(debug_assertions)]
-                let _c_str = format!("{:?}", &c);
-
-                c = check_type(c, &expr_type, ast, case_expr, type_map, false)?;
-                #[cfg(debug_assertions)]
-                let _c_str = format!("{:?}", &c);
-            }
+            let _pattern_types_str = format!("{:?}", &pattern_types);
+            let _expr_types_str = format!("{:?}", &expr_types);
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            Ok((expr_type, c))
+            assert!(most_specific_pattern.1.is_some());
+            assert!(most_specific_expression.1.is_some());
+
+            let msp = most_specific_pattern.1.unwrap();
+            let mse = most_specific_expression.1.unwrap();
+
+            #[cfg(debug_assertions)]
+            let _msp_str = format!("{}", &msp.to_string());
+            #[cfg(debug_assertions)]
+            let _mse_str = format!("{}", &mse.to_string());
+
+            // Attempt to unify all the types with the most specific one
+            for other_types in pattern_types {
+                c = match subtype(c, &other_types, &msp.clone(), type_map) {
+                    Ok(c) => c,
+                    Err(e) => return Err(type_error(format!("In match expression, cannot unify type {} with more specific type {}: {}", &other_types, &msp, e), ast, expr))
+                };
+            }
+
+            for other_types in expr_types {
+                c = match subtype(c, &other_types, &mse.clone(), type_map) {
+                    Ok(c) => c,
+                    Err(e) => return Err(type_error(format!("In match expression, cannot unify type {} with more specific type {}: {}", &other_types, &mse, e), ast, expr))
+                };
+            }
+
+            Ok((mse.clone(), c))
         }
 
         // ->I=>
@@ -751,7 +816,7 @@ fn synthesize_type(
                 ast,
                 ast.get_abstr_expr(expr),
                 type_map,
-                false
+                false,
             )?;
 
             #[cfg(debug_assertions)]
@@ -966,23 +1031,19 @@ fn check_type(
 
         // Forall Introduction
         (Type::Forall(var, t), _) => {
-            let placeholder_var = c.get_next_placeholder_assignvar();
-            let t = match t.as_ref().clone().substitute_type_variable(var, &Type::TypeVariable(placeholder_var.clone())) {
+            let t = match t
+                .as_ref()
+                .clone()
+                .substitute_type_variable(var, &Type::TypeVariable(var.clone()))
+            {
                 Ok(t) => t,
                 Err(e) => panic!("{}", e),
             };
 
-            let c = c.append(ContextItem::TypeVariable(placeholder_var.clone()));
+            let c = c.append(ContextItem::TypeVariable(var.clone()));
 
-            let pred = check_type(
-                c,
-                &t,
-                ast,
-                expr,
-                type_map,
-                is_pattern
-            )?;
-            Ok(pred.get_before_item(ContextItem::TypeVariable(placeholder_var)))
+            let pred = check_type(c, &t, ast, expr, type_map, is_pattern)?;
+            Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
         }
 
         // Arrow introduction
@@ -1046,7 +1107,7 @@ pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), 
         ast,
         expr,
         &TypeMap::new(),
-        false
+        false,
     ) {
         Ok(_) => Ok(()),
         Err(e) => Err(e),

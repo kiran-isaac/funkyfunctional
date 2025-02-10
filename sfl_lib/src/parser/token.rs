@@ -12,7 +12,7 @@ pub enum TokenType {
     Then,
     Else,
 
-    Match, 
+    Match,
     LBrace,
     RBrace,
 

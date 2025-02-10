@@ -388,7 +388,9 @@ impl Parser {
         unpack: bool,
         bound_set: &'a mut HashSet<String>,
     ) -> Result<(usize, &'a mut HashSet<String>), ParserError> {
-        let mut left = self.parse_pattern_primary(ast, type_table, unpack, bound_set)?.0;
+        let mut left = self
+            .parse_pattern_primary(ast, type_table, unpack, bound_set)?
+            .0;
 
         #[cfg(debug_assertions)]
         let _t_queue = format!("{:?}", self.t_queue);
@@ -422,13 +424,17 @@ impl Parser {
                 | TokenType::CharLit
                 | TokenType::IntLit
                 | TokenType::BoolLit => {
-                    let right = self.parse_pattern_primary(ast, type_table, unpack, bound_set)?.0;
+                    let right = self
+                        .parse_pattern_primary(ast, type_table, unpack, bound_set)?
+                        .0;
                     left = ast.add_app(left, right, line, col);
                 }
 
                 TokenType::Id | TokenType::UppercaseId => {
                     // Will throw if lowercase ID is found
-                    let id_node = self.parse_pattern_primary(ast, type_table, unpack, bound_set)?.0;
+                    let id_node = self
+                        .parse_pattern_primary(ast, type_table, unpack, bound_set)?
+                        .0;
                     left = ast.add_app(left, id_node, line, col);
                 }
 
@@ -460,15 +466,20 @@ impl Parser {
                     'a'..='z' => {
                         if unpack {
                             if self.bound.is_bound(&id_name) {
-                                return Err(self.parse_error(format!("Cannot rebind already bound identifier: {}", id_name)));
+                                return Err(self.parse_error(format!(
+                                    "Cannot rebind already bound identifier: {}",
+                                    id_name
+                                )));
                             } else {
                                 bound_set.insert(id_name.clone());
                             }
                         } else if !unpack && !self.bound.is_bound(&id_name) {
-                            return Err(self.parse_error(format!("Unbound Identifier: {}", id_name)));
+                            return Err(
+                                self.parse_error(format!("Unbound Identifier: {}", id_name))
+                            );
                         }
                         Ok((ast.add_id(t, line, col), bound_set))
-                    },
+                    }
                     _ => panic!("unexpected char in id"),
                 }
             }
@@ -488,13 +499,15 @@ impl Parser {
         }
     }
 
-    fn parse_match(        
+    fn parse_match(
         &mut self,
         ast: &mut AST,
         type_table: &HashMap<String, Type>,
     ) -> Result<usize, ParserError> {
         // Parse the expression to match on, this does not allow literals
-        let match_unpack = self.parse_pattern(ast, type_table, false, &mut HashSet::new())?.0;
+        let match_unpack = self
+            .parse_pattern(ast, type_table, false, &mut HashSet::new())?
+            .0;
 
         match self.consume()?.tt {
             TokenType::LBrace => {}
@@ -522,17 +535,21 @@ impl Parser {
                     match bar.tt {
                         TokenType::Bar => {}
                         _ => {
-                            return Err(self.parse_error("Expected \"|\" before case pattern".to_string()));
+                            return Err(
+                                self.parse_error("Expected \"|\" before case pattern".to_string())
+                            );
                         }
                     };
-                    
+
                     let case = self.parse_pattern(ast, type_table, true, &mut bound_set)?.0;
-                    
+
                     let arrow = self.consume()?;
                     match arrow.tt {
                         TokenType::RArrow => {}
                         _ => {
-                            return Err(self.parse_error("Expected \"->\" after case pattern".to_string()));
+                            return Err(
+                                self.parse_error("Expected \"->\" after case pattern".to_string())
+                            );
                         }
                     };
 
@@ -546,10 +563,15 @@ impl Parser {
                     children.push(case);
                     children.push(expr);
                 }
-                _ => return Err(self.parse_error(format!("Unexpected Token in match: expected \"|\", got: {:?}", t))),
+                _ => {
+                    return Err(self.parse_error(format!(
+                        "Unexpected Token in match: expected \"|\", got: {:?}",
+                        t
+                    )))
+                }
             }
         }
-        
+
         Ok(ast.add_match(children, self.lexer.line, self.lexer.col))
     }
 

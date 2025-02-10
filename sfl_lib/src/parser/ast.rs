@@ -446,7 +446,7 @@ impl AST {
                     children.push(self.append(other, a));
                 }
                 self.add_match(children, n.line, n.col)
-            } 
+            }
             ASTNodeType::Module => {
                 let mut assigns = vec![];
                 for a in n.children.clone() {
@@ -516,7 +516,6 @@ impl AST {
     pub fn add_match(&mut self, cases: Vec<usize>, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_match(cases, line, col))
     }
-
 
     pub fn add_module(&mut self, assigns: Vec<usize>, line: usize, col: usize) -> usize {
         self.add(ASTNode::new_module(assigns, line, col))
@@ -961,7 +960,7 @@ impl AST {
                 let unpack_pattern = self.get_match_unpack_pattern(node);
                 s.push_str(&self.to_string_desugar_and_type(unpack_pattern));
                 for (pat, exp) in self.get_match_cases(node) {
-                                        s.push_str(" | ");
+                    s.push_str(" | ");
                     s.push_str(&self.to_string_desugar_and_type(pat));
                     s.push_str(" -> ");
                     s.push_str(&self.to_string_desugar_and_type(exp));
