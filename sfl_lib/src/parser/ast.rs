@@ -1,7 +1,7 @@
 use crate::{find_redexes::RCPair, Primitive, Type};
 use std::collections::HashSet;
 use std::{collections::HashMap, fmt::Debug, vec};
-
+use std::iter::zip;
 use super::token::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -235,6 +235,12 @@ impl AST {
                 let y2 = self.get_second(n2);
 
                 self.expr_eq(x1, x2) && self.expr_eq(y1, y2)
+            }
+            (ASTNodeType::Match, ASTNodeType::Match) => {
+                for (c1, c2) in zip(self.get(n1).children.clone(), self.get(n2).children.clone()) {
+                    if !self.expr_eq(c1, c2) {return false}
+                }
+                true
             }
             _ => false,
         }

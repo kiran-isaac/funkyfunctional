@@ -181,6 +181,11 @@ pub fn find_all_redex_contraction_pairs(
             pairs.extend(find_all_redex_contraction_pairs(ast, module, f, &lt));
             pairs.extend(find_all_redex_contraction_pairs(ast, module, x, &lt));
         }
+        ASTNodeType::Match => {
+            if let Some(rc) = find_single_redex_contraction_pair(ast, module, expr, lt) {
+                pairs.push(rc);
+            }
+        }
         _ => panic!("Expected expression"),
     }
 
@@ -266,7 +271,7 @@ pub fn find_single_redex_contraction_pair(
                             pat_expr_cloned.replace(usage, replacement_appended);
                         }
                     }
-                    return Some((expr, pat_expr_cloned));
+                    return Some((expr, pat_expr_cloned.clone_node(pat_expr_cloned.root)));
                 }
             }
             None
