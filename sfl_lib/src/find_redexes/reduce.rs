@@ -1,4 +1,5 @@
 use super::*;
+use crate::find_redexes::pattern_match::pattern_match;
 use crate::functions::KnownTypeLabelTable;
 use std::collections::HashMap;
 
@@ -251,6 +252,24 @@ pub fn find_single_redex_contraction_pair(
             } else {
                 find_single_redex_contraction_pair(ast, module, ast.get_arg(expr), lt)
             }
+        }
+        ASTNodeType::Match => {
+            let unpack_expr = ast.get_match_unpack_pattern(expr);
+            for (pattern, pattern_expr) in ast.get_match_cases(expr) {
+                if let Some(bindings) = pattern_match(ast, unpack_expr, pattern) {
+                    let mut pat_expr_cloned = ast.clone_node(pattern_expr);
+                    for (var, replacement) in bindings {
+                        let replacement_appended = pat_expr_cloned.append(ast, replacement);
+                        let usages = pat_expr_cloned
+                            .get_all_free_instances_of_var_in_exp(pat_expr_cloned.root, &var);
+                        for usage in usages {
+                            pat_expr_cloned.replace(usage, replacement_appended);
+                        }
+                    }
+                    return Some((expr, pat_expr_cloned));
+                }
+            }
+            None
         }
         _ => None,
     }

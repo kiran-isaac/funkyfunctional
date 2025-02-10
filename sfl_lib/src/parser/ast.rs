@@ -585,10 +585,13 @@ impl AST {
             }
             ASTNodeType::Match => {
                 let thing_being_matched = self.get_match_unpack_pattern(exp);
-                let mut instances = self.get_all_free_instances_of_var_in_exp(thing_being_matched, &var);
+                let mut instances =
+                    self.get_all_free_instances_of_var_in_exp(thing_being_matched, &var);
 
                 for (pattern, expr) in self.get_match_cases(exp) {
-                    assert!(self.get_all_free_instances_of_var_in_exp(pattern, &var).is_empty());
+                    assert!(self
+                        .get_all_free_instances_of_var_in_exp(pattern, &var)
+                        .is_empty());
 
                     instances.extend(self.get_all_free_instances_of_var_in_exp(expr, &var));
                 }
@@ -628,7 +631,7 @@ impl AST {
         abst_ast
     }
 
-    fn replace_var_usages(&mut self, var: usize, subst: usize) {
+    pub fn replace_var_usages(&mut self, var: usize, subst: usize) {
         #[cfg(debug_assertions)]
         let _var_str = self.to_string_sugar(var, false);
         #[cfg(debug_assertions)]
@@ -826,7 +829,10 @@ impl AST {
             ASTNodeType::Match => {
                 let mut s = "match ".to_string();
                 let unpack_pattern = self.get_match_unpack_pattern(node);
+                s.push('(');
                 s.push_str(&self.to_string_sugar(unpack_pattern, false));
+                s.push(')');
+                s.push(' ');
                 s.push('{');
                 s.push('\n');
                 for (pat, exp) in self.get_match_cases(node) {

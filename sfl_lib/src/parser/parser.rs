@@ -464,11 +464,14 @@ impl Parser {
                 match id_name.chars().next().unwrap() {
                     'A'..='Z' => {
                         if !self.bound.is_bound(&id_name) {
-                            Err(self.parse_error(format!("Unbound identifier: {}", id_name)))
+                            Err(self.parse_error(format!(
+                                "Unbound constructor identifier: {}",
+                                id_name
+                            )))
                         } else {
                             Ok((ast.add_id(t, line, col), bound_set))
                         }
-                    },
+                    }
                     '_' => Ok((ast.add_id(t, line, col), bound_set)),
                     'a'..='z' => {
                         if unpack {
@@ -491,9 +494,6 @@ impl Parser {
                 }
             }
             TokenType::IntLit | TokenType::FloatLit | TokenType::BoolLit | TokenType::CharLit => {
-                if !unpack {
-                    return Err(self.parse_error("Literal in unpack pattern".to_string()));
-                }
                 Ok((ast.add_lit(t, line, col), bound_set))
             }
             TokenType::LParen => {
