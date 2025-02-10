@@ -583,6 +583,18 @@ impl AST {
                 left.extend(right);
                 left
             }
+            ASTNodeType::Match => {
+                let thing_being_matched = self.get_match_unpack_pattern(exp);
+                let mut instances = self.get_all_free_instances_of_var_in_exp(thing_being_matched, &var);
+
+                for (pattern, expr) in self.get_match_cases(exp) {
+                    assert!(self.get_all_free_instances_of_var_in_exp(pattern, &var).is_empty());
+
+                    instances.extend(self.get_all_free_instances_of_var_in_exp(expr, &var));
+                }
+
+                instances
+            }
             _ => panic!("Cannot find var instances in non exp"),
         }
     }
