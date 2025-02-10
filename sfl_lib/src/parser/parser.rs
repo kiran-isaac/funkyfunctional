@@ -462,7 +462,13 @@ impl Parser {
                 let id_name = t.value.clone();
 
                 match id_name.chars().next().unwrap() {
-                    'A'..='Z' | '_' => Ok((ast.add_id(t, line, col), bound_set)),
+                    'A'..='Z' | '_' => {
+                        if !self.bound.is_bound(&id_name) {
+                            Err(self.parse_error(format!("Unbound identifier: {}", id_name)))
+                        } else {
+                            Ok((ast.add_id(t, line, col), bound_set))
+                        }
+                    },
                     'a'..='z' => {
                         if unpack {
                             if self.bound.is_bound(&id_name) {
