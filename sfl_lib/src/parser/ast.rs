@@ -766,6 +766,100 @@ impl AST {
         }
     }
 
+    fn is_cons(&self, node: usize) -> bool {
+        let mut func = node;
+        let mut args = vec![];
+        for _ in 0..2 {
+            match self.get(func).t {
+                ASTNodeType::Application => {
+                    args.push(self.get_arg(func));
+                    func = self.get_func(func);
+                }
+                _ => {
+                    break;
+                }
+            }
+        }
+
+        if args.len() == 2 {
+            if self.get(func).t == ASTNodeType::Identifier {
+                return self.get(func).get_value() == "Cons";
+            }
+        }
+
+        false
+    }
+
+    fn get_list_elems(&self, node: usize) -> Vec<usize> {
+        let mut elems = vec![];
+
+        if self.is_cons(node) {
+            elems.push(self.get_arg(self.get_func(node)));
+            elems.extend(self.get_list_elems(self.get_arg(node)));
+        }
+
+        elems
+    }
+
+    fn list_to_string(&self, node: usize) -> String {
+        let elems = self.get_list_elems(node);
+        let mut s = "[".to_string();
+        for elem in elems {
+            s += self.to_string_sugar(elem, true ).as_str();
+            s.push(',');
+            s.push(' ');
+        }
+        s.pop();
+        s.pop();
+        s.push(']');
+        s
+    }
+
+    fn pattern_to_string(&self, node: usize) -> String {
+        let n = self.get(node);
+        match n.t {
+            ASTNodeType::Identifier => match &n.type_assignment {
+                Some(t) => format!("{} :: {}", n.get_value(), t.to_string()),
+                None => n.get_value(),
+            },
+            ASTNodeType::Literal => {
+                format!("{}", n.get_value())
+            }
+            ASTNodeType::Application => {
+                let func = self.get_func(node);
+                let arg = self.get_arg(node);
+
+                let func_str = self.pattern_to_string(func);
+
+                // If the func is an abstraction, wrap it in parens
+                let func_str = match self.get(func).t {
+                    ASTNodeType::Abstraction => format!("({})", func_str),
+                    _ => func_str,
+                };
+
+                let arg_str = self.pattern_to_string(arg);
+                // If the argument is an application, wrap it in parens
+                let arg_str = match self.get(arg).t {
+                    ASTNodeType::Application | ASTNodeType::Abstraction => format!("({})", arg_str),
+                    _ => arg_str,
+                };
+
+                if let Some(tk) = &self.get(func).info {
+                    if tk.is_infix_id() {
+                        return format!("{} {}", arg_str, func_str);
+                    }
+                }
+                format!("{} {}", func_str, arg_str)
+            },
+            ASTNodeType::Pair => {
+                let a = self.pattern_to_string(self.get_first(node));
+                let b = self.pattern_to_string(self.get_second(node));
+                format!("({}, {})", a, b)
+            },
+            _ => unreachable!("Isnt pattern, cannot use pattern_to_string"),
+        }
+    }
+
     pub fn to_string_sugar(&self, node: usize, show_assigned_types: bool) -> String {
         let n = self.get(node);
         match n.t {
@@ -791,7 +885,16 @@ impl AST {
                     }
                 }
 
-                if args.len() == 3 {
+                if args.len() == 2 {
+                    match self.get(func).t {
+                        ASTNodeType::Identifier => {
+                            if self.get(func).get_value() == "Cons" {
+                                return self.list_to_string(node);
+                            }
+                        }
+                        _ => {}
+                    }
+                } else if args.len() == 3 {
                     match self.get(func).t {
                         ASTNodeType::Identifier => {
                             if self.get(func).get_value() == "if" {
@@ -843,7 +946,7 @@ impl AST {
                 s.push('\n');
                 for (pat, exp) in self.get_match_cases(node) {
                     s.push_str("  | ");
-                    s.push_str(&self.to_string_sugar(pat, false));
+                    s.push_str(&self.pattern_to_string(pat));
                     s.push_str(" -> ");
                     s.push_str(&self.to_string_sugar(exp, show_assigned_types));
                     s.push('\n');

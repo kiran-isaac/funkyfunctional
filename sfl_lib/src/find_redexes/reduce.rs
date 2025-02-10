@@ -274,7 +274,7 @@ pub fn find_single_redex_contraction_pair(
                     return Some((expr, pat_expr_cloned.clone_node(pat_expr_cloned.root)));
                 }
             }
-            None
+            find_single_redex_contraction_pair(ast, module, unpack_expr, lt)
         }
         _ => None,
     }

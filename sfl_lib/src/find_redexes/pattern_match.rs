@@ -50,6 +50,17 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> Option<HashMap<S
                 Some(lhs)
             }
         }
+        (ASTNodeType::Literal, ASTNodeType::Literal) => {
+            if expr_n.get_lit_type() != pattern_n.get_lit_type() {
+                panic!("Not matching lit types, type checking must have failed")
+            }
+
+            if expr_n.get_value() == pattern_n.get_value() {
+                Some(HashMap::new())
+            } else {
+                None
+            }
+        }
         _ => None,
     }
 }
