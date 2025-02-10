@@ -1,4 +1,4 @@
-use sfl_lib::{self as lib, infer_or_check_assignment_types, KnownTypeLabelTable};
+use sfl_lib::{self as lib, infer_or_check_assignment_types};
 use std::{
     env, fs,
     io::{self, Write},
@@ -10,14 +10,8 @@ static HORIZONTAL_SEPARATOR: &str =
 fn main() {
     let argv: Vec<String> = env::args().collect();
 
-    let (file_path, typechecked) = if argv.len() == 2 {
-        (argv[1].clone(), false)
-    } else if argv.len() == 3 {
-        if argv[1].as_str() != "t" {
-            eprintln!("Unrecognized argument: {}", argv[1]);
-            std::process::exit(1);
-        }
-        (argv[2].clone(), true)
+    let file_path = if argv.len() == 2 {
+        argv[1].clone()
     } else {
         eprintln!("Incorrect args");
         std::process::exit(1);
@@ -66,17 +60,14 @@ fn main() {
         },
     });
 
-    let mut rcs = lib::find_all_redex_contraction_pairs(&ast, Some(ast.root), expr, &lt);
-    let mut rcs_filtered = ast.filter_identical_rcs(&rcs);
+    let mut rcs = lib::find_single_redex_contraction_pair(&ast, Some(ast.root), expr, &lt);
 
     println!("{}", ast.to_string_sugar(expr, false));
 
-    while rcs.len() != 0 {
-        for (i, rc) in rcs_filtered.iter().enumerate() {
-            let s1 = ast.to_string_sugar(rc.0, false);
-            let s2 = rc.1.to_string_sugar(rc.1.root, false);
-            println!("{}) {} => {}", i + 1, s1, s2);
-        }
+    while let Some(rc) = rcs {
+        let s1 = ast.to_string_sugar(rc.0, false);
+        let s2 = rc.1.to_string_sugar(rc.1.root, false);
+        println!("Next: {} => {}", s1, s2);
 
         io::stdout().flush().unwrap();
 
@@ -85,26 +76,8 @@ fn main() {
             .read_line(&mut input)
             .expect("Failed to read line");
         input = input.trim().to_string();
-        let choice = if input == "" {
-            &ast.get_laziest_rc(expr, &rcs_filtered).unwrap()
-        } else {
-            let num = input.trim().parse::<usize>().unwrap();
-            if num > rcs.len() {
-                eprintln!("Invalid choice\n");
-                continue;
-            }
-            &rcs_filtered[num - 1]
-        };
 
-        if input == "" {
-            let s1 = ast.to_string_sugar(choice.0, false);
-            let s2 = choice.1.to_string_sugar(choice.1.root, false);
-            println!("Chose Laziest: {} => {}", s1, s2);
-        }
-
-        let choice = &choice;
-
-        ast.do_rc_subst_and_identical_rcs(choice, &rcs);
+        ast.do_rc_subst(&rc);
 
         expr = ast.get_assign_exp(match ast.get_main(ast.root) {
             Some(v) => v,
@@ -114,8 +87,7 @@ fn main() {
             },
         });
 
-        rcs = lib::find_all_redex_contraction_pairs(&ast, Some(ast.root), expr, &lt);
-        rcs_filtered = ast.filter_identical_rcs(&rcs);
+        rcs = lib::find_single_redex_contraction_pair(&ast, Some(ast.root), expr, &lt);
         println!("\n{}", ast.to_string_sugar(expr, false));
     }
 }
