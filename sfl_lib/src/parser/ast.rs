@@ -1,7 +1,7 @@
-use crate::{find_redexes::RCPair, types::TypeError, Primitive, Type};
+use crate::{find_redexes::RCPair, Primitive, Type};
 use std::collections::HashSet;
 use std::{collections::HashMap, fmt::Debug, vec};
-
+use std::iter::zip;
 use super::token::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -13,6 +13,7 @@ pub enum ASTNodeType {
     Assignment,
     Abstraction,
     Module,
+    Match,
 }
 
 #[derive(Clone)]
@@ -162,6 +163,19 @@ impl ASTNode {
         }
     }
 
+    fn new_match(cases: Vec<usize>, line: usize, col: usize) -> Self {
+        ASTNode {
+            t: ASTNodeType::Match,
+            info: None,
+            children: cases,
+            line,
+            col,
+            type_assignment: None,
+            wait_for_args: false,
+            fancy_assign_abst_syntax: false,
+        }
+    }
+
     fn wait_for_args(&mut self) {
         self.wait_for_args = true;
     }
@@ -221,6 +235,12 @@ impl AST {
                 let y2 = self.get_second(n2);
 
                 self.expr_eq(x1, x2) && self.expr_eq(y1, y2)
+            }
+            (ASTNodeType::Match, ASTNodeType::Match) => {
+                for (c1, c2) in zip(self.get(n1).children.clone(), self.get(n2).children.clone()) {
+                    if !self.expr_eq(c1, c2) {return false}
+                }
+                true
             }
             _ => false,
         }
@@ -426,6 +446,13 @@ impl AST {
                 }
                 s
             }
+            ASTNodeType::Match => {
+                let mut children = vec![];
+                for a in n.children.clone() {
+                    children.push(self.append(other, a));
+                }
+                self.add_match(children, n.line, n.col)
+            }
             ASTNodeType::Module => {
                 let mut assigns = vec![];
                 for a in n.children.clone() {
@@ -490,6 +517,10 @@ impl AST {
         t: Option<Type>,
     ) -> usize {
         self.add(ASTNode::new_assignment(id, exp, line, col, t))
+    }
+
+    pub fn add_match(&mut self, cases: Vec<usize>, line: usize, col: usize) -> usize {
+        self.add(ASTNode::new_match(cases, line, col))
     }
 
     pub fn add_module(&mut self, assigns: Vec<usize>, line: usize, col: usize) -> usize {
@@ -558,6 +589,21 @@ impl AST {
                 left.extend(right);
                 left
             }
+            ASTNodeType::Match => {
+                let thing_being_matched = self.get_match_unpack_pattern(exp);
+                let mut instances =
+                    self.get_all_free_instances_of_var_in_exp(thing_being_matched, &var);
+
+                for (pattern, expr) in self.get_match_cases(exp) {
+                    assert!(self
+                        .get_all_free_instances_of_var_in_exp(pattern, &var)
+                        .is_empty());
+
+                    instances.extend(self.get_all_free_instances_of_var_in_exp(expr, &var));
+                }
+
+                instances
+            }
             _ => panic!("Cannot find var instances in non exp"),
         }
     }
@@ -591,7 +637,7 @@ impl AST {
         abst_ast
     }
 
-    fn replace_var_usages(&mut self, var: usize, subst: usize) {
+    pub fn replace_var_usages(&mut self, var: usize, subst: usize) {
         #[cfg(debug_assertions)]
         let _var_str = self.to_string_sugar(var, false);
         #[cfg(debug_assertions)]
@@ -698,43 +744,25 @@ impl AST {
         assigns
     }
 
-    fn to_string_indent(&self, node: usize, indent: usize) -> String {
-        let n = self.get(node);
-        let ind = " ".repeat(indent);
-        match n.t {
-            ASTNodeType::Identifier => {
-                format!("{}Identifier: {}", ind, n.get_value())
-            }
-            ASTNodeType::Literal => {
-                format!("{}Literal: {}", ind, n.get_value())
-            }
-            ASTNodeType::Application => {
-                let left = self.to_string_indent(self.get_func(node), indent + 2);
-                let right = self.to_string_indent(self.get_arg(node), indent + 2);
-                format!("{}Application\n{}\n{}", ind, left, right)
-            }
-            ASTNodeType::Assignment => {
-                let id = self.get(self.get(node).children[0]);
-                let exp = self.to_string_indent(self.get_assign_exp(node), indent + 2);
-                format!("{}Assignment: {}\n{}", ind, id.get_value(), exp)
-            }
-            ASTNodeType::Module => {
-                let mut s = format!("{}Module\n", ind);
-                for c in &n.children {
-                    s.push_str(&self.to_string_indent(*c, indent + 2));
+    pub fn get_match_unpack_pattern(&self, match_: usize) -> usize {
+        assert_eq!(self.vec[match_].t, ASTNodeType::Match);
+        assert!(self.vec[match_].children.len() > 1);
+        self.vec[match_].children[0]
+    }
+
+    /// returns patterns to expressions
+    pub fn get_match_cases(&self, match_: usize) -> Vec<(usize, usize)> {
+        assert_eq!(self.vec[match_].t, ASTNodeType::Match);
+        let new_vec = self.vec[match_].children.clone()[1..].to_vec();
+        match new_vec.len() % 2 {
+            0 => {
+                let mut cases = vec![];
+                for i in 0..new_vec.len() / 2 {
+                    cases.push((new_vec[i * 2], new_vec[i * 2 + 1]));
                 }
-                s
+                cases
             }
-            ASTNodeType::Abstraction => {
-                let id = self.get(n.children[0]);
-                let exp = self.to_string_indent(n.children[1], indent + 2);
-                format!("{}Abstraction: {}\n{}", ind, id.get_value(), exp)
-            }
-            ASTNodeType::Pair => {
-                let a = self.to_string_indent(self.get_first(node), indent + 2);
-                let b = self.to_string_indent(self.get_second(node), indent + 2);
-                format!("{}Pair: {}\n{}", ind, a, b)
-            }
+            _ => panic!("Match cases must be in pairs"),
         }
     }
 
@@ -803,6 +831,25 @@ impl AST {
                     }
                 }
                 format!("{} {}", func_str, arg_str)
+            }
+            ASTNodeType::Match => {
+                let mut s = "match ".to_string();
+                let unpack_pattern = self.get_match_unpack_pattern(node);
+                s.push('(');
+                s.push_str(&self.to_string_sugar(unpack_pattern, false));
+                s.push(')');
+                s.push(' ');
+                s.push('{');
+                s.push('\n');
+                for (pat, exp) in self.get_match_cases(node) {
+                    s.push_str("  | ");
+                    s.push_str(&self.to_string_sugar(pat, false));
+                    s.push_str(" -> ");
+                    s.push_str(&self.to_string_sugar(exp, show_assigned_types));
+                    s.push('\n');
+                }
+                s.push('}');
+                s
             }
             ASTNodeType::Assignment => {
                 let id = self.get(self.get(node).children[0]);
@@ -932,6 +979,20 @@ impl AST {
 
                 s.trim().to_string()
             }
+            ASTNodeType::Match => {
+                let mut s = "match ".to_string();
+                let unpack_pattern = self.get_match_unpack_pattern(node);
+                s.push_str(&self.to_string_desugar_and_type(unpack_pattern));
+                for (pat, exp) in self.get_match_cases(node) {
+                    s.push_str(" | ");
+                    s.push_str(&self.to_string_desugar_and_type(pat));
+                    s.push_str(" -> ");
+                    s.push_str(&self.to_string_desugar_and_type(exp));
+                    s.push('\n');
+                }
+                s.pop();
+                s
+            }
             ASTNodeType::Abstraction => {
                 let expr_str = self.to_string_desugar_and_type(n.children[1]);
                 let var_str = self.to_string_desugar_and_type(n.children[0]);
@@ -947,26 +1008,6 @@ impl AST {
                 let b = self.to_string_desugar_and_type(self.get_second(node));
                 format!("({}, {})", a, b)
             }
-        }
-    }
-
-    pub fn display_string(&self, node: usize) -> String {
-        self.to_string_indent(node, 0)
-    }
-
-    fn type_error(&self, e: String, node: usize) -> TypeError {
-        let n = self.get(node);
-        TypeError {
-            e,
-            line: n.line,
-            col: n.col,
-        }
-    }
-
-    pub fn get_type(&self, node: usize) -> Result<Type, TypeError> {
-        match self.get(node).t {
-            ASTNodeType::Literal => Ok(self.get(node).get_lit_type()),
-            _ => Err(self.type_error("Smoingus".to_string(), node)),
         }
     }
 }

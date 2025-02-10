@@ -97,6 +97,11 @@ impl Context {
                     new.next_placeholder_assignvar_i += 1;
                 }
             }
+            ContextItem::TypeVariable(name) => {
+                if name.starts_with("_") {
+                    new.next_placeholder_assignvar_i += 1;
+                }
+            }
             ContextItem::Existential(e, _) => {
                 new.next_exid = std::cmp::max(*e, new.next_exid);
             }
@@ -287,6 +292,8 @@ impl Context {
     // Stupid name
     fn get_existential(&self, ex: usize) -> Option<Option<Type>> {
         for i in &self.vec {
+            #[cfg(debug_assertions)]
+            let _i_str = format!("{:?}", i);
             match i {
                 ContextItem::Existential(ex2, o) => {
                     if ex == *ex2 {
@@ -345,6 +352,7 @@ fn type_error(msg: String, ast: &AST, expr: usize) -> TypeError {
     }
 }
 
+/// A is subtype of B
 fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context, String> {
     #[cfg(debug_assertions)]
     let _c_str = format!("{:?}", &c);
@@ -602,7 +610,7 @@ fn instantiate_r(c: Context, exst: usize, a: &Type, type_map: &TypeMap) -> Resul
             let _c_str = format!("{:?}", &c);
 
             let t = t.substitute_type_variable(var, &Type::Existential(next_ext))?;
-            let pred1 = instantiate_l(c, exst, &t, type_map)?;
+            let pred1 = instantiate_r(c, exst, &t, type_map)?;
             Ok(pred1.get_before_item(ContextItem::Marker(next_ext)))
         }
 
@@ -634,6 +642,7 @@ fn synthesize_type(
     ast: &AST,
     expr: usize,
     type_map: &TypeMap,
+    is_pattern: bool,
 ) -> Result<(Type, Context), TypeError> {
     #[cfg(debug_assertions)]
     let _expr_str = ast.to_string_sugar(expr, false);
@@ -652,15 +661,39 @@ fn synthesize_type(
             let _var_str = var.clone();
             match c.get_type_assignment(&var) {
                 Some(t) => Ok((t?, c)),
-                None => unreachable!("Unbound type variable"),
+                None => {
+                    if is_pattern && var.chars().next().unwrap().is_lowercase() {
+                        let next_exist = Type::Existential(c.get_next_existential_identifier());
+                        Ok((
+                            next_exist.clone(),
+                            c.append(ContextItem::Existential(
+                                c.get_next_existential_identifier(),
+                                None,
+                            ))
+                            .append(ContextItem::TypeAssignment(var.clone(), Ok(next_exist))),
+                        ))
+                    } else {
+                        if var == "_" {
+                            let next_exist = Type::Existential(c.get_next_existential_identifier());
+                            return Ok((
+                                next_exist.clone(),
+                                c.append(ContextItem::Existential(
+                                    c.get_next_existential_identifier(),
+                                    None,
+                                )),
+                            ));
+                        }
+                        panic!("Unbound identifier not in pattern")
+                    }
+                }
             }
         }
 
         ASTNodeType::Pair => {
             let expr1 = ast.get_first(expr);
             let expr2 = ast.get_second(expr);
-            let (expr1t, c) = synthesize_type(c, ast, expr1, type_map)?;
-            let (expr2t, c) = synthesize_type(c, ast, expr2, type_map)?;
+            let (expr1t, c) = synthesize_type(c, ast, expr1, type_map, is_pattern)?;
+            let (expr2t, c) = synthesize_type(c, ast, expr2, type_map, is_pattern)?;
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
@@ -669,6 +702,90 @@ fn synthesize_type(
         }
 
         ASTNodeType::Literal => Ok((node.get_lit_type(), c)),
+
+        ASTNodeType::Match => {
+            let unpack_expr = ast.get_match_unpack_pattern(expr);
+            let (unpack_type, c) = synthesize_type(c, ast, unpack_expr, type_map, is_pattern)?;
+
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
+            let _unpack_type_str = format!("{}", &unpack_type);
+
+            let cases = ast.get_match_cases(expr);
+
+            let mut pattern_types = vec![];
+            let mut expr_types = vec![];
+
+            let mut c = c;
+
+            let mut most_specific_pattern = (usize::MAX, None);
+            let mut most_specific_expression = (usize::MAX, None);
+
+            for (case_pat, case_expr) in cases {
+                #[cfg(debug_assertions)]
+                let _pat_str = format!("{}", &ast.to_string_sugar(case_pat, false));
+                #[cfg(debug_assertions)]
+                let _expr_str = format!("{}", &ast.to_string_sugar(case_expr, false));
+
+                let (pattern_type, new_c) =
+                    synthesize_type(c.clone(), ast, case_pat, type_map, true)?;
+                let pattern_type = new_c.substitute(&pattern_type).forall_ify();
+                #[cfg(debug_assertions)]
+                let _pat_type_str = format!("{}", &pattern_type);
+                let pattern_specificity = pattern_type.count_foralls();
+                if pattern_specificity < most_specific_pattern.0 {
+                    most_specific_pattern.0 = pattern_specificity;
+                    most_specific_pattern.1 = Some(pattern_type.clone());
+                }
+                pattern_types.push(pattern_type);
+
+                let (expr_type, new_c) = synthesize_type(new_c, ast, case_expr, type_map, false)?;
+                let expr_type = new_c.substitute(&expr_type).forall_ify();
+                let _expr_type_str = format!("{}", &expr_type);
+
+                let expr_specificity = expr_type.count_foralls();
+                if expr_specificity < most_specific_expression.0 {
+                    most_specific_expression.0 = expr_specificity;
+                    most_specific_expression.1 = Some(expr_type.clone());
+                }
+                expr_types.push(expr_type);
+            }
+
+            #[cfg(debug_assertions)]
+            let _pattern_types_str = format!("{:?}", &pattern_types);
+            let _expr_types_str = format!("{:?}", &expr_types);
+
+            #[cfg(debug_assertions)]
+            let _c_str = format!("{:?}", &c);
+
+            assert!(most_specific_pattern.1.is_some());
+            assert!(most_specific_expression.1.is_some());
+
+            let msp = most_specific_pattern.1.unwrap();
+            let mse = most_specific_expression.1.unwrap();
+
+            #[cfg(debug_assertions)]
+            let _msp_str = format!("{}", &msp.to_string());
+            #[cfg(debug_assertions)]
+            let _mse_str = format!("{}", &mse.to_string());
+
+            // Attempt to unify all the types with the most specific one
+            for other_types in pattern_types {
+                c = match subtype(c, &other_types, &msp.clone(), type_map) {
+                    Ok(c) => c,
+                    Err(e) => return Err(type_error(format!("In match expression, cannot unify type {} with more specific type {}: {}", &other_types, &msp, e), ast, expr))
+                };
+            }
+
+            for other_types in expr_types {
+                c = match subtype(c, &other_types, &mse.clone(), type_map) {
+                    Ok(c) => c,
+                    Err(e) => return Err(type_error(format!("In match expression, cannot unify type {} with more specific type {}: {}", &other_types, &mse, e), ast, expr))
+                };
+            }
+
+            Ok((mse.clone(), c))
+        }
 
         // ->I=>
         ASTNodeType::Abstraction => {
@@ -699,6 +816,7 @@ fn synthesize_type(
                 ast,
                 ast.get_abstr_expr(expr),
                 type_map,
+                false,
             )?;
 
             #[cfg(debug_assertions)]
@@ -726,7 +844,7 @@ fn synthesize_type(
             let lhs = ast.get_func(expr);
             let rhs = ast.get_arg(expr);
 
-            let (f_type, f_c) = synthesize_type(c, ast, lhs, type_map)?;
+            let (f_type, f_c) = synthesize_type(c, ast, lhs, type_map, is_pattern)?;
 
             #[cfg(debug_assertions)]
             let _f_c_str = format!("{:?}", &f_c);
@@ -738,7 +856,7 @@ fn synthesize_type(
 
             #[cfg(debug_assertions)]
             let _f_type_str = f_type.to_string();
-            synthesize_app_type(f_c, &f_type, ast, lhs, rhs, type_map)
+            synthesize_app_type(f_c, &f_type, ast, lhs, rhs, type_map, is_pattern)
         }
 
         _ => unreachable!("Non expression"),
@@ -753,6 +871,7 @@ fn synthesize_app_type(
     f: usize,
     expr: usize,
     type_map: &TypeMap,
+    is_pattern: bool,
 ) -> Result<(Type, Context), TypeError> {
     #[cfg(debug_assertions)]
     let _expr_str = ast.to_string_sugar(expr, false);
@@ -780,12 +899,12 @@ fn synthesize_app_type(
                     panic!("Failed to substitute in forall app: {}", s)
                 }
             };
-            synthesize_app_type(new_c, &a_subst, ast, f, expr, type_map)
+            synthesize_app_type(new_c, &a_subst, ast, f, expr, type_map, is_pattern)
         }
 
         // -> App
         Type::Function(from, to) => {
-            let pred = check_type(c, &from, ast, expr, type_map)?;
+            let pred = check_type(c, &from, ast, expr, type_map, is_pattern)?;
 
             Ok((to.as_ref().clone(), pred))
         }
@@ -805,7 +924,7 @@ fn synthesize_app_type(
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            let c = check_type(c, &a1t, ast, expr, type_map)?;
+            let c = check_type(c, &a1t, ast, expr, type_map, is_pattern)?;
 
             Ok((a2t.clone(), c))
         }
@@ -890,6 +1009,7 @@ fn check_type(
     ast: &AST,
     expr: usize,
     type_map: &TypeMap,
+    is_pattern: bool,
 ) -> Result<Context, TypeError> {
     let node = ast.get(expr);
 
@@ -907,17 +1027,22 @@ fn check_type(
         (Type::Unit, _) => Ok(c),
 
         // Follow Alias
-        (Type::Alias(_, type_), _) => check_type(c, &type_, ast, expr, type_map),
+        (Type::Alias(_, type_), _) => check_type(c, &type_, ast, expr, type_map, is_pattern),
 
         // Forall Introduction
         (Type::Forall(var, t), _) => {
-            let pred = check_type(
-                c.append(ContextItem::TypeVariable(var.clone())),
-                t,
-                ast,
-                expr,
-                type_map,
-            )?;
+            let t = match t
+                .as_ref()
+                .clone()
+                .substitute_type_variable(var, &Type::TypeVariable(var.clone()))
+            {
+                Ok(t) => t,
+                Err(e) => panic!("{}", e),
+            };
+
+            let c = c.append(ContextItem::TypeVariable(var.clone()));
+
+            let pred = check_type(c, &t, ast, expr, type_map, is_pattern)?;
             Ok(pred.get_before_item(ContextItem::TypeVariable(var.clone())))
         }
 
@@ -927,20 +1052,20 @@ fn check_type(
 
             let (c, before) = recurse_add_to_context(c, from, &ast, var)?;
 
-            let pred = check_type(c, to, ast, ast.get_abstr_expr(expr), type_map)?;
+            let pred = check_type(c, to, ast, ast.get_abstr_expr(expr), type_map, is_pattern)?;
             Ok(pred.get_before_assignment(before))
         }
 
         (Type::Product(pt1, pt2), ASTNodeType::Pair) => {
-            let pair1 = check_type(c, pt1, ast, ast.get_first(expr), type_map)?;
-            let pair2 = check_type(pair1, pt2, ast, ast.get_second(expr), type_map)?;
+            let pair1 = check_type(c, pt1, ast, ast.get_first(expr), type_map, is_pattern)?;
+            let pair2 = check_type(pair1, pt2, ast, ast.get_second(expr), type_map, is_pattern)?;
 
             Ok(pair2)
         }
 
         // Sub
         _ => {
-            let (synth_t, c) = synthesize_type(c, ast, expr, type_map)?;
+            let (synth_t, c) = synthesize_type(c, ast, expr, type_map, is_pattern)?;
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
@@ -957,9 +1082,6 @@ fn check_type(
                 Ok(new_c) => {
                     #[cfg(debug_assertions)]
                     let _c_str = format!("{:?}", &new_c);
-
-                    #[cfg(debug_assertions)]
-                    let _x = 1 + 1;
 
                     Ok(new_c)
                 }
@@ -985,6 +1107,7 @@ pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), 
         ast,
         expr,
         &TypeMap::new(),
+        false,
     ) {
         Ok(_) => Ok(()),
         Err(e) => Err(e),
@@ -997,7 +1120,7 @@ fn infer_type_with_context(
     expr: usize,
     type_map: &TypeMap,
 ) -> Result<(Type, Context), TypeError> {
-    let (t, c) = synthesize_type(c, ast, expr, type_map)?;
+    let (t, c) = synthesize_type(c, ast, expr, type_map, false)?;
 
     let t = c.substitute(&t);
     Ok((t, c))
@@ -1038,7 +1161,7 @@ pub fn infer_or_check_assignment_types(
                     assign_var.clone(),
                     Ok(type_assignment.clone()),
                 ));
-                c = check_type(c, &type_assignment, ast, assign_expr, type_map)?;
+                c = check_type(c, &type_assignment, ast, assign_expr, type_map, false)?;
                 type_assignment.clone()
             }
             None => {

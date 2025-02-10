@@ -109,19 +109,22 @@ function App() {
               <pre>{typeAssignsString}</pre>
             </>
           )}
+
+          <ul id="RCArea">
+            {rcs}
+          </ul>
+
           {originalExprString && (
             <>
               <h4>Main Expression:</h4>
               <pre>{originalExprString}</pre>
+              <hr></hr>
             </>
           )}
         </div>
         <div id="Error">
           <pre>{errorString}</pre>
         </div>
-        <ul id="RCArea">
-          {rcs}
-        </ul>
         <pre><ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToStringHistory} astHistory={astHistory} /></pre>
       </div>
     </>

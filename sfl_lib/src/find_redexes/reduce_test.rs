@@ -226,3 +226,29 @@ fn correct_abst_order() {
 
 //     assert_eq!("myadd 2 3 => add 2 3", rc_pair_to_string(&ast, &rcs[0]));
 // }
+
+#[test]
+fn redexes_match() {
+    let program = r#"
+    data List a = Cons a (List a) | Nil
+
+    main = match (Cons (5) Nil) {
+      | Nil -> true
+      | Cons _ _ -> false
+    }"#;
+
+    let pr = Parser::from_string(program.to_string())
+        .parse_module()
+        .unwrap();
+
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
+
+    let module = ast.root;
+    let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
+    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
+
+    let rc = find_single_redex_contraction_pair(&ast, Some(module), exp, &lt).unwrap();
+    assert_eq!("false", rc.1.to_string_sugar(rc.1.root, false));
+}
