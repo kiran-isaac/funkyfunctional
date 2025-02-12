@@ -410,6 +410,7 @@ impl Parser {
                 | TokenType::RArrow
                 | TokenType::LBrace
                 | TokenType::EOF
+                | TokenType::DoubleColon
                 | TokenType::Newline => {
                     return Ok((left, bound_set));
                 }
@@ -517,9 +518,20 @@ impl Parser {
             .0;
 
         match self.consume()?.tt {
-            TokenType::LBrace => {}
+            TokenType::DoubleColon => {
+                ast.set_type(
+                    match_unpack,
+                    self.parse_type_expression(type_table, None)?,
+                );
+                match self.consume()?.tt {
+                    TokenType::LBrace => {}
+                    _ => {
+                        return Err(self.parse_error("Expected \"{\" after match type assignment before cases".to_string()));
+                    }
+                };
+            }
             _ => {
-                return Err(self.parse_error("Expected \"{\" after match before cases".to_string()));
+                return Err(self.parse_error("Expected type assignment of match subject".to_string()));
             }
         };
 
@@ -602,9 +614,7 @@ impl Parser {
 
         let then_tk = self.consume()?;
         if then_tk.tt != TokenType::Then {
-            return Err(
-                self.parse_error(format!("Expected \"then\", got: {}", then_tk.value))
-            )
+            return Err(self.parse_error(format!("Expected \"then\", got: {}", then_tk.value)));
         }
 
         let then_exp = self.parse_expression(ast, type_table)?;
@@ -612,9 +622,7 @@ impl Parser {
 
         let else_tk = self.consume()?;
         if else_tk.tt != TokenType::Else {
-            return Err(
-                self.parse_error(format!("Expected \"else\", got: {}", then_tk.value))
-            )
+            return Err(self.parse_error(format!("Expected \"else\", got: {}", then_tk.value)));
         }
 
         let else_exp = self.parse_expression(ast, type_table)?;
@@ -668,7 +676,7 @@ impl Parser {
                     }
                 }
 
-                TokenType::RParen | TokenType::Newline | TokenType::EOF | TokenType::Dot => {
+                TokenType::RParen | TokenType::Newline | TokenType::EOF | TokenType::Dot | TokenType::LBrace => {
                     return Ok(left)
                 }
 

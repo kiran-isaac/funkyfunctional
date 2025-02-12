@@ -355,7 +355,7 @@ impl KnownTypeLabelTable {
             binary_float_bool_type,
         );
 
-        self.add_inbuilt("if".to_string(), 1, inbuilt_if, if_type);
+        // self.add_inbuilt("if".to_string(), 1, inbuilt_if, if_type);
 
         self.add_inbuilt("neg".to_string(), 1, inbuilt_int_neg, unary_int_type);
         self.add_inbuilt("negf".to_string(), 1, inbuilt_float_neg, unary_float_type);

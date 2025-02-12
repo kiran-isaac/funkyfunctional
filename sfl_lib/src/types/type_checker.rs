@@ -652,6 +652,10 @@ fn synthesize_type(
 
     let node = ast.get(expr);
 
+    if let Some(t) = &node.type_assignment {
+        return Ok((t.clone(), c));
+    }
+
     match node.t {
         // Var
         ASTNodeType::Identifier => {
@@ -683,7 +687,7 @@ fn synthesize_type(
                                 )),
                             ));
                         }
-                        panic!("Unbound identifier not in pattern")
+                        panic!("Unbound identifier not in pattern: {}", &var)
                     }
                 }
             }
@@ -711,7 +715,13 @@ fn synthesize_type(
             assert_eq!(is_pattern, false);
 
             let unpack_expr = ast.get_match_unpack_pattern(expr);
-            let (unpack_type, c) = synthesize_type(c, ast, unpack_expr, type_map, is_pattern)?;
+
+            let (unpack_type, c) = if let Some(t ) = ast.get(unpack_expr).type_assignment.clone() {
+                let c = check_type(c, &t, ast, unpack_expr, type_map, false)?;
+                (t.clone(), c)
+            } else {
+                synthesize_type(c, ast, unpack_expr, type_map, false)?
+            };
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
@@ -731,8 +741,12 @@ fn synthesize_type(
                 let _expr_str = format!("{}", &ast.to_string_sugar(case_expr, false));
 
                 let pattern_context = check_type(c, &unpack_type, ast, case_pat, type_map, true)?;
+                #[cfg(debug_assertions)]
+                let _pat_c_str = format!("{:?}", &pattern_context);
 
                 let expr_context = check_type(pattern_context, &expr_type, ast, case_expr, type_map, false)?;
+                #[cfg(debug_assertions)]
+                let _expr_c_str = format!("{:?}", &expr_context);
 
                 c = expr_context;
             }

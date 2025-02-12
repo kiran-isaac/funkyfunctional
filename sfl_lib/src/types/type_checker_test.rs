@@ -387,3 +387,19 @@ fn check_match_map_ifnot_zero() -> Result<(), ParserError> {
 
     Ok(())
 }
+
+
+#[test]
+fn check_ifmatch() -> Result<(), ParserError> {
+    let program = r#"
+    data List a = Cons a (List a) | Nil
+
+    main cond x y = match cond :: Bool {
+    | true -> x 
+    | false -> y
+    }"#;
+
+    mod_main_inference_test(program, "∀a. Bool -> a -> a -> a");
+
+    Ok(())
+}
