@@ -704,6 +704,8 @@ fn synthesize_type(
         ASTNodeType::Literal => Ok((node.get_lit_type(), c)),
 
         ASTNodeType::Match => {
+            assert_eq!(is_pattern, false);
+
             let unpack_expr = ast.get_match_unpack_pattern(expr);
             let (unpack_type, c) = synthesize_type(c, ast, unpack_expr, type_map, is_pattern)?;
 
@@ -713,13 +715,10 @@ fn synthesize_type(
 
             let cases = ast.get_match_cases(expr);
 
-            let mut pattern_types = vec![];
-            let mut expr_types = vec![];
+            let expr_exist = c.get_next_existential_identifier();
+            let expr_type = Type::Existential(expr_exist);
 
-            let mut c = c;
-
-            let mut most_specific_pattern = (usize::MAX, None);
-            let mut most_specific_expression = (usize::MAX, None);
+            let mut c = c.append(ContextItem::Existential(expr_exist, None));
 
             for (case_pat, case_expr) in cases {
                 #[cfg(debug_assertions)]
@@ -727,64 +726,19 @@ fn synthesize_type(
                 #[cfg(debug_assertions)]
                 let _expr_str = format!("{}", &ast.to_string_sugar(case_expr, false));
 
-                let (pattern_type, new_c) =
-                    synthesize_type(c.clone(), ast, case_pat, type_map, true)?;
-                let pattern_type = new_c.substitute(&pattern_type).forall_ify();
-                #[cfg(debug_assertions)]
-                let _pat_type_str = format!("{}", &pattern_type);
-                let pattern_specificity = pattern_type.count_foralls();
-                if pattern_specificity < most_specific_pattern.0 {
-                    most_specific_pattern.0 = pattern_specificity;
-                    most_specific_pattern.1 = Some(pattern_type.clone());
-                }
-                pattern_types.push(pattern_type);
+                let pattern_context = check_type(c, &unpack_type, ast, case_pat, type_map, true)?;
 
-                let (expr_type, new_c) = synthesize_type(new_c, ast, case_expr, type_map, false)?;
-                let expr_type = new_c.substitute(&expr_type).forall_ify();
-                let _expr_type_str = format!("{}", &expr_type);
+                let expr_context = check_type(pattern_context, &expr_type, ast, case_expr, type_map, false)?;
 
-                let expr_specificity = expr_type.count_foralls();
-                if expr_specificity < most_specific_expression.0 {
-                    most_specific_expression.0 = expr_specificity;
-                    most_specific_expression.1 = Some(expr_type.clone());
-                }
-                expr_types.push(expr_type);
+                c = expr_context;
             }
-
-            #[cfg(debug_assertions)]
-            let _pattern_types_str = format!("{:?}", &pattern_types);
-            let _expr_types_str = format!("{:?}", &expr_types);
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            assert!(most_specific_pattern.1.is_some());
-            assert!(most_specific_expression.1.is_some());
-
-            let msp = most_specific_pattern.1.unwrap();
-            let mse = most_specific_expression.1.unwrap();
-
-            #[cfg(debug_assertions)]
-            let _msp_str = format!("{}", &msp.to_string());
-            #[cfg(debug_assertions)]
-            let _mse_str = format!("{}", &mse.to_string());
-
-            // Attempt to unify all the types with the most specific one
-            for other_types in pattern_types {
-                c = match subtype(c, &other_types, &msp.clone(), type_map) {
-                    Ok(c) => c,
-                    Err(e) => return Err(type_error(format!("In match expression, cannot unify type {} with more specific type {}: {}", &other_types, &msp, e), ast, expr))
-                };
-            }
-
-            for other_types in expr_types {
-                c = match subtype(c, &other_types, &mse.clone(), type_map) {
-                    Ok(c) => c,
-                    Err(e) => return Err(type_error(format!("In match expression, cannot unify type {} with more specific type {}: {}", &other_types, &mse, e), ast, expr))
-                };
-            }
-
-            Ok((mse.clone(), c))
+            c.get_existential(expr_exist)
+                .map(|t| (t.unwrap(), c))
+                .ok_or_else(|| type_error("Match failed".to_string(), ast, expr))
         }
 
         // ->I=>
