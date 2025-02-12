@@ -11,4 +11,4 @@ filter pred list = match list :: List a {
 
 isEven x = (((x / 2) * 2) == x)
 
-main = length (filter isEven (range 1 (Just 5)))
+main = length (filter isEven (Cons 1 (Cons 2 (Cons 3 (Cons 4 Nil)))))

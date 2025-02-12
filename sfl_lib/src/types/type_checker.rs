@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::iter::zip;
 
 use crate::{functions::KnownTypeLabelTable, parser::TypeMap, ASTNodeType, AST};
@@ -55,11 +56,13 @@ impl std::fmt::Debug for Context {
 }
 
 impl Context {
-    fn from_labels(labels: &KnownTypeLabelTable) -> Self {
+    fn from_labels(labels: &KnownTypeLabelTable, yet_to_bind: &HashSet<String>) -> Self {
         let mut vec = vec![];
 
         for (k, v) in labels.get_type_map() {
-            vec.push(ContextItem::TypeAssignment(k.clone(), Ok(v.clone())));
+            if !yet_to_bind.contains(&k) {
+                vec.push(ContextItem::TypeAssignment(k.clone(), Ok(v.clone())));
+            }
         }
 
         Self {
@@ -683,7 +686,7 @@ fn synthesize_type(
                                 )),
                             ));
                         }
-                        panic!("Unbound identifier not in pattern")
+                        panic!("Unbound identifier not in pattern: {}", &var)
                     }
                 }
             }
@@ -702,14 +705,31 @@ fn synthesize_type(
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            Ok((Type::fa(expr1fas, Type::fa(expr2fas, Type::pr(expr1t.strip_foralls(), expr2t.strip_foralls()))), c))
+            Ok((
+                Type::fa(
+                    expr1fas,
+                    Type::fa(
+                        expr2fas,
+                        Type::pr(expr1t.strip_foralls(), expr2t.strip_foralls()),
+                    ),
+                ),
+                c,
+            ))
         }
 
         ASTNodeType::Literal => Ok((node.get_lit_type(), c)),
 
         ASTNodeType::Match => {
+            assert_eq!(is_pattern, false);
+
             let unpack_expr = ast.get_match_unpack_pattern(expr);
-            let (unpack_type, c) = synthesize_type(c, ast, unpack_expr, type_map, is_pattern)?;
+
+            let (unpack_type, c) = if let Some(t) = ast.get(unpack_expr).type_assignment.clone() {
+                let c = check_type(c, &t, ast, unpack_expr, type_map, false)?;
+                (t.clone(), c)
+            } else {
+                synthesize_type(c, ast, unpack_expr, type_map, false)?
+            };
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
@@ -717,13 +737,10 @@ fn synthesize_type(
 
             let cases = ast.get_match_cases(expr);
 
-            let mut pattern_types = vec![];
-            let mut expr_types = vec![];
+            let expr_exist = c.get_next_existential_identifier();
+            let expr_type = Type::Existential(expr_exist);
 
-            let mut c = c;
-
-            let mut most_specific_pattern = (usize::MAX, None);
-            let mut most_specific_expression = (usize::MAX, None);
+            let mut c = c.append(ContextItem::Existential(expr_exist, None));
 
             for (case_pat, case_expr) in cases {
                 #[cfg(debug_assertions)]
@@ -731,64 +748,24 @@ fn synthesize_type(
                 #[cfg(debug_assertions)]
                 let _expr_str = format!("{}", &ast.to_string_sugar(case_expr, false));
 
-                let (pattern_type, new_c) =
-                    synthesize_type(c.clone(), ast, case_pat, type_map, true)?;
-                let pattern_type = new_c.substitute(&pattern_type).forall_ify();
+                let pattern_context = check_type(c, &unpack_type, ast, case_pat, type_map, true)?;
                 #[cfg(debug_assertions)]
-                let _pat_type_str = format!("{}", &pattern_type);
-                let pattern_specificity = pattern_type.count_foralls();
-                if pattern_specificity < most_specific_pattern.0 {
-                    most_specific_pattern.0 = pattern_specificity;
-                    most_specific_pattern.1 = Some(pattern_type.clone());
-                }
-                pattern_types.push(pattern_type);
+                let _pat_c_str = format!("{:?}", &pattern_context);
 
-                let (expr_type, new_c) = synthesize_type(new_c, ast, case_expr, type_map, false)?;
-                let expr_type = new_c.substitute(&expr_type).forall_ify();
-                let _expr_type_str = format!("{}", &expr_type);
+                let expr_context =
+                    check_type(pattern_context, &expr_type, ast, case_expr, type_map, false)?;
+                #[cfg(debug_assertions)]
+                let _expr_c_str = format!("{:?}", &expr_context);
 
-                let expr_specificity = expr_type.count_foralls();
-                if expr_specificity < most_specific_expression.0 {
-                    most_specific_expression.0 = expr_specificity;
-                    most_specific_expression.1 = Some(expr_type.clone());
-                }
-                expr_types.push(expr_type);
+                c = expr_context;
             }
-
-            #[cfg(debug_assertions)]
-            let _pattern_types_str = format!("{:?}", &pattern_types);
-            let _expr_types_str = format!("{:?}", &expr_types);
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            assert!(most_specific_pattern.1.is_some());
-            assert!(most_specific_expression.1.is_some());
-
-            let msp = most_specific_pattern.1.unwrap();
-            let mse = most_specific_expression.1.unwrap();
-
-            #[cfg(debug_assertions)]
-            let _msp_str = format!("{}", &msp.to_string());
-            #[cfg(debug_assertions)]
-            let _mse_str = format!("{}", &mse.to_string());
-
-            // Attempt to unify all the types with the most specific one
-            for other_types in pattern_types {
-                c = match subtype(c, &other_types, &msp.clone(), type_map) {
-                    Ok(c) => c,
-                    Err(e) => return Err(type_error(format!("Cannot unify match pattern types. Cannot unify type {} with type {}: {}", &other_types, &msp, e), ast, expr))
-                };
-            }
-
-            for other_types in expr_types {
-                c = match subtype(c, &other_types, &mse.clone(), type_map) {
-                    Ok(c) => c,
-                    Err(e) => return Err(type_error(format!("Cannot unify match expression types {} with more specific type {}: {}", &other_types, &mse, e), ast, expr))
-                };
-            }
-
-            Ok((mse.clone(), c))
+            c.get_existential(expr_exist)
+                .map(|t| (t.unwrap(), c))
+                .ok_or_else(|| type_error("Match failed".to_string(), ast, expr))
         }
 
         // ->I=>
@@ -965,6 +942,9 @@ fn recurse_add_to_context(
     match (expected, &pn.t) {
         (_, ASTNodeType::Identifier) => {
             let mut var_name = ast.get(expr).get_value();
+            if c.get_type_assignment(var_name.as_str()).is_some() {
+                return Err(type_error(format!("Type of {} is defined elsewhere, so cannot rebind", var_name), ast, expr));
+            }
             if var_name.starts_with("_") {
                 var_name = c.get_next_placeholder_assignvar();
             }
@@ -1106,7 +1086,7 @@ fn check_type(
 
 pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), TypeError> {
     match check_type(
-        Context::from_labels(&KnownTypeLabelTable::new()),
+        Context::from_labels(&KnownTypeLabelTable::new(), &HashSet::new()),
         expected,
         ast,
         expr,
@@ -1131,11 +1111,11 @@ fn infer_type_with_context(
 }
 
 #[cfg(test)]
-pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
+pub fn infer_type(ast: &AST, expr: usize, type_map: &TypeMap) -> Result<Type, TypeError> {
     let lt = KnownTypeLabelTable::new();
-    let c = Context::from_labels(&lt);
+    let c = Context::from_labels(&lt, &HashSet::new());
 
-    Ok(infer_type_with_context(c, ast, expr, &TypeMap::new())?
+    Ok(infer_type_with_context(c, ast, expr, type_map)?
         .0
         .forall_ify())
 }
@@ -1146,7 +1126,7 @@ pub fn infer_or_check_assignment_types(
     lt: &mut KnownTypeLabelTable,
     type_map: &TypeMap,
 ) -> Result<(), TypeError> {
-    let mut c = Context::from_labels(&lt);
+    let mut c = Context::from_labels(&lt, &ast.get_assignee_names(module).iter().map(|s| s.clone()).collect());
 
     for assign_var in &ast.get_assignee_names(module) {
         #[cfg(debug_assertions)]

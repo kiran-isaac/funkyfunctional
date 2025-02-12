@@ -221,7 +221,7 @@ pub fn find_single_redex_contraction_pair(
 
                             let assign_exp = ast.get_assign_exp(assign);
                             Some((expr, ast.clone_node(assign_exp)))
-                        }
+                        };
                     }
                 }
             }

@@ -88,7 +88,7 @@ use crate::{
 fn basic_add_test() {
     let program = "main = add 5 1";
     let ast = Parser::from_string(program.to_string())
-        .parse_module()
+        .parse_module(false)
         .unwrap()
         .ast;
 
@@ -105,7 +105,7 @@ fn basic_add_test() {
 fn waits_for_eval() {
     let program = "func x = x\n  main = func (add 5 1)";
     let pr = Parser::from_string(program.to_string())
-        .parse_module()
+        .parse_module(false)
         .unwrap();
     let mut ast = pr.ast;
     let mut lt = pr.lt;
@@ -125,7 +125,7 @@ fn correct_abst_order() {
     let program = "test f x y z = f x\nmain = test (\\x . x) 1 2 3";
     // let program = "main = (\\f x y z. f x) id 1 2 3";
     let pr = Parser::from_string(program.to_string())
-        .parse_module()
+        .parse_module(false)
         .unwrap();
     let mut ast = pr.ast;
     let mut lt = pr.lt;
@@ -207,25 +207,22 @@ fn correct_abst_order() {
 //     assert_eq!("inc 2 => add 1 2", rc_pair_to_string(&ast, &rcs[0]));
 // }
 
-// #[test]
-// fn myadd_test() {
-//     let program =
-//         "myadd::Int -> Int -> Int\nmyadd = \\x y.add x y\nmain::Int\nmain = myadd 2 3".to_string();
+#[test]
+fn myadd_test() {
+    let program =
+        "myadd::Int -> Int -> Int\nmyadd = \\x y.add x y\nmain::Int\nmain = myadd 2 3".to_string();
 
-//     let ast = Parser::from_string(program).parse_module().unwrap().ast;
+    let pr = Parser::from_string(program).parse_module(false).unwrap();
+    let ast = pr.ast;
+    let lt = pr.lt;
 
-//     let module = ast.root;
-//     let exp = ast.get_assign_exp(ast.get_main(module));
+    let module = ast.root;
+    let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
 
-//     let mut lt = LabelTable::new();
-//     lt.consume_from_module(&ast, module).unwrap();
+    let rc = find_single_redex_contraction_pair(&ast, Some(module), exp, &lt).unwrap();
 
-//     let rcs = find_redex_contraction_pairs(&ast, module, exp, &lt);
-
-//     assert_eq!(rcs.len(), 1);
-
-//     assert_eq!("myadd 2 3 => add 2 3", rc_pair_to_string(&ast, &rcs[0]));
-// }
+    assert_eq!("myadd 2 3 -> add 2 3", ast.rc_to_str(&rc));
+}
 
 #[test]
 fn redexes_match() {
@@ -238,7 +235,7 @@ fn redexes_match() {
     }"#;
 
     let pr = Parser::from_string(program.to_string())
-        .parse_module()
+        .parse_module(false)
         .unwrap();
 
     let mut ast = pr.ast;

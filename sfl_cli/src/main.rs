@@ -24,7 +24,7 @@ fn main() {
         std::process::exit(1);
     };
 
-    let pr = lib::Parser::from_string(file_string).parse_module();
+    let pr = lib::Parser::from_string(file_string).parse_module(true);
     if let Err(e) = &pr {
         eprintln!("{:?}", e);
         std::process::exit(1);

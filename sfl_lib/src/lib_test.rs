@@ -1,7 +1,7 @@
 use super::*;
 
 fn full_run_test(program: String) -> String {
-    let pr = Parser::from_string(program).parse_module().unwrap();
+    let pr = Parser::from_string(program).parse_module(true).unwrap();
     let mut ast = pr.ast;
     let mut lt = pr.lt;
     let tm = pr.tm;

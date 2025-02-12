@@ -1,10 +1,7 @@
 #[allow(unused)]
 mod utils;
 
-use sfl_lib::{
-    find_all_redex_contraction_pairs, find_single_redex_contraction_pair,
-    infer_or_check_assignment_types, KnownTypeLabelTable, Parser, RCPair, AST,
-};
+use sfl_lib::{find_all_redex_contraction_pairs, find_single_redex_contraction_pair, infer_or_check_assignment_types, KnownTypeLabelTable, Parser, RCPair, AST, PRELUDE};
 
 use wasm_bindgen::prelude::*;
 use std::collections::BTreeMap;
@@ -158,7 +155,7 @@ pub unsafe fn get_one_redex(info: &RawASTInfo) -> *mut Vec<RawRC> {
 
 #[wasm_bindgen]
 pub fn parse(str: &str) -> Result<RawASTInfo, String> {
-    let pr = match Parser::from_string(str.to_string()).parse_module() {
+    let pr = match Parser::from_string(str.to_string()).parse_module(true) {
         Ok(ast) => ast,
         Err(e) => return Err(format!("{:?}", e)),
     };
@@ -227,4 +224,9 @@ pub unsafe fn main_to_string(info: &RawASTInfo) -> String {
 #[wasm_bindgen]
 pub fn my_init() {
     utils::set_panic_hook();
+}
+
+#[wasm_bindgen]
+pub fn get_prelude() -> String {
+    PRELUDE.to_string()
 }
