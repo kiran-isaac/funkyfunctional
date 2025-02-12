@@ -327,8 +327,6 @@ fn check_match_is_less_than_2_long() -> Result<(), ParserError> {
 #[test]
 fn check_match_map() -> Result<(), ParserError> {
     let program = r#"
-    data List a = Cons a (List a) | Nil
-
     map :: (a -> b) -> List a -> List b
     map f lst = match lst {
        | Nil       -> Nil
@@ -345,8 +343,6 @@ fn check_match_map() -> Result<(), ParserError> {
 #[test]
 fn check_match_map_ifnot_zero() -> Result<(), ParserError> {
     let program = r#"
-    data List a = Cons a (List a) | Nil
-
     // Map a function over a list, skipping zeros
     mapNoZero :: (Int -> b) -> List Int -> List b
     mapNoZero f lst = match lst {

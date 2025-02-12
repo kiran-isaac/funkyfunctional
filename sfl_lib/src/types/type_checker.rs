@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::iter::zip;
 
 use crate::{functions::KnownTypeLabelTable, parser::TypeMap, ASTNodeType, AST};
@@ -55,11 +56,21 @@ impl std::fmt::Debug for Context {
 }
 
 impl Context {
-    fn from_labels(labels: &KnownTypeLabelTable) -> Self {
+    fn new() -> Context {
+        Self {
+            vec: vec![],
+            next_exid: 0,
+            next_placeholder_assignvar_i: 0,
+        }
+    }
+
+    fn from_labels(labels: &KnownTypeLabelTable, yet_to_bind: &HashSet<String>) -> Self {
         let mut vec = vec![];
 
         for (k, v) in labels.get_type_map() {
-            vec.push(ContextItem::TypeAssignment(k.clone(), Ok(v.clone())));
+            if !yet_to_bind.contains(&k) {
+                vec.push(ContextItem::TypeAssignment(k.clone(), Ok(v.clone())));
+            }
         }
 
         Self {
@@ -939,6 +950,9 @@ fn recurse_add_to_context(
     match (expected, &pn.t) {
         (_, ASTNodeType::Identifier) => {
             let mut var_name = ast.get(expr).get_value();
+            if c.get_type_assignment(var_name.as_str()).is_some() {
+                return Err(type_error(format!("Type of {} is defined elsewhere, so cannot rebind", var_name), ast, expr));
+            }
             if var_name.starts_with("_") {
                 var_name = c.get_next_placeholder_assignvar();
             }
@@ -1080,7 +1094,7 @@ fn check_type(
 
 pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), TypeError> {
     match check_type(
-        Context::from_labels(&KnownTypeLabelTable::new()),
+        Context::from_labels(&KnownTypeLabelTable::new(), &HashSet::new()),
         expected,
         ast,
         expr,
@@ -1107,7 +1121,7 @@ fn infer_type_with_context(
 #[cfg(test)]
 pub fn infer_type(ast: &AST, expr: usize, type_map: &TypeMap) -> Result<Type, TypeError> {
     let lt = KnownTypeLabelTable::new();
-    let c = Context::from_labels(&lt);
+    let c = Context::from_labels(&lt, &HashSet::new());
 
     Ok(infer_type_with_context(c, ast, expr, type_map)?
         .0
@@ -1120,7 +1134,7 @@ pub fn infer_or_check_assignment_types(
     lt: &mut KnownTypeLabelTable,
     type_map: &TypeMap,
 ) -> Result<(), TypeError> {
-    let mut c = Context::from_labels(&lt);
+    let mut c = Context::from_labels(&lt, &ast.get_assignee_names(module).iter().map(|s| s.clone()).collect());
 
     for assign_var in &ast.get_assignee_names(module) {
         #[cfg(debug_assertions)]
