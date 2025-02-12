@@ -5,7 +5,7 @@ fn assign() -> Result<(), ParserError> {
     let str = "x = add 2 5";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?.ast;
+    let ast = parser.parse_module(false)?.ast;
     let module = 0;
     let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
     let exp = ast.get_assign_exp(assign);
@@ -27,7 +27,7 @@ fn assign_2() -> Result<(), ParserError> {
     parser.bind("y".to_string());
     parser.bind("z".to_string());
 
-    let ast = parser.parse_module()?.ast;
+    let ast = parser.parse_module(false)?.ast;
     let module = 0;
     let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
     let exp = ast.get_assign_exp(assign);
@@ -51,7 +51,7 @@ fn multi_assign() -> Result<(), ParserError> {
     let str = "x = 5\n\n//Hello\ny = 6\nz = 7";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?.ast;
+    let ast = parser.parse_module(false)?.ast;
     let module = 0;
 
     let ass1 = ast.get_assign_to(module, "x".to_string()).unwrap();
@@ -72,22 +72,22 @@ fn multi_assign() -> Result<(), ParserError> {
 fn bound() -> Result<(), ParserError> {
     // recursive
     let str = "x = x 5";
-    Parser::from_string(str.to_string()).parse_module()?.ast;
+    Parser::from_string(str.to_string()).parse_module(false)?.ast;
 
     // add is an inbuilt
     let str = "x = add 2 x";
-    Parser::from_string(str.to_string()).parse_module()?.ast;
+    Parser::from_string(str.to_string()).parse_module(false)?.ast;
 
     // y is unbound
     let str = "x = add 2 y";
-    assert!(Parser::from_string(str.to_string()).parse_module().is_err());
+    assert!(Parser::from_string(str.to_string()).parse_module(false).is_err());
 
     Ok(())
 }
 
 fn unchanged_parse_output_str_test(program_str: &str, types: bool) -> Result<(), ParserError> {
     let mut parser = Parser::from_string(program_str.to_string());
-    let ast = parser.parse_module()?.ast;
+    let ast = parser.parse_module(false)?.ast;
     assert_eq!(program_str, ast.to_string_sugar(ast.root, types));
     Ok(())
 }
@@ -119,21 +119,21 @@ fn abstraction() -> Result<(), ParserError> {
     let str = "x = \\y :: Int. add y 5";
     let mut parser = Parser::from_string(str.to_string());
 
-    let _ = parser.parse_module()?.ast;
+    let _ = parser.parse_module(false)?.ast;
 
     // Should error because y is not bound
     let unbound_str = "x = (\\y . add y 5) y";
     let mut parser = Parser::from_string(unbound_str.to_string());
-    assert!(parser.parse_module().is_err());
+    assert!(parser.parse_module(false).is_err());
 
     // Should be same for both
     let multi_abstr = "x = \\y :: Int z :: Int . add y 5";
     let multi_abstr2 = "x = \\y :: Int . \\z :: Int . add y 5";
     let ast = Parser::from_string(multi_abstr.to_string())
-        .parse_module()?
+        .parse_module(false)?
         .ast;
     let ast2 = Parser::from_string(multi_abstr2.to_string())
-        .parse_module()?
+        .parse_module(false)?
         .ast;
     assert_eq!(
         ast.to_string_sugar(ast.root, false),
@@ -142,7 +142,7 @@ fn abstraction() -> Result<(), ParserError> {
 
     let ignore_directive = "x = \\_ :: Int . 1.5";
     Parser::from_string(ignore_directive.to_string())
-        .parse_module()?
+        .parse_module(false)?
         .ast;
 
     Ok(())
@@ -153,7 +153,7 @@ fn type_assignment() -> Result<(), ParserError> {
     let str = "x :: Int\nx = 5";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?.ast;
+    let ast = parser.parse_module(false)?.ast;
     let module = 0;
     let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
 
@@ -163,7 +163,7 @@ fn type_assignment() -> Result<(), ParserError> {
 
     let str = "id2 :: var -> var\nid2 = \\x.x";
     let mut parser = Parser::from_string(str.to_string());
-    let ast = parser.parse_module()?.ast;
+    let ast = parser.parse_module(false)?.ast;
     let module = ast.root;
     let assign = ast.get_assign_to(module, "id2".to_string()).unwrap();
     let type_assignment = ast.get(assign).type_assignment.clone();
@@ -181,7 +181,7 @@ fn type_assignment_right_assoc() -> Result<(), ParserError> {
     let str = "x :: (Int -> Int) -> (Int -> Float) -> Int\nx = 5";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?.ast;
+    let ast = parser.parse_module(false)?.ast;
     let module = 0;
     let assign = ast.get_assign_to(module, "x".to_string()).unwrap();
 
@@ -200,15 +200,15 @@ fn ite() -> Result<(), ParserError> {
     let str = "x = if true then 1 else 2";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?.ast;
+    let ast = parser.parse_module(true)?.ast;
     let module = 0;
 
-    assert_eq!(ast.to_string_sugar(module, false), str);
+    assert_eq!(ast.to_string_sugar(ast.get_assign_to(module, "x".to_string()).unwrap(), false), str);
 
     let str = "x = \\_ :: Int. add (if true then 1 else 2) (if true then 2 else 3)";
     let mut parser = Parser::from_string(str.to_string());
 
-    let ast = parser.parse_module()?.ast;
+    let ast = parser.parse_module(false)?.ast;
     let module = 0;
     assert_eq!(ast.to_string_sugar(module, false), str);
 
@@ -229,7 +229,7 @@ fn pair() -> Result<(), ParserError> {
 
     let str = "pair :: a -> b -> (a, b)\npair x y = (x, y)";
     let mut parser = Parser::from_string(str.to_string());
-    let ast = parser.parse_module()?.ast;
+    let ast = parser.parse_module(false)?.ast;
     let module = 0;
     assert_eq!(
         ast.to_string_sugar(module, true),
@@ -241,7 +241,7 @@ fn pair() -> Result<(), ParserError> {
 #[test]
 fn type_decl() -> Result<(), ParserError> {
     let str = "type Bingus = Int\nmain :: Bingus -> Int\nmain = \\x.x";
-    let ast = Parser::from_string(str.to_string()).parse_module()?.ast;
+    let ast = Parser::from_string(str.to_string()).parse_module(false)?.ast;
     assert_eq!(
         format!("{}", ast.to_string_sugar(ast.root, true)),
         "main :: Bingus -> Int\nmain = \\x. x"
@@ -253,7 +253,7 @@ fn type_decl() -> Result<(), ParserError> {
 #[test]
 fn data_decl() -> Result<(), ParserError> {
     let str = "data Maybe a = Some a | None\nmain :: Int -> Maybe Int\nmain = Some 10";
-    let pr = Parser::from_string(str.to_string()).parse_module()?;
+    let pr = Parser::from_string(str.to_string()).parse_module(false)?;
     let lt = pr.lt;
     let tm = pr.tm;
 
@@ -273,7 +273,7 @@ fn data_decl() -> Result<(), ParserError> {
 #[test]
 fn data_decl2() -> Result<(), ParserError> {
     let str = "data Maybe a = Some a | None\ndata DataTest maybevar = Bingus (Maybe maybevar)\nmain :: Int -> Maybe Int\nmain = Some 10";
-    let pr = Parser::from_string(str.to_string()).parse_module()?;
+    let pr = Parser::from_string(str.to_string()).parse_module(false)?;
     let lt = pr.lt;
     let tm = pr.tm;
 
@@ -301,7 +301,7 @@ fn data_decl2() -> Result<(), ParserError> {
 #[test]
 fn list_decl() -> Result<(), ParserError> {
     let str = "data List a = Cons a (List a) | Nil\ndata IntListEither a = Left (List Int) | Right a\nmain :: Int -> (IntListEither a)\nmain = \\x.Left (Cons x Nil)";
-    let pr = Parser::from_string(str.to_string()).parse_module()?;
+    let pr = Parser::from_string(str.to_string()).parse_module(false)?;
     let lt = pr.lt;
     let tm = pr.tm;
 
@@ -333,30 +333,26 @@ fn list_decl() -> Result<(), ParserError> {
 #[test]
 fn list_maybe() -> Result<(), ParserError> {
     let program = r#"
-    data Either a b = Left a | Right b
-    data Maybe a = Just a | Nothing
-    data List a = Cons a (List a) | Nil
-
     fac :: Int -> Int
     fac n = if n <= 1 then 1 else n * (fac (n - 1))
 
     fromMaybes :: Either a (Maybe a) -> List a
     fromMaybes a = a
-    
+
     main = Just (fac 5)"#;
 
-    let pr = Parser::from_string(program.to_string()).parse_module()?;
+    let pr = Parser::from_string(program.to_string()).parse_module(true)?;
     // println!("{:?}", pr.lt);
     println!("{:?}", pr.lt.get_type("fromMaybes").unwrap());
 
     Ok(())
 }
 
-fn assert_string_equal_no_whitespace(s1: String, s2: String) {
+fn assert_string_equal_no_whitespace_or_brackets(s1: String, s2: String) {
     let mut s1 = s1.clone();
     let mut s2 = s2.clone();
-    s1.retain(|c| !c.is_whitespace());
-    s2.retain(|c| !c.is_whitespace());
+    s1.retain(|c| !(c.is_whitespace() || c == ')' || c == '('));
+    s2.retain(|c| !(c.is_whitespace() || c == ')' || c == '('));
 
     assert_eq!(s1, s2);
 }
@@ -366,18 +362,18 @@ fn parse_match_length() -> Result<(), ParserError> {
     let program = r#"
     data List a = Cons a (List a) | Nil
 
-    length x = match x {
+    length x = match x :: List a {
        | Nil       -> 0
        | Cons _ xs -> 1 + length xs
     }
 
     main = length (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
 
-    let pr = Parser::from_string(program.to_string()).parse_module()?;
-    assert_string_equal_no_whitespace(
+    let pr = Parser::from_string(program.to_string()).parse_module(false)?;
+    assert_string_equal_no_whitespace_or_brackets(
         pr.ast.to_string_sugar(pr.ast.root, false),
         r#"
-    length x = match x {
+    length x = match (x :: List a) {
        | Nil       -> 0
        | Cons _ xs -> 1 + (length xs)
     }
@@ -392,18 +388,18 @@ fn parse_match_map() -> Result<(), ParserError> {
     let program = r#"
     data List a = Cons a (List a) | Nil
 
-    map f lst = match lst {
+    map f lst = match lst:: List a {
        | Nil       -> Nil
        | Cons x xs -> Cons (f x) (map f xs)
     }
 
     main = map (\x. x + 1) (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
 
-    let pr = Parser::from_string(program.to_string()).parse_module()?;
-    assert_string_equal_no_whitespace(
+    let pr = Parser::from_string(program.to_string()).parse_module(false)?;
+    assert_string_equal_no_whitespace_or_brackets(
         pr.ast.to_string_sugar(pr.ast.root, false),
         r#"
-    map f lst = match lst {
+    map f lst = match lst :: List a  {
        | Nil       -> Nil
        | Cons x xs -> Cons (f x) (map f xs)
     }
@@ -419,12 +415,12 @@ fn parse_match_fold() -> Result<(), ParserError> {
     let program = r#"
     data List a = Cons a (List a) | Nil
 
-    foldr f acc lst = match lst {
+    foldr f acc lst = match lst :: List a {
        | Nil       -> acc
        | Cons x xs -> f acc (foldr f acc xs)
     }
     
-    foldl f acc lst = match lst {
+    foldl f acc lst = match lst :: List a {
        | Nil       -> acc
        | Cons x xs -> foldl f (f acc x) xs
     }
@@ -433,16 +429,16 @@ fn parse_match_fold() -> Result<(), ParserError> {
     foldl_sum = foldl (\x y. x + y) (Cons 1 (Cons 2 (Cons 3 Nil)))
     "#;
 
-    let pr = Parser::from_string(program.to_string()).parse_module()?;
-    assert_string_equal_no_whitespace(
+    let pr = Parser::from_string(program.to_string()).parse_module(false)?;
+    assert_string_equal_no_whitespace_or_brackets(
         pr.ast.to_string_sugar(pr.ast.root, false),
         r#"
-    foldr f acc lst = match lst {
+    foldr f acc lst = match lst :: List a {
        | Nil       -> acc
        | Cons x xs -> f acc (foldr f acc xs)
     }
     
-    foldl f acc lst = match lst {
+    foldl f acc lst = match lst :: List a {
        | Nil       -> acc
        | Cons x xs -> foldl f (f acc x) xs
     }

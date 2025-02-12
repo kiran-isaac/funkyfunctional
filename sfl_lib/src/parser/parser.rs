@@ -1,6 +1,7 @@
 use super::ast::AST;
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
+use super::prelude::PRELUDE;
 use super::token::*;
 use crate::{ASTNodeType, KnownTypeLabelTable, Type};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -35,7 +36,7 @@ impl TypeMap {
     }
 }
 
-pub struct ModuleParseResult {
+pub struct ParseResult {
     pub ast: AST,
     pub lt: KnownTypeLabelTable,
     pub tm: TypeMap,
@@ -519,19 +520,20 @@ impl Parser {
 
         match self.consume()?.tt {
             TokenType::DoubleColon => {
-                ast.set_type(
-                    match_unpack,
-                    self.parse_type_expression(type_table, None)?,
-                );
+                ast.set_type(match_unpack, self.parse_type_expression(type_table, None)?);
                 match self.consume()?.tt {
                     TokenType::LBrace => {}
                     _ => {
-                        return Err(self.parse_error("Expected \"{\" after match type assignment before cases".to_string()));
+                        return Err(self.parse_error(
+                            "Expected \"{\" after match type assignment before cases".to_string(),
+                        ));
                     }
                 };
             }
             _ => {
-                return Err(self.parse_error("Expected type assignment of match subject".to_string()));
+                return Err(
+                    self.parse_error("Expected type assignment of match subject".to_string())
+                );
             }
         };
 
@@ -676,9 +678,11 @@ impl Parser {
                     }
                 }
 
-                TokenType::RParen | TokenType::Newline | TokenType::EOF | TokenType::Dot | TokenType::LBrace => {
-                    return Ok(left)
-                }
+                TokenType::RParen
+                | TokenType::Newline
+                | TokenType::EOF
+                | TokenType::Dot
+                | TokenType::LBrace => return Ok(left),
 
                 _ => {
                     return Err(self
@@ -729,17 +733,7 @@ impl Parser {
         }
     }
 
-    fn parse_type_assignment(
-        &mut self,
-        type_table: &HashMap<String, Type>,
-    ) -> Result<(), ParserError> {
-        let name = self.peek(0)?.value.clone();
-        if self.type_assignment_map.contains_key(&name) {
-            return Err(self.parse_error(format!("Type already assigned: {}", name)));
-        }
-        self.advance();
-        self.advance();
-
+    fn parse_type_annotation(&mut self, type_table: &HashMap<String, Type>) -> Result<Type, ParserError> {
         let assigned_type = self.parse_type_expression(type_table, None)?;
 
         let mut sorted_tvs: Vec<String> = assigned_type
@@ -754,6 +748,23 @@ impl Parser {
 
         #[cfg(debug_assertions)]
         let _assigned_type_str = assigned_type.to_string();
+
+        Ok(assigned_type)
+    }
+
+    fn parse_type_assignment(
+        &mut self,
+        type_map: &HashMap<String, Type>,
+    ) -> Result<(), ParserError> {
+        let name = self.peek(0)?.value.clone();
+        if self.type_assignment_map.contains_key(&name) {
+            return Err(self.parse_error(format!("Type already assigned: {}", name)));
+        }
+        self.advance();
+        self.advance();
+
+        let assigned_type = self.parse_type_annotation(type_map)?;
+
         self.type_assignment_map.insert(name, assigned_type);
 
         Ok(())
@@ -771,7 +782,7 @@ impl Parser {
         ast: &mut AST,
         type_table: &HashMap<String, Type>,
     ) -> Result<usize, ParserError> {
-        assert_eq!(self.peek(0)?.tt, TokenType::Id);
+        assert!(self.peek(0)?.tt == TokenType::Id || self.peek(0)?.tt == TokenType::If);
 
         let assid = self.peek(0)?;
         let name = assid.value.clone();
@@ -1007,18 +1018,39 @@ impl Parser {
         Ok(constructors)
     }
 
-    pub fn parse_module(&mut self) -> Result<ModuleParseResult, ParserError> {
-        // At the top level its just a set of assignments
-        let mut ast = AST::new();
-        let mut lt = KnownTypeLabelTable::new();
-        let mut tm = TypeMap::new();
-        let module = ast.add_module(Vec::new(), self.lexer.line, self.lexer.col);
+    fn init_parser(&mut self, with_prelude: bool) -> (KnownTypeLabelTable, TypeMap, AST) {
+        if with_prelude {
+            let mut parser = Self::from_string(PRELUDE.to_string());
+            let pr = match parser
+                .parse_module(false) {
+                Ok(pr) => pr,
+                Err(e) => panic!("Failed to parse prelude: {:?}", e)
+            };
+            for binding in parser.bound.bound {
+                self.bind(binding);
+            }
+            (pr.lt, pr.tm, pr.ast)
+        } else {
+            let mut ast = AST::new();
+            let module = ast.add_module(Vec::new(), self.lexer.line, self.lexer.col);
+            ast.root = module;
+            (KnownTypeLabelTable::new(), TypeMap::new(), ast)
+        }
+    }
+
+
+    pub fn parse_module(
+        &mut self,
+        with_prelude: bool,
+    ) -> Result<ParseResult, ParserError> {
+        let (mut lt, mut tm, mut ast) = self.init_parser(with_prelude);
+        let module = ast.root;
 
         'assloop: loop {
             let t = self.peek(0)?;
 
             match t.tt {
-                TokenType::Id => {
+                TokenType::Id | TokenType::If => {
                     let next = self.peek(1)?;
                     match next.tt {
                         TokenType::Assignment | TokenType::Id | TokenType::LParen => {
@@ -1070,12 +1102,14 @@ impl Parser {
             }
         }
 
-        Ok(ModuleParseResult { ast, lt, tm })
+        Ok(ParseResult { ast, lt, tm })
     }
 
-    pub fn parse_tl_expression(&mut self) -> Result<AST, ParserError> {
-        let mut ast = AST::new();
-        ast.root = self.parse_expression(&mut ast, &TypeMap::new().types)?;
-        Ok(ast)
+    #[cfg(test)]
+    pub fn parse_tl_expression(&mut self, with_prelude : bool) -> Result<ParseResult, ParserError> {
+        let (lt, tm, mut ast) = self.init_parser(with_prelude);
+        let module = ast.root;
+        ast.root = self.parse_expression(&mut ast, &tm.types)?;
+        Ok(ParseResult {lt, tm, ast})
     }
 }

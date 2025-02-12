@@ -1,11 +1,9 @@
 use std::collections::HashMap;
 
 use inbuilt_arith::*;
-use inbuilt_control_flow::*;
 
 use crate::*;
 mod inbuilt_arith;
-mod inbuilt_control_flow;
 
 #[cfg(test)]
 mod test;
@@ -197,20 +195,6 @@ impl KnownTypeLabelTable {
         let unary_float_type = Type::Function(
             Box::new(Type::Primitive(Primitive::Float64)),
             Box::new(Type::Primitive(Primitive::Float64)),
-        );
-
-        let if_type = Type::Forall(
-            "a".to_string(),
-            Box::new(Type::Function(
-                Box::new(Type::Primitive(Primitive::Bool)),
-                Box::new(Type::Function(
-                    Box::new(Type::tv("a".to_string())),
-                    Box::new(Type::Function(
-                        Box::new(Type::tv("a".to_string())),
-                        Box::new(Type::tv("a".to_string())),
-                    )),
-                )),
-            )),
         );
 
         self.add_inbuilt(

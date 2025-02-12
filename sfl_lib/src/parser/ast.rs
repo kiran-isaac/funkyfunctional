@@ -1,8 +1,8 @@
+use super::token::*;
 use crate::{find_redexes::RCPair, Primitive, Type};
 use std::collections::HashSet;
-use std::{collections::HashMap, fmt::Debug, vec};
 use std::iter::zip;
-use super::token::*;
+use std::{collections::HashMap, fmt::Debug, vec};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ASTNodeType {
@@ -238,7 +238,9 @@ impl AST {
             }
             (ASTNodeType::Match, ASTNodeType::Match) => {
                 for (c1, c2) in zip(self.get(n1).children.clone(), self.get(n2).children.clone()) {
-                    if !self.expr_eq(c1, c2) {return false}
+                    if !self.expr_eq(c1, c2) {
+                        return false;
+                    }
                 }
                 true
             }
@@ -614,7 +616,7 @@ impl AST {
     }
 
     pub fn get_n_abstr_vars(&self, abstr: usize, n: usize) -> Vec<usize> {
-        if n <= 0 ||  self.get(abstr).t != ASTNodeType::Abstraction {
+        if n <= 0 || self.get(abstr).t != ASTNodeType::Abstraction {
             vec![]
         } else {
             let var = self.get_abstr_var(abstr);

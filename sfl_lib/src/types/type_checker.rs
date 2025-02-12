@@ -702,7 +702,16 @@ fn synthesize_type(
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            Ok((Type::fa(expr1fas, Type::fa(expr2fas, Type::pr(expr1t.strip_foralls(), expr2t.strip_foralls()))), c))
+            Ok((
+                Type::fa(
+                    expr1fas,
+                    Type::fa(
+                        expr2fas,
+                        Type::pr(expr1t.strip_foralls(), expr2t.strip_foralls()),
+                    ),
+                ),
+                c,
+            ))
         }
 
         ASTNodeType::Literal => Ok((node.get_lit_type(), c)),
@@ -712,7 +721,7 @@ fn synthesize_type(
 
             let unpack_expr = ast.get_match_unpack_pattern(expr);
 
-            let (unpack_type, c) = if let Some(t ) = ast.get(unpack_expr).type_assignment.clone() {
+            let (unpack_type, c) = if let Some(t) = ast.get(unpack_expr).type_assignment.clone() {
                 let c = check_type(c, &t, ast, unpack_expr, type_map, false)?;
                 (t.clone(), c)
             } else {
@@ -740,7 +749,8 @@ fn synthesize_type(
                 #[cfg(debug_assertions)]
                 let _pat_c_str = format!("{:?}", &pattern_context);
 
-                let expr_context = check_type(pattern_context, &expr_type, ast, case_expr, type_map, false)?;
+                let expr_context =
+                    check_type(pattern_context, &expr_type, ast, case_expr, type_map, false)?;
                 #[cfg(debug_assertions)]
                 let _expr_c_str = format!("{:?}", &expr_context);
 
@@ -1095,11 +1105,11 @@ fn infer_type_with_context(
 }
 
 #[cfg(test)]
-pub fn infer_type(ast: &AST, expr: usize) -> Result<Type, TypeError> {
+pub fn infer_type(ast: &AST, expr: usize, type_map: &TypeMap) -> Result<Type, TypeError> {
     let lt = KnownTypeLabelTable::new();
     let c = Context::from_labels(&lt);
 
-    Ok(infer_type_with_context(c, ast, expr, &TypeMap::new())?
+    Ok(infer_type_with_context(c, ast, expr, type_map)?
         .0
         .forall_ify())
 }

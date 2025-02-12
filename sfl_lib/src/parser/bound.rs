@@ -2,7 +2,7 @@ use crate::functions::KnownTypeLabelTable;
 use std::collections::HashSet;
 
 pub struct BoundChecker {
-    bound: HashSet<String>,
+    pub(super) bound: HashSet<String>,
 }
 
 impl BoundChecker {
