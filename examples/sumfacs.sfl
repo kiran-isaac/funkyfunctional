@@ -22,6 +22,6 @@ range lower upperMaybe = match upperMaybe :: Maybe Int {
 }
 
 // Sum of first n factorials
-sumFacs n = foldr (\x acc. (fac x) + acc) 0 (range 1 (Just (n + 1))) 
+sumFacs n = foldr (\x acc. (fac x) + acc) 0 (range 1 (Just (n + 1)))
 
 main = sumFacs 3

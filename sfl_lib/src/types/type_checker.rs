@@ -652,10 +652,6 @@ fn synthesize_type(
 
     let node = ast.get(expr);
 
-    if let Some(t) = &node.type_assignment {
-        return Ok((t.clone(), c));
-    }
-
     match node.t {
         // Var
         ASTNodeType::Identifier => {
