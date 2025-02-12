@@ -7,6 +7,7 @@ mod token;
 
 pub use lexer::*;
 pub use parser::*;
+pub use prelude::PRELUDE;
 
 #[cfg(test)]
 mod tests;

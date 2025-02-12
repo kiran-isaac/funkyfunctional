@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import {useState} from 'react'
 import Input from './Input'
 import * as wasm from 'sfl_wasm_lib'
 import './App.css'
 import RC from './RC';
-import { DefinitionWindow, DefinitionSpawnButton } from './help';
+import {DefinitionSpawnButton, DefinitionWindow} from './help';
 import ASTHistory from './ASTHistory';
 
 function App() {
@@ -32,16 +32,13 @@ function App() {
 
         // add the current ast to the history
         setAstHistory((prevAstHistory) => {
-          const newAstHistory = [...prevAstHistory, ast];
-          return newAstHistory;
+          return [...prevAstHistory, ast];
         });
         setSelectedRcFromStringHistory((prev) => {
-          const newRcFromStringHistory = [...prev, from_string];
-          return newRcFromStringHistory;
+          return [...prev, from_string];
         });
         setSelectedRcToStringHistory((prev) => {
-          const newRcToString = [...prev, to_string];
-          return newRcToString;
+          return [...prev, to_string];
         });
         ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
         setOriginalExprString(wasm.main_to_string(ast));
@@ -87,7 +84,7 @@ function App() {
       setSelectedRcFromStringHistory([])
       setSelectedRcToStringHistory([])
       setTypeAssignsToString("")
-    };
+    }
   };
 
   return (
@@ -126,6 +123,12 @@ function App() {
           <pre>{errorString}</pre>
         </div>
         <pre><ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToStringHistory} astHistory={astHistory} /></pre>
+        <hr/>
+
+        <div id="prelude">
+          <h2>Prelude</h2><pre>{wasm.get_prelude()}</pre>
+        </div>
+
       </div>
     </>
   )

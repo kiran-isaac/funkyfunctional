@@ -56,14 +56,6 @@ impl std::fmt::Debug for Context {
 }
 
 impl Context {
-    fn new() -> Context {
-        Self {
-            vec: vec![],
-            next_exid: 0,
-            next_placeholder_assignvar_i: 0,
-        }
-    }
-
     fn from_labels(labels: &KnownTypeLabelTable, yet_to_bind: &HashSet<String>) -> Self {
         let mut vec = vec![];
 
