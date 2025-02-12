@@ -530,9 +530,10 @@ impl Parser {
                     }
                 };
             }
+            TokenType::LBrace => {}
             _ => {
                 return Err(
-                    self.parse_error("Expected type assignment of match subject".to_string())
+                    self.parse_error("Expected type assignment of match subject, or lbrace".to_string())
                 );
             }
         };

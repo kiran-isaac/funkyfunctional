@@ -296,7 +296,7 @@ fn triple_test() -> Result<(), TypeError> {
 fn check_match_length() -> Result<(), ParserError> {
     let program = r#"
 
-    length2 lst = match lst :: List a {
+    length2 lst = match lst {
         | Nil       -> 0
         | Cons x xs -> 1
     }
@@ -311,7 +311,7 @@ fn check_match_length() -> Result<(), ParserError> {
 #[test]
 fn check_match_is_less_than_2_long() -> Result<(), ParserError> {
     let program = r#"
-    len_less_than_2 lst = match lst :: List a {
+    len_less_than_2 lst = match lst {
         | Nil       -> true
         | Cons _ (Cons _ Nil) -> true
         | _ -> false
@@ -356,8 +356,6 @@ fn check_match_map_ifnot_zero() -> Result<(), ParserError> {
     mod_main_inference_test(program, "List Int");
 
     let program = r#"
-    data List a = Cons a (List a) | Nil
-
     // Map a function over a list, skipping zeros
     mapNoZero :: (a -> b) -> List a -> List b
     mapNoZero f lst = match lst {
