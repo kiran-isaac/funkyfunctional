@@ -1,8 +1,36 @@
+data Either a b = Left a | Right b
+data Maybe a = Just a | Nothing
 data List a = Cons a (List a) | Nil
 
-list_is_empty list = match list {
-  | Nil -> true
-  | Cons _ _ -> false
-} 
+take :: Int -> List Int -> List Int
+take n list = if n >= 0 then (match (true, list) {
+  | (false, _) -> Nil
+  | (_, Nil) -> Nil
+  | (_, Cons x xs) -> Cons x (take (n - 1) xs)
+}) else Nil
 
-main = list_is_empty (Cons (5) Nil)
+fac :: Int -> Int
+fac n = if n <= 1 then 1 else n * (fac (n - 1))
+
+foldr :: (a -> b -> b) -> b -> List a -> b
+foldr f acc list = match list {
+  | Nil -> acc
+  | Cons x xs -> f x (foldr f acc xs)
+}
+
+range :: Int -> Maybe Int -> List Int
+range lower upperMaybe = match upperMaybe {
+  | Just upper  -> if lower >= upper then Nil else Cons lower (range (lower + 1) upperMaybe)
+  | Nothing     -> Cons lower (range (lower + 1) upperMaybe)
+}
+
+sum :: List Int -> Int
+sum list = match list {
+  | Nil -> 0
+  | Cons x xs -> x + (sum xs)
+}
+
+length :: List a -> Int
+length xs = foldr (\_ i. i + 1) 0 xs
+
+main = length (take 10 (range 1 Nil))

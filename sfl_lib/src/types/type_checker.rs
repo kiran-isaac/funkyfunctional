@@ -473,7 +473,7 @@ fn subtype(c: Context, a: &Type, b: &Type, type_map: &TypeMap) -> Result<Context
                 return Err(format!(
                     "Type {} is not a subtype of union {}",
                     a.tv_ify(),
-                    Type::Union(name1.clone(), uargs1.clone()).tv_ify()
+                    b.tv_ify()
                 ));
             }
             let mut c = c;
@@ -695,10 +695,14 @@ fn synthesize_type(
             let (expr1t, c) = synthesize_type(c, ast, expr1, type_map, is_pattern)?;
             let (expr2t, c) = synthesize_type(c, ast, expr2, type_map, is_pattern)?;
 
+            // lift foralls
+            let expr1fas = expr1t.get_foralls();
+            let expr2fas = expr2t.get_foralls();
+
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            Ok((Type::pr(expr1t, expr2t), c))
+            Ok((Type::fa(expr1fas, Type::fa(expr2fas, Type::pr(expr1t.strip_foralls(), expr2t.strip_foralls()))), c))
         }
 
         ASTNodeType::Literal => Ok((node.get_lit_type(), c)),

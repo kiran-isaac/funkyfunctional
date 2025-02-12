@@ -75,7 +75,10 @@ fn check_for_ready_call(
 
                             let assign_exp = ast.get_assign_exp(assign);
                             let n_args = ast.get_n_abstr_vars(assign_exp, argv.len());
-                            assert_eq!(argv.len(), n_args.len());
+
+                            if ast.get_n_abstr_vars(assign_exp, argv.len()).len() != argv.len() {
+                                return None;
+                            }
 
                             // Stop it being a ready call when a pair is expected but we dont have it
                             for i in 0..argv.len() {
@@ -142,34 +145,6 @@ pub fn find_all_redex_contraction_pairs(
 
     match ast.get(expr).t {
         ASTNodeType::Literal | ASTNodeType::Abstraction => {}
-        ASTNodeType::Pair => {
-            let left_rcs = find_all_redex_contraction_pairs(ast, module, ast.get_first(expr), lt);
-            let right_rcs = find_all_redex_contraction_pairs(ast, module, ast.get_second(expr), lt);
-            pairs.extend(left_rcs);
-            pairs.extend(right_rcs);
-        }
-        ASTNodeType::Identifier => {
-            let value = ast.get(expr).get_value();
-
-            // It should not be non zero_ary func as otherwise it would be caught by the app case
-            if let Some(labels) = lt.get_n_ary_labels(0) {
-                if labels.contains_key(&value) {
-                    let label = labels.get(&value).unwrap();
-
-                    if label.is_inbuilt() {
-                        let inbuilt = label.call_inbuilt(&ast.get(expr), vec![]);
-                        pairs.push((expr, inbuilt));
-                    } else {
-                        if let Some(assign) = am.get(&value) {
-                            let assign_exp = ast.get_assign_exp(*assign);
-                            pairs.push((expr, ast.clone_node(assign_exp)));
-                        }
-                    }
-                }
-            } else {
-                // unreachable!("No label match: {}", value);
-            }
-        }
         ASTNodeType::Application => {
             let f = ast.get_func(expr);
             let x = ast.get_arg(expr);
@@ -181,7 +156,13 @@ pub fn find_all_redex_contraction_pairs(
             pairs.extend(find_all_redex_contraction_pairs(ast, module, f, &lt));
             pairs.extend(find_all_redex_contraction_pairs(ast, module, x, &lt));
         }
-        ASTNodeType::Match => {
+        ASTNodeType::Pair => {
+            let left_rcs = find_all_redex_contraction_pairs(ast, module, ast.get_first(expr), lt);
+            let right_rcs = find_all_redex_contraction_pairs(ast, module, ast.get_second(expr), lt);
+            pairs.extend(left_rcs);
+            pairs.extend(right_rcs);
+        }
+        ASTNodeType::Match | ASTNodeType::Identifier => {
             if let Some(rc) = find_single_redex_contraction_pair(ast, module, expr, lt) {
                 pairs.push(rc);
             }
@@ -223,29 +204,28 @@ pub fn find_single_redex_contraction_pair(
             let value = ast.get(expr).get_value();
 
             // It should not be non zero_ary func as otherwise it would be caught by the app case
-            if let Some(labels) = lt.get_n_ary_labels(0) {
-                if labels.contains_key(&value) {
-                    let label = labels.get(&value).unwrap();
+            for i in 0..lt.get_max_arity() {
+                if let Some(labels) = lt.get_n_ary_labels(i) {
+                    if labels.contains_key(&value) {
+                        let label = labels.get(&value).unwrap();
 
-                    if label.is_inbuilt() {
-                        let inbuilt = label.call_inbuilt(&ast.get(expr), vec![]);
-                        Some((expr, inbuilt))
-                    } else {
-                        let assign = if let Some(assign) = am.get(&value) {
-                            *assign
+                        return if label.is_inbuilt() && i == 0 {
+                            let inbuilt = label.call_inbuilt(&ast.get(expr), vec![]);
+                            Some((expr, inbuilt))
                         } else {
-                            return None;
-                        };
+                            let assign = if let Some(assign) = am.get(&value) {
+                                *assign
+                            } else {
+                                return None;
+                            };
 
-                        let assign_exp = ast.get_assign_exp(assign);
-                        Some((expr, ast.clone_node(assign_exp)))
+                            let assign_exp = ast.get_assign_exp(assign);
+                            Some((expr, ast.clone_node(assign_exp)))
+                        }
                     }
-                } else {
-                    None
                 }
-            } else {
-                None
             }
+            None
         }
         ASTNodeType::Application => {
             if let Some(ready_call_reduction) = check_for_ready_call(ast, expr, &lt, am) {

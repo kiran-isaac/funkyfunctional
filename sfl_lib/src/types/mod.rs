@@ -171,6 +171,20 @@ impl Type {
         }
     }
 
+    pub fn strip_foralls(&self) -> Self {
+        match self {
+            Type::Forall(_, t) => { t.as_ref().clone() },
+            _ => self.clone(),
+        }
+    }
+
+    pub fn get_foralls(&self) -> Vec<String> {
+        match self {
+            Type::Forall(name, t) => { let mut v = vec![name.clone()]; v.extend(t.get_foralls()); v },
+            _ => vec![],
+        }
+    }
+
     fn ordered_existentials(&self) -> Vec<usize> {
         match &self {
             Type::Existential(n) => vec![*n],

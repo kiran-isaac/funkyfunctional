@@ -3,3 +3,22 @@ id = \x . x
 
 const :: forall a b. a -> b -> a
 const = \x y . x
+
+data Either a b = Left a | Right b
+data Maybe a = Just a | Nothing
+data List a = Cons a (List a) | Nil
+
+foldr :: (a -> b -> b) -> b -> List a -> b
+foldr f acc list = match list {
+  | Nil -> acc
+  | Cons x xs -> f x (foldr f acc xs)
+}
+
+length :: List a -> Int
+length = foldr (\_ i. i + 1) 0
+
+range :: Int -> Maybe Int -> List Int
+range lower upperMaybe = match upper {
+  Just upper  -> if lower >= cap then Nil else Cons lower (range (lower + 1) upper)
+  Nil         -> Cons lower (range (lower + 1) upper)
+}

@@ -490,7 +490,7 @@ impl Parser {
                         }
                         Ok((ast.add_id(t, line, col), bound_set))
                     }
-                    _ => panic!("unexpected char in id"),
+                    _ => Err(self.parse_error(format!("unexpected char in id: {}", t.value))),
                 }
             }
             TokenType::IntLit | TokenType::FloatLit | TokenType::BoolLit | TokenType::CharLit => {
@@ -601,13 +601,21 @@ impl Parser {
         let app1 = ast.add_app(if_id_node, condition, self.lexer.line, self.lexer.col);
 
         let then_tk = self.consume()?;
-        assert!(then_tk.tt == TokenType::Then);
+        if then_tk.tt != TokenType::Then {
+            return Err(
+                self.parse_error(format!("Expected \"then\", got: {}", then_tk.value))
+            )
+        }
 
         let then_exp = self.parse_expression(ast, type_table)?;
         let app2 = ast.add_app(app1, then_exp, self.lexer.line, self.lexer.col);
 
         let else_tk = self.consume()?;
-        assert!(else_tk.tt == TokenType::Else);
+        if else_tk.tt != TokenType::Else {
+            return Err(
+                self.parse_error(format!("Expected \"else\", got: {}", then_tk.value))
+            )
+        }
 
         let else_exp = self.parse_expression(ast, type_table)?;
         let app3 = ast.add_app(app2, else_exp, self.lexer.line, self.lexer.col);

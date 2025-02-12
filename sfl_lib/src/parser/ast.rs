@@ -614,7 +614,7 @@ impl AST {
     }
 
     pub fn get_n_abstr_vars(&self, abstr: usize, n: usize) -> Vec<usize> {
-        if n <= 0 {
+        if n <= 0 ||  self.get(abstr).t != ASTNodeType::Abstraction {
             vec![]
         } else {
             let var = self.get_abstr_var(abstr);
