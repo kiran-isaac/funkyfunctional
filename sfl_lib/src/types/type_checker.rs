@@ -1112,7 +1112,7 @@ pub fn check_assignment_types(
                 type_assignment.clone()
             }
             None => {
-                return Err(type_error(format!("Cannot find type assignment for:  {}", assign), ast, assign_expr));
+                return Err(type_error(format!("Cannot find type assignment for:  {}", &assign_var), ast, assign_expr));
             }
         };
 

@@ -280,6 +280,11 @@ impl AST {
         #[cfg(debug_assertions)]
         let _within_str = format!("{}", self.to_string_sugar(within, false));
 
+        if within == old {
+            self.replace_references_to_node(within, new);
+            return;
+        }
+
         if self.expr_eq(within, old) {
             self.replace_references_to_node(within, new);
             return;
@@ -295,7 +300,15 @@ impl AST {
                 let second = within_n.children[1];
                 self.rc_replacement_recurse(first, old, new);
                 self.rc_replacement_recurse(second, old, new); }
-            _ => {}
+            ASTNodeType::Match => {
+                let matched_thingy = self.get_match_unpack_pattern(within);
+                self.rc_replacement_recurse(matched_thingy, old, new);
+                for (_, match_case_expr) in self.get_match_cases(within) {
+                    self.rc_replacement_recurse(match_case_expr, old, new)
+                }
+            }
+            ASTNodeType::Abstraction | ASTNodeType::Literal | ASTNodeType::Identifier => {}
+            _ => {panic!("Non expr node: {:?}", within_n)}
         }
     }
 
@@ -421,7 +434,7 @@ impl AST {
         }
     }
 
-    fn replace_references_to_node(&mut self, old: usize, new: usize) {
+    pub(crate) fn replace_references_to_node(&mut self, old: usize, new: usize) {
         if self.root == old {
             self.root = new;
         }
@@ -660,7 +673,7 @@ impl AST {
         abst_ast
     }
 
-    pub fn replace_var_usages(&mut self, var: usize, subst: usize) {
+    pub fn replace_var_usages_in_top_level_abstraction(&mut self, var: usize, subst: usize) {
         #[cfg(debug_assertions)]
         let _var_str = self.to_string_sugar(var, false);
         #[cfg(debug_assertions)]
@@ -681,8 +694,8 @@ impl AST {
             ASTNodeType::Pair => {
                 let subst_first = self.get_first(subst);
                 let subst_second = self.get_second(subst);
-                self.replace_var_usages(self.get_first(var), subst_first);
-                self.replace_var_usages(self.get_second(var), subst_second);
+                self.replace_var_usages_in_top_level_abstraction(self.get_first(var), subst_first);
+                self.replace_var_usages_in_top_level_abstraction(self.get_second(var), subst_second);
             }
             _ => panic!("WTF HOW DID THIS HAPPEN"),
         }
@@ -694,7 +707,7 @@ impl AST {
         let new_abstr_var = cloned_abst_expr.get_abstr_var(cloned_abst_expr.root);
         let subst_id = cloned_abst_expr.append(&self, subst);
 
-        cloned_abst_expr.replace_var_usages(new_abstr_var, subst_id);
+        cloned_abst_expr.replace_var_usages_in_top_level_abstraction(new_abstr_var, subst_id);
         let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
         cloned_abst_expr.root = cloned_abst_expr.get_abstr_expr(cloned_abst_expr.root);
         let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
