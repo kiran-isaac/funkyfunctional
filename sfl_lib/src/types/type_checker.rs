@@ -72,25 +72,6 @@ impl Context {
         }
     }
 
-    fn assigns_only(&self) -> Self {
-        let mut new_v = vec![];
-
-        for i in &self.vec {
-            match i {
-                ContextItem::TypeAssignment(_, _) => {
-                    new_v.push(i.clone());
-                }
-                _ => {}
-            }
-        }
-
-        Self {
-            vec: new_v,
-            next_exid: self.next_exid,
-            next_placeholder_assignvar_i: self.next_placeholder_assignvar_i,
-        }
-    }
-
     fn append(&self, item: ContextItem) -> Self {
         let mut new = self.clone();
 
@@ -113,26 +94,6 @@ impl Context {
 
         new.vec.push(item);
         new
-    }
-
-    fn remove_assignment(&self, name: &String) -> Self {
-        let mut new_v = vec![];
-
-        for i in &self.vec {
-            if let ContextItem::TypeAssignment(name2, _) = i {
-                if name == name2 {
-                    continue;
-                }
-            }
-
-            new_v.push(i.clone());
-        }
-
-        Self {
-            vec: new_v,
-            next_exid: self.next_exid,
-            next_placeholder_assignvar_i: self.next_placeholder_assignvar_i,
-        }
     }
 
     fn get_before_item(&self, item: ContextItem) -> Self {
@@ -1098,6 +1059,7 @@ pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), 
     }
 }
 
+#[cfg(test)]
 fn infer_type_with_context(
     c: Context,
     ast: &AST,
@@ -1110,6 +1072,7 @@ fn infer_type_with_context(
     Ok((t, c))
 }
 
+
 #[cfg(test)]
 pub fn infer_type(ast: &AST, expr: usize, type_map: &TypeMap) -> Result<Type, TypeError> {
     let lt = KnownTypeLabelTable::new();
@@ -1120,7 +1083,7 @@ pub fn infer_type(ast: &AST, expr: usize, type_map: &TypeMap) -> Result<Type, Ty
         .forall_ify())
 }
 
-pub fn infer_or_check_assignment_types(
+pub fn check_assignment_types(
     ast: &mut AST,
     module: usize,
     lt: &mut KnownTypeLabelTable,
@@ -1149,17 +1112,7 @@ pub fn infer_or_check_assignment_types(
                 type_assignment.clone()
             }
             None => {
-                c = c.append(ContextItem::TypeAssignment(
-                    assign_var.clone(),
-                    Err(type_error(format!("Cannot infer type of expression containing recursive call. Assign a type to label '{}'", &assign_var), ast, assign_expr)),
-                ));
-                let (t, new_c) = infer_type_with_context(c.clone(), &ast, assign_expr, type_map)?;
-                let t = t.forall_ify();
-                c = new_c.assigns_only().remove_assignment(assign_var).append(
-                    ContextItem::TypeAssignment(assign_var.clone(), Ok(t.clone())),
-                );
-                ast.set_assignment_type(assign, t.clone());
-                t
+                return Err(type_error(format!("Cannot find type assignment for:  {}", assign), ast, assign_expr));
             }
         };
 

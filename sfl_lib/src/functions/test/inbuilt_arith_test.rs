@@ -15,7 +15,13 @@ fn test_basic_int_arith() {
     for _ in 0..1000 {
         // Generate random numbers, (16 bit to avoid overflow)
         let a_int = rand::random::<i16>();
-        let b_int = rand::random::<i16>();
+        let b_int = {
+            let mut rand = rand::random::<i16>();
+            while rand == 0 {
+                rand = rand::random::<i16>();
+            }
+            rand
+        };
 
         let a = Token {
             tt: parser::TokenType::IntLit,

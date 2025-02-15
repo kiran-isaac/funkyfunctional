@@ -248,7 +248,7 @@ pub fn find_single_redex_contraction_pair(
                         let usages = pat_expr_cloned
                             .get_all_free_instances_of_var_in_exp(pat_expr_cloned.root, &var);
                         for usage in usages {
-                            pat_expr_cloned.replace(usage, replacement_appended);
+                            pat_expr_cloned.replace_var_usages(usage, replacement_appended);
                         }
                     }
                     return Some((expr, pat_expr_cloned.clone_node(pat_expr_cloned.root)));
