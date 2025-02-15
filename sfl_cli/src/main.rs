@@ -52,7 +52,7 @@ fn main() {
         HORIZONTAL_SEPARATOR
     );
 
-    let mut expr = ast.get_assign_exp(match ast.get_main(ast.root) {
+    let mut main_expr = ast.get_assign_exp(match ast.get_main(ast.root) {
         Some(v) => v,
         None => {
             eprintln!("Main not found");
@@ -60,9 +60,9 @@ fn main() {
         },
     });
 
-    let mut rcs = lib::find_single_redex_contraction_pair(&ast, Some(ast.root), expr, &lt);
+    let mut rcs = lib::find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt);
 
-    println!("{}", ast.to_string_sugar(expr, false));
+    println!("{}", ast.to_string_sugar(main_expr, false));
 
     while let Some(rc) = rcs {
         let s1 = ast.to_string_sugar(rc.0, false);
@@ -77,17 +77,16 @@ fn main() {
             .expect("Failed to read line");
         input = input.trim().to_string();
 
-        ast.do_rc_subst(&rc);
-
-        expr = ast.get_assign_exp(match ast.get_main(ast.root) {
+        main_expr = ast.get_assign_exp(match ast.get_main(ast.root) {
             Some(v) => v,
             None => {
-                eprintln!("Main not found");
-                std::process::exit(1);
+                panic!("Main not found, should have been caught by parser");
             },
         });
 
-        rcs = lib::find_single_redex_contraction_pair(&ast, Some(ast.root), expr, &lt);
-        println!("\n{}", ast.to_string_sugar(expr, false));
+        ast.do_rc_subst(main_expr, &rc);
+
+        rcs = lib::find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt);
+        println!("\n{}", ast.to_string_sugar(main_expr, false));
     }
 }

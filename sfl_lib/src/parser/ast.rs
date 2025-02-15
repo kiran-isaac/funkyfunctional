@@ -276,7 +276,75 @@ impl AST {
         ast
     }
 
-    pub fn do_rc_subst(&mut self, rc: &RCPair) {
+    fn overwrite_children(&mut self, node: usize, new_children: Vec<usize>) {
+        self.vec[node].children = new_children;
+    }
+
+    // fn rc_replacement_recurse(&mut self, within: usize, old: usize, new: usize) {
+    //     #[cfg(debug_assertions)]
+    //     let _within_str = format!("{}", self.to_string_sugar(within, false));
+    //
+    //     let within_n = self.get(within).clone();
+    //     let old_n = self.get(old).clone();
+    //
+    //     let mut new_child_vec = vec![];
+    //
+    //     for child in &mut within_n.children.clone() {
+    //         let mut child_n = self.get(*child);
+    //         match (&child_n.t, &old_n.t) {
+    //             (ASTNodeType::Identifier, ASTNodeType::Identifier) => {
+    //                 if child_n.get_value() == old_n.get_value() {
+    //                     new_child_vec.push(new);
+    //                 } else {
+    //                     new_child_vec.push(*child);
+    //                 }
+    //             }
+    //             (ASTNodeType::Application, ASTNodeType::Application)
+    //             | (ASTNodeType::Pair, ASTNodeType::Pair)
+    //             => {
+    //                 #[cfg(debug_assertion)]
+    //                 assert_eq!(child_n.children.len(), 2);
+    //
+    //                 let first = child_n.children[0];
+    //                 let second = child_n.children[1];
+    //                 self.rc_replacement_recurse(within, first, new);
+    //                 self.rc_replacement_recurse(within, second, new);
+    //
+    //                 new_child_vec.push(*child);
+    //             }
+    //             _ => {new_child_vec.push(*child);}
+    //         }
+    //     }
+    //     self.overwrite_children(within, new_child_vec);
+    // }
+
+    fn rc_replacement_recurse(&mut self, within: usize, old: usize, new: usize) {
+        #[cfg(debug_assertions)]
+        let _within_str = format!("{}", self.to_string_sugar(within, false));
+
+        if self.expr_eq(within, old) {
+            self.replace_references_to_node(within, new);
+            return;
+        }
+
+        let within_n = self.get(within);
+
+        match within_n.t {
+            ASTNodeType::Application
+            | ASTNodeType::Pair
+            => {
+                #[cfg(debug_assertion)]
+                assert_eq!(child_n.children.len(), 2);
+
+                let first = within_n.children[0];
+                let second = within_n.children[1];
+                self.rc_replacement_recurse(first, old, new);
+                self.rc_replacement_recurse(second, old, new); }
+            _ => {}
+        }
+    }
+
+    pub fn do_rc_subst(&mut self, within: usize, rc: &RCPair) {
         let other = &rc.1;
         let old = rc.0;
         let new = self.append(other, other.root);
@@ -285,7 +353,8 @@ impl AST {
         let _old_str = self.to_string_sugar(old, false);
         #[cfg(debug_assertions)]
         let _new_str = self.to_string_sugar(new, false);
-        self.replace_references_to_node(old, new);
+        self.rc_replacement_recurse(within, old, new);
+        let _new_within = self.get(within);
     }
 
     pub fn filter_identical_rcs(&self, rcs: &Vec<RCPair>) -> Vec<RCPair> {
@@ -301,11 +370,11 @@ impl AST {
         new_rcs
     }
 
-    pub fn do_rc_subst_and_identical_rcs(&mut self, rc0: &RCPair, rcs: &Vec<RCPair>) {
-        self.do_rc_subst_and_identical_rcs_borrowed(rc0, &rcs.into_iter().map(|rc| rc).collect());
+    pub fn do_rc_subst_and_identical_rcs(&mut self, within: usize, rc0: &RCPair, rcs: &Vec<RCPair>) {
+        self.do_rc_subst_and_identical_rcs_borrowed(within, rc0, &rcs.into_iter().map(|rc| rc).collect());
     }
 
-    pub fn do_rc_subst_and_identical_rcs_borrowed(&mut self, rc0: &RCPair, rcs: &Vec<&RCPair>) {
+    pub fn do_rc_subst_and_identical_rcs_borrowed(&mut self, within: usize, rc0: &RCPair, rcs: &Vec<&RCPair>) {
         #[cfg(debug_assertions)]
         let _rc0_0_str = self.to_string_sugar(rc0.0, false);
         #[cfg(debug_assertions)]
@@ -317,21 +386,7 @@ impl AST {
             #[cfg(debug_assertions)]
             let _this_rc_1 = rc.1.to_string_sugar(rc.1.root, false);
             if self.expr_eq(rc0.0, rc.0) {
-                self.do_rc_subst(rc);
-            }
-        }
-    }
-
-    pub fn do_rc_subst_and_identical_substs_borrowed(&mut self, rc0: &RCPair) {
-        #[cfg(debug_assertions)]
-        let _rc0_0_str = self.to_string_sugar(rc0.0, false);
-        #[cfg(debug_assertions)]
-        let _rc1_0_str = rc0.1.to_string_sugar(rc0.1.root, false);
-
-        // Its important that the ast contains no orphans before this function is called
-        for node in 0..self.vec.len() {
-            if self.expr_eq(rc0.0, node) {
-                self.do_rc_subst(&(node, rc0.1.clone()));
+                self.do_rc_subst(within, rc);
             }
         }
     }
@@ -411,15 +466,14 @@ impl AST {
         }
     }
 
-    pub fn replace(&mut self, old: usize, new: usize) {
-        // Replace references to the old node with the new node
-        self.replace_references_to_node(old, new);
-    }
-
     fn replace_references_to_node(&mut self, old: usize, new: usize) {
         if self.root == old {
             self.root = new;
         }
+
+        #[cfg(debug_assertions)]
+        let _ast_before = self.to_string_sugar(self.root, false);
+
         for n in &mut self.vec {
             for c in &mut n.children {
                 if *c == old {
@@ -427,6 +481,9 @@ impl AST {
                 }
             }
         }
+
+        #[cfg(debug_assertions)]
+        let _ast_before = self.to_string_sugar(self.root, false);
     }
 
     // Add a node from another ast to this ast with its children
@@ -663,7 +720,7 @@ impl AST {
                     &var_name,
                 );
                 for usage in usages {
-                    self.replace(usage, subst);
+                    self.replace_references_to_node(usage, subst);
                 }
             }
             ASTNodeType::Pair => {

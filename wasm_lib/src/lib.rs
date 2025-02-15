@@ -1,5 +1,7 @@
 #[allow(unused)]
 mod utils;
+#[cfg(test)]
+mod wasm_lib_tests;
 
 use sfl_lib::{find_all_redex_contraction_pairs, find_single_redex_contraction_pair, infer_or_check_assignment_types, KnownTypeLabelTable, Parser, RCPair, AST, PRELUDE};
 
@@ -10,6 +12,7 @@ use std::collections::BTreeMap;
 pub struct RawASTInfo {
     pub ast: *mut AST,
     pub lt: *mut KnownTypeLabelTable,
+    pub main_expr: usize,
 }
 
 #[wasm_bindgen]
@@ -69,6 +72,7 @@ pub unsafe fn pick_rc_and_free(
 
     let ast = &mut *info.ast;
     let lt = &*info.lt;
+    let main_expr = info.main_expr;
     let mut rust_rcs = vec![];
 
     for rc in rcs {
@@ -76,7 +80,7 @@ pub unsafe fn pick_rc_and_free(
     }
 
     let mut ast2 = ast.clone();
-    ast2.do_rc_subst_and_identical_substs_borrowed(&*rcs[to_subst].redex);
+    ast2.do_rc_subst(main_expr, &*rcs[to_subst].redex);
 
     for rc in rcs {
         rc.free();
@@ -85,9 +89,16 @@ pub unsafe fn pick_rc_and_free(
     // clone to cleanup and remove orphan nodes
     let ast2 = ast2.clone_node(ast2.root);
 
+    let main_expr = ast2.get_assign_exp(if let Some(main) = ast2.get_main(ast2.root) {
+        main
+    } else {
+        panic!("no main, should have been caught by parser")
+    });
+
     RawASTInfo {
         ast: Box::into_raw(Box::new(ast2)),
         lt: Box::into_raw(Box::new(lt.clone())),
+        main_expr
     }
 }
 
@@ -120,42 +131,31 @@ pub unsafe fn get_one_redex(info: &RawASTInfo) -> *mut Vec<RawRC> {
     let lt = &*info.lt;
     let module = ast.root;
 
-    log!("0");
-
     let main_assign = if let Some(main) = ast.get_assign_to(module, "main".to_string()) {
         main
     } else {
         return Box::into_raw(Box::new(vec![]));
     };
 
-    log!("1");
-
     let main_expr = ast.get_assign_exp(main_assign);
-
-    log!("2");
     
     Box::into_raw(Box::new(
         if let Some(rc) = find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt) {
-            log!("3");
 
             let from_str = Box::into_raw(Box::new(ast.to_string_sugar(rc.0, false).clone()));
             let to_string = Box::into_raw(Box::new(rc.1.to_string_sugar(rc.1.root, false).clone()));
-            log!("4");
             vec![RawRC {
                 from_str: from_str,
                 to_str: to_string,
                 redex: Box::into_raw(Box::new(rc)),
             }]
         } else {
-            log!("5");
             vec![]
         },
     ))
 }
-
-#[wasm_bindgen]
-pub fn parse(str: &str) -> Result<RawASTInfo, String> {
-    let pr = match Parser::from_string(str.to_string()).parse_module(true) {
+fn parse_internal(str: &str, prelude: bool) -> Result<RawASTInfo, String> {
+    let pr = match Parser::from_string(str.to_string()).parse_module(prelude) {
         Ok(ast) => ast,
         Err(e) => return Err(format!("{:?}", e)),
     };
@@ -167,10 +167,28 @@ pub fn parse(str: &str) -> Result<RawASTInfo, String> {
         Ok(_) => {},
         Err(e) => return Err(format!("{:?}", e)),
     };
+
+    let main_expr = ast.get_assign_exp(if let Some(main) = ast.get_main(ast.root) {
+        main
+    } else {
+        panic!("no main, should have been caught by parser")
+    });
+
     Ok(RawASTInfo {
         ast: Box::into_raw(Box::new(ast)),
         lt: Box::into_raw(Box::new(lt)),
+        main_expr
     })
+}
+
+#[wasm_bindgen]
+pub fn parse(str: &str) -> Result<RawASTInfo, String> {
+    parse_internal(str, true)
+}
+
+#[cfg(test)]
+pub fn parse_no_prelude(str: &str) -> Result<RawASTInfo, String> {
+    parse_internal(str, false)
 }
 
 #[wasm_bindgen]
@@ -211,7 +229,8 @@ pub unsafe fn types_to_string(info: &RawASTInfo) -> String {
 pub unsafe fn main_to_string(info: &RawASTInfo) -> String {
     let info = info;
     let ast = &*info.ast;
-    let main_assign = if let Some(main) = ast.get_assign_to(ast.root, "main".to_string()) {
+
+    let main_assign = if let Some(main) = ast.get_main(ast.root) {
         main
     } else {
         return String::new();

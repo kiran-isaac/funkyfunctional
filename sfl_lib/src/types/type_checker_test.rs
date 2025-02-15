@@ -165,7 +165,7 @@ fn expr_inference_should_fail(program: &str) {
 
 #[test]
 fn infer() {
-    mod_main_inference_test("main f x = f x", "∀a. ∀b. (a -> b) -> a -> b");
+    mod_main_inference_test("main:: (a -> b) -> a -> b\nmain f x = f x", "∀a. ∀b. (a -> b) -> a -> b");
 
     mod_main_inference_test(
         "main = \\b . if true then (\\x . x) else (\\x . x)",
@@ -200,7 +200,7 @@ fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
 
         let filtered_rcs = ast.filter_identical_rcs(&rcs);
         let laziest = ast.get_laziest_rc(main_expr, &filtered_rcs).unwrap();
-        ast.do_rc_subst_and_identical_rcs(&laziest, &filtered_rcs);
+        ast.do_rc_subst_and_identical_rcs(main_expr, &laziest, &filtered_rcs);
 
         main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
         let module = ast.root;
