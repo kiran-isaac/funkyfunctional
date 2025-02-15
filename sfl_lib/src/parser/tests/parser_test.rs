@@ -20,6 +20,18 @@ fn assign() -> Result<(), ParserError> {
 }
 
 #[test]
+fn dollar() -> Result<(), ParserError> {
+    let str = "y = (\\x.x) $ 5 + 1 \n x = 10";
+    let mut parser = Parser::from_string(str.to_string());
+
+    let ast = parser.parse_module(false)?.ast;
+    let string = ast.to_string_sugar(0, false);
+    println!("{}", string);
+
+    Ok(())
+}
+
+#[test]
 fn assign_2() -> Result<(), ParserError> {
     let str = "x = add (y z) 5";
     let mut parser = Parser::from_string(str.to_string());

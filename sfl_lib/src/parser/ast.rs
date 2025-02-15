@@ -32,6 +32,7 @@ pub struct ASTNode {
     pub type_assignment: Option<Type>,
     pub wait_for_args: bool,
     pub fancy_assign_abst_syntax: bool,
+    pub dollar_app: bool,
 }
 
 impl Debug for ASTNode {
@@ -82,6 +83,7 @@ impl ASTNode {
             type_assignment: None,
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
+            dollar_app: false,
         }
     }
 
@@ -95,6 +97,7 @@ impl ASTNode {
             type_assignment: None,
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
+            dollar_app: false,
         }
     }
 
@@ -108,10 +111,11 @@ impl ASTNode {
             type_assignment: None,
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
+            dollar_app: false,
         }
     }
 
-    fn new_app(f: usize, x: usize, line: usize, col: usize) -> Self {
+    fn new_app(f: usize, x: usize, line: usize, col: usize, dollar: bool) -> Self {
         ASTNode {
             t: ASTNodeType::Application,
             info: None,
@@ -121,6 +125,7 @@ impl ASTNode {
             type_assignment: None,
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
+            dollar_app: dollar,
         }
     }
 
@@ -134,6 +139,7 @@ impl ASTNode {
             type_assignment: None,
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
+            dollar_app: false,
         }
     }
 
@@ -147,6 +153,7 @@ impl ASTNode {
             type_assignment: t,
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
+            dollar_app: false,
         }
     }
 
@@ -160,6 +167,7 @@ impl ASTNode {
             type_assignment: None,
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
+            dollar_app: false,
         }
     }
 
@@ -173,6 +181,7 @@ impl ASTNode {
             type_assignment: None,
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
+            dollar_app: false,
         }
     }
 
@@ -429,7 +438,7 @@ impl AST {
             ASTNodeType::Application => {
                 let f = self.append(other, other.get_func(node));
                 let x = self.append(other, other.get_arg(node));
-                self.add_app(f, x, n.line, n.col)
+                self.add_app(f, x, n.line, n.col, n.dollar_app)
             }
             ASTNodeType::Assignment => {
                 let id = self.append(other, n.children[0]);
@@ -494,8 +503,8 @@ impl AST {
         self.add(ASTNode::new_lit(tk, line, col))
     }
 
-    pub fn add_app(&mut self, f: usize, x: usize, line: usize, col: usize) -> usize {
-        self.add(ASTNode::new_app(f, x, line, col))
+    pub fn add_app(&mut self, f: usize, x: usize, line: usize, col: usize, dollar_app: bool) -> usize {
+        self.add(ASTNode::new_app(f, x, line, col, dollar_app))
     }
 
     pub fn add_pair(&mut self, a: usize, b: usize, line: usize, col: usize) -> usize {
@@ -811,16 +820,17 @@ impl AST {
 
                 let func = self.get_func(node);
                 let arg = self.get_arg(node);
-
                 let func_str = self.to_string_sugar(func, show_assigned_types);
+                let arg_str = self.to_string_sugar(arg, show_assigned_types);
 
+                if n.dollar_app {
+                    return format!("{} $ {}", func_str, arg_str)
+                }
                 // If the func is an abstraction, wrap it in parens
                 let func_str = match self.get(func).t {
                     ASTNodeType::Abstraction => format!("({})", func_str),
                     _ => func_str,
                 };
-
-                let arg_str = self.to_string_sugar(arg, show_assigned_types);
                 // If the argument is an application, wrap it in parens
                 let arg_str = match self.get(arg).t {
                     ASTNodeType::Application | ASTNodeType::Abstraction => format!("({})", arg_str),
@@ -832,6 +842,8 @@ impl AST {
                         return format!("{} {}", arg_str, func_str);
                     }
                 }
+
+
                 format!("{} {}", func_str, arg_str)
             }
             ASTNodeType::Match => {

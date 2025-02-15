@@ -365,6 +365,13 @@ impl Lexer {
                     value: "}".to_string(),
                 })
             }
+            '$' => {
+                self.advance();
+                Ok(Token {
+                    tt: TokenType::Dollar,
+                    value: "$".to_string(),
+                })
+            }
             '=' => {
                 self.advance();
                 match self.c() {
