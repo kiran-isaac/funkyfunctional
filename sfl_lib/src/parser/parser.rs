@@ -276,16 +276,36 @@ impl Parser {
         #[cfg(debug_assertions)]
         let _t_queue = format!("{:?}", self.t_queue);
         loop {
+            #[cfg(debug_assertions)]
+            let _left_str = format!("{:?}", ast.to_string_sugar(left, false));
+
             let line = self.lexer.line;
             let col = self.lexer.col;
-            match &self.peek(0)?.tt {
+            let tk = self.peek(0)?;
+            match &tk.tt {
                 // If paren, apply to paren
                 TokenType::LParen => {
                     self.advance();
                     let right = self.parse_expression(ast, type_table)?;
-                    self.advance();
-                    left = ast.add_app(left, right, line, col);
+                    match self.peek(0)?.tt {
+                        TokenType::RParen => {self.advance();}   
+                        _ => return Err(self.parse_error(format!("Expected closing parenthesis, got \"{:?}\"", tk)))
+                    }
+                    left = ast.add_app(left, right, line, col, false);
                 }
+
+                TokenType::Dollar => {
+                    self.advance();
+                    let right = self.parse_expression(ast, type_table)?;
+                    match self.peek(0)?.tt {
+                        TokenType::RParen => {
+                            return Err(self.parse_error(format!("Unexpected closing parenthesis")))
+                        }   
+                        _ => {}
+                    }
+                    left = ast.add_app(left, right, line, col, true);
+                }
+
                 TokenType::RParen
                 | TokenType::EOF
                 | TokenType::Newline
@@ -308,13 +328,13 @@ impl Parser {
                 TokenType::If => {
                     self.advance();
                     let ite = self.parse_ite(ast, type_table)?;
-                    left = ast.add_app(left, ite, line, col);
+                    left = ast.add_app(left, ite, line, col, false);
                 }
 
                 TokenType::Match => {
                     self.advance();
                     let match_ = self.parse_match(ast, type_table)?;
-                    left = ast.add_app(left, match_, line, col);
+                    left = ast.add_app(left, match_, line, col, false);
                 }
 
                 TokenType::FloatLit
@@ -322,18 +342,18 @@ impl Parser {
                 | TokenType::IntLit
                 | TokenType::BoolLit => {
                     let right = self.parse_expr_primary(ast, type_table)?;
-                    left = ast.add_app(left, right, line, col);
+                    left = ast.add_app(left, right, line, col, false);
                 }
 
                 TokenType::Id | TokenType::UppercaseId => {
                     if self.peek(0)?.is_infix_id() {
                         let id_node = self.parse_expr_primary(ast, type_table)?;
                         let right = self.parse_expression(ast, type_table)?;
-                        left = ast.add_app(id_node, left, line, col);
-                        left = ast.add_app(left, right, line, col);
+                        left = ast.add_app(id_node, left, line, col, false);
+                        left = ast.add_app(left, right, line, col, false);
                     } else {
                         let id_node = self.parse_expr_primary(ast, type_table)?;
-                        left = ast.add_app(left, id_node, line, col);
+                        left = ast.add_app(left, id_node, line, col, false);
                     }
                 }
 
@@ -373,7 +393,7 @@ impl Parser {
                 self.advance();
                 Ok(self.parse_abstraction(ast, false, type_table)?.0)
             }
-            TokenType::LParen => {
+            TokenType::LParen | TokenType::Dollar => {
                 let exp = self.parse_expression(ast, type_table)?;
                 self.advance();
                 Ok(exp)
@@ -404,7 +424,7 @@ impl Parser {
                     self.advance();
                     let right = self.parse_pattern(ast, type_table, unpack, bound_set)?.0;
                     self.advance();
-                    left = ast.add_app(left, right, line, col);
+                    left = ast.add_app(left, right, line, col, false);
                 }
 
                 TokenType::RParen
@@ -429,7 +449,7 @@ impl Parser {
                     let right = self
                         .parse_pattern_primary(ast, type_table, unpack, bound_set)?
                         .0;
-                    left = ast.add_app(left, right, line, col);
+                    left = ast.add_app(left, right, line, col, false);
                 }
 
                 TokenType::Id | TokenType::UppercaseId => {
@@ -437,7 +457,7 @@ impl Parser {
                     let id_node = self
                         .parse_pattern_primary(ast, type_table, unpack, bound_set)?
                         .0;
-                    left = ast.add_app(left, id_node, line, col);
+                    left = ast.add_app(left, id_node, line, col, false);
                 }
 
                 _ => {
@@ -613,7 +633,7 @@ impl Parser {
 
         let condition = self.parse_expression(ast, type_table)?;
 
-        let app1 = ast.add_app(if_id_node, condition, self.lexer.line, self.lexer.col);
+        let app1 = ast.add_app(if_id_node, condition, self.lexer.line, self.lexer.col, false);
 
         let then_tk = self.consume()?;
         if then_tk.tt != TokenType::Then {
@@ -621,7 +641,7 @@ impl Parser {
         }
 
         let then_exp = self.parse_expression(ast, type_table)?;
-        let app2 = ast.add_app(app1, then_exp, self.lexer.line, self.lexer.col);
+        let app2 = ast.add_app(app1, then_exp, self.lexer.line, self.lexer.col, false);
 
         let else_tk = self.consume()?;
         if else_tk.tt != TokenType::Else {
@@ -629,7 +649,7 @@ impl Parser {
         }
 
         let else_exp = self.parse_expression(ast, type_table)?;
-        let app3 = ast.add_app(app2, else_exp, self.lexer.line, self.lexer.col);
+        let app3 = ast.add_app(app2, else_exp, self.lexer.line, self.lexer.col, false);
 
         Ok(app3)
     }
@@ -1109,7 +1129,6 @@ impl Parser {
     #[cfg(test)]
     pub fn parse_tl_expression(&mut self, with_prelude : bool) -> Result<ParseResult, ParserError> {
         let (lt, tm, mut ast) = self.init_parser(with_prelude);
-        let module = ast.root;
         ast.root = self.parse_expression(&mut ast, &tm.types)?;
         Ok(ParseResult {lt, tm, ast})
     }

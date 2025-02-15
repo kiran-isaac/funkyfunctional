@@ -33,6 +33,7 @@ pub enum TokenType {
 
     Lambda,
 
+    Dollar,
     Dot,
     Comma,
     Bar,
