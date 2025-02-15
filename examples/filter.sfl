@@ -1,14 +1,11 @@
-list_is_empty list = match list :: List a {
-  | Nil -> true
-  | Cons _ _ -> false
-}
-
 filter :: (a -> Bool) -> List a -> List a
 filter pred list = match list :: List a {
   | Nil -> Nil
   | Cons x xs -> if (pred x) then Cons x (filter pred xs) else filter pred xs
 }
 
+isEven :: Int -> Bool
 isEven x = (((x / 2) * 2) == x)
 
-main = length (filter isEven (Cons 1 (Cons 2 (Cons 3 (Cons 4 Nil)))))
+main :: Int
+main = length $ filter isEven $ range 1 (Just 5)

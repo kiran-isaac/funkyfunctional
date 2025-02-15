@@ -309,6 +309,8 @@ impl Parser {
                 TokenType::RParen
                 | TokenType::EOF
                 | TokenType::Newline
+                | TokenType::DoubleColon
+                | TokenType::LBrace
                 | TokenType::Then
                 | TokenType::Else => {
                     return Ok(left);
@@ -387,8 +389,6 @@ impl Parser {
             }
             TokenType::If => Ok(self.parse_ite(ast, type_table)?),
             TokenType::Match => Ok(self.parse_match(ast, type_table)?),
-            // Removed support for lambda except at the top level
-            // for now, untill i figure out type inference
             TokenType::Lambda => {
                 self.advance();
                 Ok(self.parse_abstraction(ast, false, type_table)?.0)
@@ -535,8 +535,7 @@ impl Parser {
     ) -> Result<usize, ParserError> {
         // Parse the expression to match on, this does not allow literals
         let match_unpack = self
-            .parse_pattern(ast, type_table, false, &mut HashSet::new())?
-            .0;
+            .parse_expression(ast, type_table)?;
 
         match self.consume()?.tt {
             TokenType::DoubleColon => {

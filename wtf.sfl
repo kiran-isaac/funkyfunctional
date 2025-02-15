@@ -1,0 +1,142 @@
+match (match ((\x. ((x / 2) * 2) == x) 1) {
+  | true -> Cons 1 (filter (\x. ((x / 2) * 2) == x) (Cons 2 (range (2 + 1) (Just 5))))
+  | false -> filter (\x. ((x / 2) * 2) == x) (Cons 2 (range (2 + 1) (Just 5)))
+}) {
+  | Nil -> 0
+  | Cons x xs -> (\_. \i. i + 1) x (foldr (\_. \i. i + 1) 0 xs)
+}
+
+match (if (\x. ((x / 2) * 2) == x) 1 then Cons 1 (filter (\x. ((x / 2) * 2) == x) (Cons 2 (range (2 + 1) (Just 5)))) else filter (\x. ((x / 2) * 2) == x) (Cons 2 (range (2 + 1) (Just 5)))) {
+  | Nil -> 0
+  | Cons x xs -> (\_. \i. i + 1) x (foldr (\_. \i. i + 1) 0 xs)
+}
+
+match (match (Cons 1 (Cons 2 (range (2 + 1) (Just 5)))) {
+  | Nil -> Nil
+  | Cons x xs -> if (\x. ((x / 2) * 2) == x) x then Cons x (filter (\x. ((x / 2) * 2) == x) xs) else filter (\x. ((x / 2) * 2) == x) xs
+}) {
+  | Nil -> 0
+  | Cons x xs -> (\_. \i. i + 1) x (foldr (\_. \i. i + 1) 0 xs)
+}
+
+match ((\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ Cons 1 (Cons 2 (range (2 + 1) (Just 5)))) {
+  | Nil -> 0
+  | Cons x xs -> (\_. \i. i + 1) x (foldr (\_. \i. i + 1) 0 xs)
+}
+
+foldr (\_. \i. i + 1) 0 ((\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ Cons 1 (Cons 2 (range (2 + 1) (Just 5))))
+
+\xs. foldr (\_. \i. i + 1) 0 xs $ (\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ Cons 1 (Cons 2 (range (2 + 1) (Just 5)))
+
+\xs. foldr (\_. \i. i + 1) 0 xs $ (\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ Cons 1 match (false) {
+  | true -> Nil
+  | false -> Cons 2 (range (2 + 1) (Just 5))
+}
+
+\xs. foldr (\_. \i. i + 1) 0 xs $ (\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ Cons 1 match (2 >= 5) {
+  | true -> Nil
+  | false -> Cons 2 (range (2 + 1) (Just 5))
+}
+
+\xs. foldr (\_. \i. i + 1) 0 xs $ (\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ Cons 1 match ((1 + 1) >= 5) {
+  | true -> Nil
+  | false -> Cons (1 + 1) (range ((1 + 1) + 1) (Just 5))
+}
+
+\xs. foldr (\_. \i. i + 1) 0 xs $ (\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ Cons 1 (if (1 + 1) >= 5 then Nil else Cons (1 + 1) (range ((1 + 1) + 1) (Just 5)))
+
+\xs. foldr (\_. \i. i + 1) 0 xs $ (\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ Cons 1 match (Just 5) {
+  | Just upper -> if (1 + 1) >= upper then Nil else Cons (1 + 1) (range ((1 + 1) + 1) (Just 5))
+  | Nothing -> Cons (1 + 1) (range ((1 + 1) + 1) (Just 5))
+}
+
+\xs. foldr (\_. \i. i + 1) 0 xs $ (\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ Cons 1 ((\lower. \upperMaybe. match (upperMaybe) {
+  | Just upper -> if lower >= upper then Nil else Cons lower (range (lower + 1) upperMaybe)
+  | Nothing -> Cons lower (range (lower + 1) upperMaybe)
+}) (1 + 1) (Just 5))
+
+\xs. foldr (\_. \i. i + 1) 0 xs $ (\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ Cons 1 (range (1 + 1) (Just 5))
+
+\xs. foldr (\_. \i. i + 1) 0 xs $ (\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ match (false) {
+  | true -> Nil
+  | false -> Cons 1 (range (1 + 1) (Just 5))
+}
+
+\xs. foldr (\_. \i. i + 1) 0 xs $ (\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ match (1 >= 5) {
+  | true -> Nil
+  | false -> Cons 1 (range (1 + 1) (Just 5))
+}
+
+\xs. foldr (\_. \i. i + 1) 0 xs $ (\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ if 1 >= 5 then Nil else Cons 1 (range (1 + 1) (Just 5))
+
+\xs. foldr (\_. \i. i + 1) 0 xs $ (\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ match (Just 5) {
+  | Just upper -> if 1 >= upper then Nil else Cons 1 (range (1 + 1) (Just 5))
+  | Nothing -> Cons 1 (range (1 + 1) (Just 5))
+}
+
+length $ (\pred. \list. match (list) {
+  | Nil -> Nil
+  | Cons x xs -> if pred x then Cons x (filter pred xs) else filter pred xs
+}) (\x. ((x / 2) * 2) == x) $ match (Just 5) {
+  | Just upper -> if 1 >= upper then Nil else Cons 1 (range (1 + 1) (Just 5))
+  | Nothing -> Cons 1 (range (1 + 1) (Just 5))
+}
+
+length $ filter (\x. ((x / 2) * 2) == x) $ match (Just 5) {
+  | Just upper -> if 1 >= upper then Nil else Cons 1 (range (1 + 1) (Just 5))
+  | Nothing -> Cons 1 (range (1 + 1) (Just 5))
+}
+
+length $ filter isEven $ match (Just 5) {
+  | Just upper -> if 1 >= upper then Nil else Cons 1 (range (1 + 1) (Just 5))
+  | Nothing -> Cons 1 (range (1 + 1) (Just 5))
+}
+
+length $ filter isEven $ (\lower. \upperMaybe. match (upperMaybe) {
+  | Just upper -> if lower >= upper then Nil else Cons lower (range (lower + 1) upperMaybe)
+  | Nothing -> Cons lower (range (lower + 1) upperMaybe)
+}) 1 (Just 5)
+
+length $ filter isEven $ range 1 (Just 5)
