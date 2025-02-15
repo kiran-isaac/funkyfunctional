@@ -3,7 +3,7 @@ mod utils;
 #[cfg(test)]
 mod wasm_lib_tests;
 
-use sfl_lib::{find_all_redex_contraction_pairs, find_single_redex_contraction_pair, infer_or_check_assignment_types, KnownTypeLabelTable, Parser, RCPair, AST, PRELUDE};
+use sfl_lib::{find_all_redex_contraction_pairs, find_single_redex_contraction_pair, check_assignment_types, KnownTypeLabelTable, Parser, RCPair, AST, PRELUDE};
 
 use wasm_bindgen::prelude::*;
 use std::collections::BTreeMap;
@@ -163,7 +163,7 @@ fn parse_internal(str: &str, prelude: bool) -> Result<RawASTInfo, String> {
     let mut lt = pr.lt;
     let tm = pr.tm;
     let module = ast.root;
-    match infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm) {
+    match check_assignment_types(&mut ast, module, &mut lt, &tm) {
         Ok(_) => {},
         Err(e) => return Err(format!("{:?}", e)),
     };

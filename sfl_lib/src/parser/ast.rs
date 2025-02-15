@@ -276,48 +276,6 @@ impl AST {
         ast
     }
 
-    fn overwrite_children(&mut self, node: usize, new_children: Vec<usize>) {
-        self.vec[node].children = new_children;
-    }
-
-    // fn rc_replacement_recurse(&mut self, within: usize, old: usize, new: usize) {
-    //     #[cfg(debug_assertions)]
-    //     let _within_str = format!("{}", self.to_string_sugar(within, false));
-    //
-    //     let within_n = self.get(within).clone();
-    //     let old_n = self.get(old).clone();
-    //
-    //     let mut new_child_vec = vec![];
-    //
-    //     for child in &mut within_n.children.clone() {
-    //         let mut child_n = self.get(*child);
-    //         match (&child_n.t, &old_n.t) {
-    //             (ASTNodeType::Identifier, ASTNodeType::Identifier) => {
-    //                 if child_n.get_value() == old_n.get_value() {
-    //                     new_child_vec.push(new);
-    //                 } else {
-    //                     new_child_vec.push(*child);
-    //                 }
-    //             }
-    //             (ASTNodeType::Application, ASTNodeType::Application)
-    //             | (ASTNodeType::Pair, ASTNodeType::Pair)
-    //             => {
-    //                 #[cfg(debug_assertion)]
-    //                 assert_eq!(child_n.children.len(), 2);
-    //
-    //                 let first = child_n.children[0];
-    //                 let second = child_n.children[1];
-    //                 self.rc_replacement_recurse(within, first, new);
-    //                 self.rc_replacement_recurse(within, second, new);
-    //
-    //                 new_child_vec.push(*child);
-    //             }
-    //             _ => {new_child_vec.push(*child);}
-    //         }
-    //     }
-    //     self.overwrite_children(within, new_child_vec);
-    // }
-
     fn rc_replacement_recurse(&mut self, within: usize, old: usize, new: usize) {
         #[cfg(debug_assertions)]
         let _within_str = format!("{}", self.to_string_sugar(within, false));
@@ -333,9 +291,6 @@ impl AST {
             ASTNodeType::Application
             | ASTNodeType::Pair
             => {
-                #[cfg(debug_assertion)]
-                assert_eq!(child_n.children.len(), 2);
-
                 let first = within_n.children[0];
                 let second = within_n.children[1];
                 self.rc_replacement_recurse(first, old, new);

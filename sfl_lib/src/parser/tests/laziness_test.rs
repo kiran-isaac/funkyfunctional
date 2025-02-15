@@ -1,4 +1,4 @@
-use crate::{find_all_redex_contraction_pairs, KnownTypeLabelTable, Parser};
+use crate::{find_all_redex_contraction_pairs, Parser};
 
 #[test]
 fn test_laziness() {

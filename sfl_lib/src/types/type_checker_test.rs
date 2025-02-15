@@ -10,7 +10,7 @@ fn tc_test_should_pass(program: &str) {
     let mut lt = pr.lt;
     let tm = pr.tm;
     let module = ast.root;
-    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
+    check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
 }
 
 fn tc_test_should_fail(program: &str) {
@@ -21,7 +21,7 @@ fn tc_test_should_fail(program: &str) {
     let mut lt = pr.lt;
     let tm = pr.tm;
     let module = ast.root;
-    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap_err();
+    check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap_err();
 }
 
 #[test]
@@ -124,7 +124,7 @@ fn mod_main_inference_test(program: &str, type_str: &str) {
     let mut lt = pr.lt;
     let tm = pr.tm;
     let module = ast.root;
-    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
+    check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
     let main_expr_type = ast
         .get(ast.get_main(ast.root).unwrap())
         .clone()
@@ -141,7 +141,7 @@ fn mod_inference_should_fail(program: &str) {
     let mut lt = pr.lt;
     let tm = pr.tm;
     let module = ast.root;
-    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap_err();
+    check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap_err();
 }
 
 fn expr_inference_should_fail(program: &str) {
@@ -193,7 +193,7 @@ fn either_test() -> Result<(), TypeError> {
         "data Either2 a b = Left2 a | Right2 b\nmain :: a -> Either2 a b\nmain = \\x. Right2 x",
     );
     tc_test_should_pass(
-        "data Either2 a b = Left2 a | Right2 b\nmain :: a -> Either2 a b\nmain = \\x. Left2 x",
+        "data Either2 a b = Left2 a | Right2 b\nmain :: a -> Either2 b a\nmain = \\x. Left2 x",
     );
 
     Ok(())
