@@ -1,10 +1,6 @@
 pub static PRELUDE: &str = r#"
-id :: a -> a
-id = \x . x
-
-const :: a -> b -> a
-const = \x y . x
-
+// Use as "if _ then _ else
+if :: Bool -> a -> a -> a
 if cond x y = match cond :: Bool {
   | true -> x
   | false -> y
