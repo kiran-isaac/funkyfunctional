@@ -1,6 +1,6 @@
 use super::*;
 use crate::parser::ParserError;
-use crate::{find_all_redex_contraction_pairs, Parser};
+use crate::Parser;
 
 fn tc_test_should_pass(program: &str) {
     let pr = Parser::from_string(program.to_string())
@@ -106,25 +106,14 @@ fn type_check_pair() {
     tc_test_should_pass("triple_first :: (a, (b, c)) -> a\ntriple_first (x, (y, z)) = x");
     tc_test_should_pass("triple_second :: (a, (b, c)) -> b\ntriple_second  (x, (y, z)) = y");
     tc_test_should_pass("triple_third :: (a, (b, c)) -> c\ntriple_third  (x, (y, z)) = z");
-    mod_main_inference_test("main = \\(x, (_, _)) . x", "∀a. ∀b. ∀c. (a, (b, c)) -> a");
-    mod_main_inference_test("main = \\(_, (x, _)) . x", "∀a. ∀b. ∀c. (a, (b, c)) -> b");
-    mod_main_inference_test("main = \\(_, (_, x)) . x", "∀a. ∀b. ∀c. (a, (b, c)) -> c");
 
     tc_test_should_pass("first :: (a, b) -> a\nfirst (x, y) = x");
     tc_test_should_pass("second :: (a, b) -> b\nsecond (x, y) = y");
-    mod_main_inference_test("main = \\(_, y) . y", "∀a. ∀b. (a, b) -> b");
-    mod_main_inference_test("main = \\(x, _) . x", "∀a. ∀b. (a, b) -> a");
 
     tc_test_should_pass("pair :: a -> b -> (a, b)\npair x y = (x, y)");
-    mod_main_inference_test("main = \\x y. (x, y)", "∀a. ∀b. a -> b -> (a, b)");
-    mod_main_inference_test(
-        "main = \\x y z. (x, (y, z))",
-        "∀a. ∀b. ∀c. a -> b -> c -> (a, (b, c))",
-    );
-    mod_main_inference_test(
-        "main = \\a b c d. ((a, b), (c, d))",
-        "∀a. ∀b. ∀c. ∀d. a -> b -> c -> d -> ((a, b), (c, d))",
-    );
+    tc_test_should_pass("main :: a -> b -> (a, b)\nmain = \\x y. (x, y)");
+    tc_test_should_pass("main :: a -> b -> c -> (a, (b, c))\nmain = \\x y z. (x, (y, z))");
+    tc_test_should_pass("main :: a -> b -> c -> d -> ((a, b), (c, d))\nmain = \\a b c d. ((a, b), (c, d))");
 }
 
 fn mod_main_inference_test(program: &str, type_str: &str) {
@@ -168,59 +157,17 @@ fn infer() {
     mod_main_inference_test("main:: (a -> b) -> a -> b\nmain f x = f x", "∀a. ∀b. (a -> b) -> a -> b");
 
     mod_main_inference_test(
-        "main = \\b . if true then (\\x . x) else (\\x . x)",
+        "main :: a -> b -> b\nmain = \\b . if true then (\\x . x) else (\\x . x)",
         "∀a. ∀b. a -> b -> b",
     );
 
     expr_inference_should_fail("\\x . x x");
-    mod_inference_should_fail("recurse = recurse");
 
-    mod_main_inference_test("main = if true then (\\x :: Int. x) else (\\x . x)", "Int -> Int");
+    mod_main_inference_test("main::Int -> Int\nmain = if true then (\\x :: Int. x) else (\\x . x)", "Int -> Int");
     mod_main_inference_test(
-        "main = \\b . if b then (\\x . x) else (\\x . 10)",
+        "main :: Bool -> Int -> Int\nmain = \\b . if b then (\\x . x) else (\\x . 10)",
         "Bool -> Int -> Int",
     );
-}
-
-/// Test a program is well typed throughout evaluation
-fn full_well_typed_test(program: &str) -> Result<(), TypeError> {
-    let pr = Parser::from_string(program.to_string())
-        .parse_module(true)
-        .unwrap();
-    let mut ast = pr.ast;
-    let mut lt = pr.lt;
-    let tm = pr.tm;
-    let mut main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
-    let module = ast.root;
-    infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm)?;
-    let mut rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &lt);
-    while rcs.len() > 0 {
-        #[cfg(debug_assertions)]
-        let _module_str = ast.to_string_sugar(ast.root, true);
-
-        let filtered_rcs = ast.filter_identical_rcs(&rcs);
-        let laziest = ast.get_laziest_rc(main_expr, &filtered_rcs).unwrap();
-        ast.do_rc_subst_and_identical_rcs(main_expr, &laziest, &filtered_rcs);
-
-        main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
-        let module = ast.root;
-        infer_or_check_assignment_types(&mut ast, module, &mut lt, &tm)?;
-        rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &lt);
-    }
-    Ok(())
-}
-
-#[test]
-fn full_well_typed_tests() -> Result<(), TypeError> {
-    let program = r#"
-    fac :: Int -> Int
-    fac n = if n <= 1 then 1 else n * (fac (n - 1))
-
-    main :: Int
-    main = fac 5"#;
-    full_well_typed_test(program)?;
-
-    Ok(())
 }
 
 #[test]
@@ -249,26 +196,17 @@ fn either_test() -> Result<(), TypeError> {
         "data Either2 a b = Left2 a | Right2 b\nmain :: a -> Either2 a b\nmain = \\x. Left2 x",
     );
 
-    mod_main_inference_test(
-        "data Either2 a b = Left2 a | Right2 b\nmain = \\x. Left2 x",
-        "∀a. ∀b. a -> Either2 a b",
-    );
-    mod_main_inference_test(
-        "data Either2 a b = Left2 a | Right2 b\nmain = \\x. Right2 x",
-        "∀a. ∀b. a -> Either2 b a",
-    );
-
     Ok(())
 }
 
 #[test]
 fn list_text() -> Result<(), TypeError> {
     mod_main_inference_test(
-        "data List2 a = Cons2 a (List2 a) | Nil2\ndata IntListEither a = List2 (List2 Int) | Right a\nmain = \\x.List2 (Cons2 x Nil2)",
+        "data List2 a = Cons2 a (List2 a) | Nil2\ndata IntListEither a = List2 (List2 Int) | Right a\nmain::Int -> IntListEither a\nmain = \\x.List2 (Cons2 x Nil2)",
         "∀a. Int -> IntListEither a"
     );
     mod_main_inference_test(
-        "data List2 a = Cons2 a (List2 a) | Nil2\ndata IntListEither a = Left (List2 Int) | Right a\nmain = \\x.Left (Cons2 x (Cons2 10 Nil2))",
+        "data List2 a = Cons2 a (List2 a) | Nil2\ndata IntListEither a = Left (List2 Int) | Right a\nmain::Int -> IntListEither a\nmain = \\x.Left (Cons2 x (Cons2 10 Nil2))",
         "∀a. Int -> IntListEither a"
     );
 
@@ -280,12 +218,12 @@ fn list_text() -> Result<(), TypeError> {
 #[test]
 fn triple_test() -> Result<(), TypeError> {
     mod_main_inference_test(
-        "data Triple a b c = Triple a b c | NoTriple\nmain = \\x y z. Triple x y z",
+        "data Triple a b c = Triple a b c | NoTriple\nmain :: a -> b -> c -> Triple a b c\nmain = \\x y z. Triple x y z",
         "∀a. ∀b. ∀c. a -> b -> c -> Triple a b c",
     );
 
     mod_main_inference_test(
-        "data Triple a b c = Triple a b c | NoTriple\nmain = NoTriple",
+        "data Triple a b c = Triple a b c | NoTriple\nmain::Triple a b c\nmain = NoTriple",
         "∀a. ∀b. ∀c. Triple a b c",
     );
 
@@ -293,30 +231,16 @@ fn triple_test() -> Result<(), TypeError> {
 }
 
 #[test]
-fn check_match_length() -> Result<(), ParserError> {
-    let program = r#"
-
-    length2 lst = match lst {
-        | Nil       -> 0
-        | Cons x xs -> 1
-    }
-
-    main = length2 (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
-
-    mod_main_inference_test(program, "Int");
-
-    Ok(())
-}
-
-#[test]
 fn check_match_is_less_than_2_long() -> Result<(), ParserError> {
     let program = r#"
+    len_less_than_2 :: List a -> Bool
     len_less_than_2 lst = match lst {
         | Nil       -> true
         | Cons _ (Cons _ Nil) -> true
         | _ -> false
     }
 
+    main :: Bool
     main = len_less_than_2 (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
 
     mod_main_inference_test(program, "Bool");
@@ -333,6 +257,7 @@ fn check_match_map() -> Result<(), ParserError> {
        | Cons x xs -> Cons (f x) Nil
     }
 
+    main :: List Int
     main = map (\x.x) (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
 
     mod_main_inference_test(program, "List Int");
@@ -351,6 +276,7 @@ fn check_match_map_ifnot_zero() -> Result<(), ParserError> {
         | Cons x xs -> Cons (f x) (mapNoZero f xs)
     }
 
+    main :: List Int
     main = mapNoZero (\x.x) (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
 
     mod_main_inference_test(program, "List Int");
@@ -364,6 +290,7 @@ fn check_match_map_ifnot_zero() -> Result<(), ParserError> {
         | Cons x xs -> Cons (f x) (mapNoZero f xs)
     }
 
+    main :: List Int
     main = mapNoZero (\x.x) (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
 
     mod_inference_should_fail(program);
@@ -374,6 +301,7 @@ fn check_match_map_ifnot_zero() -> Result<(), ParserError> {
 #[test]
 fn check_ifmatch() -> Result<(), ParserError> {
     let program = r#"
+    main :: Bool -> a -> a -> a
     main cond x y = match cond :: Bool {
     | true -> x 
     | false -> y

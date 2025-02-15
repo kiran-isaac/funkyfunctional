@@ -840,7 +840,7 @@ impl Parser {
         // Ignore if type assignment is not found, so the typechecker will have to infer
         let type_assignment = match self.get_type_assignment(&name) {
             Ok(t) => Some(t),
-            Err(_) => return Err(self.parse_error(format!("Cannot find type assignment for:  {}", &name))),
+            Err(_) => None,
         };
 
         Ok(ast.add_assignment(id, expr, self.lexer.line, self.lexer.col, type_assignment))

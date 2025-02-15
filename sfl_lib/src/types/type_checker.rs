@@ -1149,17 +1149,7 @@ pub fn infer_or_check_assignment_types(
                 type_assignment.clone()
             }
             None => {
-                c = c.append(ContextItem::TypeAssignment(
-                    assign_var.clone(),
-                    Err(type_error(format!("Cannot infer type of expression containing recursive call. Assign a type to label '{}'", &assign_var), ast, assign_expr)),
-                ));
-                let (t, new_c) = infer_type_with_context(c.clone(), &ast, assign_expr, type_map)?;
-                let t = t.forall_ify();
-                c = new_c.assigns_only().remove_assignment(assign_var).append(
-                    ContextItem::TypeAssignment(assign_var.clone(), Ok(t.clone())),
-                );
-                ast.set_assignment_type(assign, t.clone());
-                t
+                return Err(type_error(format!("Cannot find type assignment for:  {}", assign), ast, assign_expr));
             }
         };
 
