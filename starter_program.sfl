@@ -1,8 +1,3 @@
-list_is_empty list = match list :: List a {
-  | Nil -> true
-  | Cons _ _ -> false
-}
-
 filter :: (a -> Bool) -> List a -> List a
 filter pred list = match list :: List a {
   | Nil -> Nil
