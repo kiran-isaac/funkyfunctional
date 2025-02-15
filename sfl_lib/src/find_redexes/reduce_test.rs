@@ -103,7 +103,7 @@ fn basic_add_test() {
 
 #[test]
 fn waits_for_eval() {
-    let program = "func x = x\n  main = func (add 5 1)";
+    let program = "func :: a -> a\nfunc x = x\nmain :: Int\nmain = func (add 5 1)";
     let pr = Parser::from_string(program.to_string())
         .parse_module(false)
         .unwrap();
@@ -229,6 +229,7 @@ fn redexes_match() {
     let program = r#"
     data List a = Cons a (List a) | Nil
 
+    main :: Bool
     main = match (Cons (5) Nil) {
       | Nil -> true
       | Cons _ _ -> false
