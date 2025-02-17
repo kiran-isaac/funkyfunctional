@@ -113,7 +113,9 @@ fn type_check_pair() {
     tc_test_should_pass("pair :: a -> b -> (a, b)\npair x y = (x, y)");
     tc_test_should_pass("main :: a -> b -> (a, b)\nmain = \\x y. (x, y)");
     tc_test_should_pass("main :: a -> b -> c -> (a, (b, c))\nmain = \\x y z. (x, (y, z))");
-    tc_test_should_pass("main :: a -> b -> c -> d -> ((a, b), (c, d))\nmain = \\a b c d. ((a, b), (c, d))");
+    tc_test_should_pass(
+        "main :: a -> b -> c -> d -> ((a, b), (c, d))\nmain = \\a b c d. ((a, b), (c, d))",
+    );
 }
 
 fn mod_main_inference_test(program: &str, type_str: &str) {
@@ -154,7 +156,10 @@ fn expr_inference_should_fail(program: &str) {
 
 #[test]
 fn infer() {
-    mod_main_inference_test("main:: (a -> b) -> a -> b\nmain f x = f x", "∀a. ∀b. (a -> b) -> a -> b");
+    mod_main_inference_test(
+        "main:: (a -> b) -> a -> b\nmain f x = f x",
+        "∀a. ∀b. (a -> b) -> a -> b",
+    );
 
     mod_main_inference_test(
         "main :: a -> b -> b\nmain = \\b . if true then (\\x . x) else (\\x . x)",
@@ -163,7 +168,10 @@ fn infer() {
 
     expr_inference_should_fail("\\x . x x");
 
-    mod_main_inference_test("main::Int -> Int\nmain = if true then (\\x :: Int. x) else (\\x . x)", "Int -> Int");
+    mod_main_inference_test(
+        "main::Int -> Int\nmain = if true then (\\x :: Int. x) else (\\x . x)",
+        "Int -> Int",
+    );
     mod_main_inference_test(
         "main :: Bool -> Int -> Int\nmain = \\b . if b then (\\x . x) else (\\x . 10)",
         "Bool -> Int -> Int",
@@ -181,7 +189,9 @@ fn alias_test() -> Result<(), TypeError> {
 
 #[test]
 fn maybe_test() -> Result<(), TypeError> {
-    tc_test_should_pass("data Maybe2 a = Some2 a | None\nmain :: a -> Maybe2 a\nmain = \\x. Some2 x");
+    tc_test_should_pass(
+        "data Maybe2 a = Some2 a | None\nmain :: a -> Maybe2 a\nmain = \\x. Some2 x",
+    );
     tc_test_should_fail("data Maybe2 a = Some2 a | None\nmain :: a -> Int\nmain = \\x. Some2 x");
 
     Ok(())

@@ -85,7 +85,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent: false
+            is_silent: false,
         }
     }
 
@@ -100,7 +100,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent: false
+            is_silent: false,
         }
     }
 
@@ -115,7 +115,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent: false
+            is_silent: false,
         }
     }
 
@@ -130,7 +130,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: dollar,
-            is_silent: false
+            is_silent: false,
         }
     }
 
@@ -145,11 +145,18 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent: false
+            is_silent: false,
         }
     }
 
-    fn new_assignment(id: usize, exp: usize, line: usize, col: usize, t: Option<Type>, is_silent: bool) -> Self {
+    fn new_assignment(
+        id: usize,
+        exp: usize,
+        line: usize,
+        col: usize,
+        t: Option<Type>,
+        is_silent: bool,
+    ) -> Self {
         ASTNode {
             t: ASTNodeType::Assignment,
             info: None,
@@ -160,7 +167,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent
+            is_silent,
         }
     }
 
@@ -175,7 +182,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent: false
+            is_silent: false,
         }
     }
 
@@ -190,7 +197,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent: false
+            is_silent: false,
         }
     }
 
@@ -302,13 +309,12 @@ impl AST {
         let within_n = self.get(within);
 
         match within_n.t {
-            ASTNodeType::Application
-            | ASTNodeType::Pair
-            => {
+            ASTNodeType::Application | ASTNodeType::Pair => {
                 let first = within_n.children[0];
                 let second = within_n.children[1];
                 self.rc_replacement_recurse(first, old, new);
-                self.rc_replacement_recurse(second, old, new); }
+                self.rc_replacement_recurse(second, old, new);
+            }
             ASTNodeType::Match => {
                 let matched_thingy = self.get_match_unpack_pattern(within);
                 self.rc_replacement_recurse(matched_thingy, old, new);
@@ -317,7 +323,9 @@ impl AST {
                 }
             }
             ASTNodeType::Abstraction | ASTNodeType::Literal | ASTNodeType::Identifier => {}
-            _ => {panic!("Non expr node: {:?}", within_n)}
+            _ => {
+                panic!("Non expr node: {:?}", within_n)
+            }
         }
     }
 
@@ -347,11 +355,25 @@ impl AST {
         new_rcs
     }
 
-    pub fn do_rc_subst_and_identical_rcs(&mut self, within: usize, rc0: &RCPair, rcs: &Vec<RCPair>) {
-        self.do_rc_subst_and_identical_rcs_borrowed(within, rc0, &rcs.into_iter().map(|rc| rc).collect());
+    pub fn do_rc_subst_and_identical_rcs(
+        &mut self,
+        within: usize,
+        rc0: &RCPair,
+        rcs: &Vec<RCPair>,
+    ) {
+        self.do_rc_subst_and_identical_rcs_borrowed(
+            within,
+            rc0,
+            &rcs.into_iter().map(|rc| rc).collect(),
+        );
     }
 
-    pub fn do_rc_subst_and_identical_rcs_borrowed(&mut self, within: usize, rc0: &RCPair, rcs: &Vec<&RCPair>) {
+    pub fn do_rc_subst_and_identical_rcs_borrowed(
+        &mut self,
+        within: usize,
+        rc0: &RCPair,
+        rcs: &Vec<&RCPair>,
+    ) {
         #[cfg(debug_assertions)]
         let _rc0_0_str = self.to_string_sugar(rc0.0, false);
         #[cfg(debug_assertions)]
@@ -477,7 +499,14 @@ impl AST {
             ASTNodeType::Assignment => {
                 let id = self.append(other, n.children[0]);
                 let exp = self.append(other, other.get_assign_exp(node));
-                self.add_assignment(id, exp, n.line, n.col, n.type_assignment.clone(), n.is_silent)
+                self.add_assignment(
+                    id,
+                    exp,
+                    n.line,
+                    n.col,
+                    n.type_assignment.clone(),
+                    n.is_silent,
+                )
             }
             ASTNodeType::Abstraction => {
                 let var = self.append(other, n.children[0]);
@@ -537,7 +566,14 @@ impl AST {
         self.add(ASTNode::new_lit(tk, line, col))
     }
 
-    pub fn add_app(&mut self, f: usize, x: usize, line: usize, col: usize, dollar_app: bool) -> usize {
+    pub fn add_app(
+        &mut self,
+        f: usize,
+        x: usize,
+        line: usize,
+        col: usize,
+        dollar_app: bool,
+    ) -> usize {
         self.add(ASTNode::new_app(f, x, line, col, dollar_app))
     }
 
@@ -560,7 +596,7 @@ impl AST {
         line: usize,
         col: usize,
         t: Option<Type>,
-        is_silent: bool
+        is_silent: bool,
     ) -> usize {
         self.add(ASTNode::new_assignment(id, exp, line, col, t, is_silent))
     }
@@ -705,7 +741,10 @@ impl AST {
                 let subst_first = self.get_first(subst);
                 let subst_second = self.get_second(subst);
                 self.replace_var_usages_in_top_level_abstraction(self.get_first(var), subst_first);
-                self.replace_var_usages_in_top_level_abstraction(self.get_second(var), subst_second);
+                self.replace_var_usages_in_top_level_abstraction(
+                    self.get_second(var),
+                    subst_second,
+                );
             }
             _ => panic!("WTF HOW DID THIS HAPPEN"),
         }
@@ -777,14 +816,14 @@ impl AST {
         None
     }
 
-    pub fn get_assigns_map(&self, module: usize) -> HashMap<String, usize> {
+    pub fn get_assigns_map(&self, module: usize) -> HashMap<String, AST> {
         assert_eq!(self.vec[module].t, ASTNodeType::Module);
         let mut assigns = HashMap::new();
 
         for a in &self.vec[module].children {
             let assign = self.get(*a);
             let id = self.get(assign.children[0]);
-            assigns.insert(id.get_value(), *a);
+            assigns.insert(id.get_value(), self.clone_node(assign.children[1]));
         }
 
         assigns
@@ -859,7 +898,7 @@ impl AST {
                 let arg_str = self.to_string_sugar(arg, show_assigned_types);
 
                 if n.dollar_app {
-                    return format!("{} $ {}", func_str, arg_str)
+                    return format!("{} $ {}", func_str, arg_str);
                 }
                 // If the func is an abstraction, wrap it in parens
                 let func_str = match self.get(func).t {
@@ -877,7 +916,6 @@ impl AST {
                         return format!("{} {}", arg_str, func_str);
                     }
                 }
-
 
                 format!("{} {}", func_str, arg_str)
             }

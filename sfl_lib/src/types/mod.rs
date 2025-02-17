@@ -316,7 +316,6 @@ impl Type {
                 let t2 = t2.get_tvs_set();
                 t1.extend(t2);
                 t1
-
             }
             Type::TypeVariable(str) => HashSet::from_iter(vec![str.clone()]),
             _ => HashSet::new(),
