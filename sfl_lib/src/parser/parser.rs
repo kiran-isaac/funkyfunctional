@@ -288,8 +288,15 @@ impl Parser {
                     self.advance();
                     let right = self.parse_expression(ast, type_table)?;
                     match self.peek(0)?.tt {
-                        TokenType::RParen => {self.advance();}   
-                        _ => return Err(self.parse_error(format!("Expected closing parenthesis, got \"{:?}\"", tk)))
+                        TokenType::RParen => {
+                            self.advance();
+                        }
+                        _ => {
+                            return Err(self.parse_error(format!(
+                                "Expected closing parenthesis, got \"{:?}\"",
+                                tk
+                            )))
+                        }
                     }
                     left = ast.add_app(left, right, line, col, false);
                 }
@@ -300,7 +307,7 @@ impl Parser {
                     match self.peek(0)?.tt {
                         TokenType::RParen => {
                             return Err(self.parse_error(format!("Unexpected closing parenthesis")))
-                        }   
+                        }
                         _ => {}
                     }
                     left = ast.add_app(left, right, line, col, true);
@@ -534,8 +541,7 @@ impl Parser {
         type_table: &HashMap<String, Type>,
     ) -> Result<usize, ParserError> {
         // Parse the expression to match on, this does not allow literals
-        let match_unpack = self
-            .parse_expression(ast, type_table)?;
+        let match_unpack = self.parse_expression(ast, type_table)?;
 
         match self.consume()?.tt {
             TokenType::DoubleColon => {
@@ -551,9 +557,9 @@ impl Parser {
             }
             TokenType::LBrace => {}
             _ => {
-                return Err(
-                    self.parse_error("Expected type assignment of match subject, or lbrace".to_string())
-                );
+                return Err(self.parse_error(
+                    "Expected type assignment of match subject, or lbrace".to_string(),
+                ));
             }
         };
 
@@ -632,7 +638,13 @@ impl Parser {
 
         let condition = self.parse_expression(ast, type_table)?;
 
-        let app1 = ast.add_app(if_id_node, condition, self.lexer.line, self.lexer.col, false);
+        let app1 = ast.add_app(
+            if_id_node,
+            condition,
+            self.lexer.line,
+            self.lexer.col,
+            false,
+        );
 
         let then_tk = self.consume()?;
         if then_tk.tt != TokenType::Then {
@@ -753,7 +765,10 @@ impl Parser {
         }
     }
 
-    fn parse_type_annotation(&mut self, type_table: &HashMap<String, Type>) -> Result<Type, ParserError> {
+    fn parse_type_annotation(
+        &mut self,
+        type_table: &HashMap<String, Type>,
+    ) -> Result<Type, ParserError> {
         let assigned_type = self.parse_type_expression(type_table, None)?;
 
         let mut sorted_tvs: Vec<String> = assigned_type
@@ -802,10 +817,16 @@ impl Parser {
         ast: &mut AST,
         type_table: &HashMap<String, Type>,
     ) -> Result<usize, ParserError> {
-        assert!(self.peek(0)?.tt == TokenType::Id || self.peek(0)?.tt == TokenType::If);
+        let mut ass_tk = self.peek(0)?;
+        assert!(ass_tk.tt == TokenType::Id || ass_tk.tt == TokenType::If || ass_tk.tt == TokenType::Silence);
 
-        let assid = self.peek(0)?;
-        let name = assid.value.clone();
+        let is_silent = ass_tk.tt == TokenType::Silence;
+        if is_silent {
+            self.advance();
+            ass_tk = self.consume()?;
+        }
+
+        let name = ass_tk.value.clone();
 
         if self.bound.is_bound(name.as_str()) {
             return Err(self.parse_error(format!("Variable already assigned: {}", name)));
@@ -834,7 +855,7 @@ impl Parser {
             }
         };
 
-        let id = ast.add_id(assid, self.lexer.line, self.lexer.col);
+        let id = ast.add_id(ass_tk, self.lexer.line, self.lexer.col);
 
         // Ignore if type assignment is not found, so the typechecker will have to infer
         let type_assignment = match self.get_type_assignment(&name) {
@@ -842,7 +863,7 @@ impl Parser {
             Err(_) => None,
         };
 
-        Ok(ast.add_assignment(id, expr, self.lexer.line, self.lexer.col, type_assignment))
+        Ok(ast.add_assignment(id, expr, self.lexer.line, self.lexer.col, type_assignment, is_silent))
     }
 
     /// Takes type table, returns the name of the data and also the type constructors
@@ -1041,10 +1062,9 @@ impl Parser {
     fn init_parser(&mut self, with_prelude: bool) -> (KnownTypeLabelTable, TypeMap, AST) {
         if with_prelude {
             let mut parser = Self::from_string(PRELUDE.to_string());
-            let pr = match parser
-                .parse_module(false) {
+            let pr = match parser.parse_module(false) {
                 Ok(pr) => pr,
-                Err(e) => panic!("Failed to parse prelude: {:?}", e)
+                Err(e) => panic!("Failed to parse prelude: {:?}", e),
             };
             for binding in parser.bound.bound {
                 self.bind(binding);
@@ -1058,11 +1078,7 @@ impl Parser {
         }
     }
 
-
-    pub fn parse_module(
-        &mut self,
-        with_prelude: bool,
-    ) -> Result<ParseResult, ParserError> {
+    pub fn parse_module(&mut self, with_prelude: bool) -> Result<ParseResult, ParserError> {
         let (mut lt, mut tm, mut ast) = self.init_parser(with_prelude);
         let module = ast.root;
 
@@ -1070,14 +1086,15 @@ impl Parser {
             let t = self.peek(0)?;
 
             match t.tt {
-                TokenType::Id | TokenType::If => {
+                TokenType::Id | TokenType::If | TokenType::Silence => {
                     let next = self.peek(1)?;
                     match next.tt {
-                        TokenType::Assignment | TokenType::Id | TokenType::LParen => {
+                        TokenType::Assignment | TokenType::Id | TokenType::If | TokenType::LParen => {
                             let assignment = self.parse_assignment(&mut ast, &tm.types)?;
+                            let ass_node = ast.get(assignment);
                             let ass_name = ast.get_assignee(assignment);
-                            if let Some(ass_type) = &ast.get(assignment).type_assignment {
-                                lt.add(ass_name.clone(), ass_type.clone())
+                            if let Some(ass_type) = &ass_node.type_assignment {
+                                lt.add(ass_name.clone(), ass_type.clone(), ass_node.is_silent)
                             }
                             ast.add_to_module(module, assignment);
                         }
@@ -1108,7 +1125,7 @@ impl Parser {
                     let constructors = self.parse_data_decl(&mut tm.types)?;
 
                     for (constructor_name, constructor_type) in constructors {
-                        lt.add(constructor_name.clone(), constructor_type);
+                        lt.add(constructor_name.clone(), constructor_type, false);
                         self.bound.add_binding(constructor_name);
                     }
                 }
@@ -1126,9 +1143,9 @@ impl Parser {
     }
 
     #[cfg(test)]
-    pub fn parse_tl_expression(&mut self, with_prelude : bool) -> Result<ParseResult, ParserError> {
+    pub fn parse_tl_expression(&mut self, with_prelude: bool) -> Result<ParseResult, ParserError> {
         let (lt, tm, mut ast) = self.init_parser(with_prelude);
         ast.root = self.parse_expression(&mut ast, &tm.types)?;
-        Ok(ParseResult {lt, tm, ast})
+        Ok(ParseResult { lt, tm, ast })
     }
 }

@@ -81,7 +81,7 @@ fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
 
 use crate::find_redexes::reduce::find_single_redex_contraction_pair;
 use crate::{
-    find_all_redex_contraction_pairs, check_assignment_types, KnownTypeLabelTable, Parser,
+    find_all_redex_contraction_pairs, typecheck, KnownTypeLabelTable, Parser,
 };
 
 #[test]
@@ -114,7 +114,26 @@ fn waits_for_eval() {
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
 
-    check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
+    typecheck(&mut ast, module, &mut lt, &tm).unwrap();
+
+    let rcs = find_single_redex_contraction_pair(&ast, Some(module), exp, &lt).unwrap();
+    println!("{}", ast.rc_to_str(&rcs));
+}
+
+#[test]
+fn silent_if() {
+    let program = "main :: Int\nmain = if true then 1 else 2";
+    let pr = Parser::from_string(program.to_string())
+        .parse_module(true)
+        .unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
+
+    let module = ast.root;
+    let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
+
+    typecheck(&mut ast, module, &mut lt, &tm).unwrap();
 
     let rcs = find_single_redex_contraction_pair(&ast, Some(module), exp, &lt).unwrap();
     println!("{}", ast.rc_to_str(&rcs));
@@ -245,7 +264,7 @@ fn redexes_match() {
 
     let module = ast.root;
     let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
-    check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
+    typecheck(&mut ast, module, &mut lt, &tm).unwrap();
 
     let rc = find_single_redex_contraction_pair(&ast, Some(module), exp, &lt).unwrap();
     assert_eq!("false", rc.1.to_string_sugar(rc.1.root, false));

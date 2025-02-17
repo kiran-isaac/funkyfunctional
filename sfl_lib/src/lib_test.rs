@@ -6,7 +6,7 @@ fn full_run_test(program: String) -> String {
     let mut lt = pr.lt;
     let tm = pr.tm;
     let module = ast.root;
-    check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap();
+    typecheck(&mut ast, module, &mut lt, &tm).unwrap();
     let mut main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
 
     let mut rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &lt);

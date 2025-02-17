@@ -33,6 +33,7 @@ pub struct ASTNode {
     pub wait_for_args: bool,
     pub fancy_assign_abst_syntax: bool,
     pub dollar_app: bool,
+    pub is_silent: bool,
 }
 
 impl Debug for ASTNode {
@@ -84,6 +85,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
+            is_silent: false
         }
     }
 
@@ -98,6 +100,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
+            is_silent: false
         }
     }
 
@@ -112,6 +115,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
+            is_silent: false
         }
     }
 
@@ -126,6 +130,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: dollar,
+            is_silent: false
         }
     }
 
@@ -140,10 +145,11 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
+            is_silent: false
         }
     }
 
-    fn new_assignment(id: usize, exp: usize, line: usize, col: usize, t: Option<Type>) -> Self {
+    fn new_assignment(id: usize, exp: usize, line: usize, col: usize, t: Option<Type>, is_silent: bool) -> Self {
         ASTNode {
             t: ASTNodeType::Assignment,
             info: None,
@@ -154,6 +160,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
+            is_silent
         }
     }
 
@@ -168,6 +175,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
+            is_silent: false
         }
     }
 
@@ -182,6 +190,7 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
+            is_silent: false
         }
     }
 
@@ -468,7 +477,7 @@ impl AST {
             ASTNodeType::Assignment => {
                 let id = self.append(other, n.children[0]);
                 let exp = self.append(other, other.get_assign_exp(node));
-                self.add_assignment(id, exp, n.line, n.col, n.type_assignment.clone())
+                self.add_assignment(id, exp, n.line, n.col, n.type_assignment.clone(), n.is_silent)
             }
             ASTNodeType::Abstraction => {
                 let var = self.append(other, n.children[0]);
@@ -551,8 +560,9 @@ impl AST {
         line: usize,
         col: usize,
         t: Option<Type>,
+        is_silent: bool
     ) -> usize {
-        self.add(ASTNode::new_assignment(id, exp, line, col, t))
+        self.add(ASTNode::new_assignment(id, exp, line, col, t, is_silent))
     }
 
     pub fn add_match(&mut self, cases: Vec<usize>, line: usize, col: usize) -> usize {

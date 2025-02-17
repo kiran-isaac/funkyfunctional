@@ -16,12 +16,13 @@ use std::collections::HashMap;
 /// with the right num of args
 fn check_for_ready_call(
     ast: &AST,
-    exp: usize,
+    expr: usize,
     lt: &KnownTypeLabelTable,
     am: HashMap<String, usize>,
+    module: Option<usize>
 ) -> Option<AST> {
-    let mut f = ast.get_func(exp);
-    let mut x = ast.get_arg(exp);
+    let mut f = ast.get_func(expr);
+    let mut x = ast.get_arg(expr);
     let mut argv = vec![];
     let mut argv_ids = vec![];
 
@@ -89,7 +90,15 @@ fn check_for_ready_call(
                                 }
                             }
 
-                            Some(ast.do_multiple_abst_substs(assign_exp, argv_ids))
+                            let mut ready_call_result = ast.do_multiple_abst_substs(assign_exp, argv_ids);
+
+                            if label.is_silent {
+                                if let Some(silent_rc) = find_single_redex_contraction_pair(ast, None, ready_call_result.root, lt) {
+                                    ready_call_result = silent_rc.1;
+                                };
+                            }
+
+                            Some(ready_call_result)
                         } else {
                             None
                         }
@@ -149,7 +158,7 @@ pub fn find_all_redex_contraction_pairs(
             let f = ast.get_func(expr);
             let x = ast.get_arg(expr);
 
-            if let Some(inbuilt_reduction) = check_for_ready_call(ast, expr, &lt, am) {
+            if let Some(inbuilt_reduction) = check_for_ready_call(ast, expr, &lt, am, module) {
                 pairs.push((expr, inbuilt_reduction));
             }
 
@@ -228,7 +237,7 @@ pub fn find_single_redex_contraction_pair(
             None
         }
         ASTNodeType::Application => {
-            if let Some(ready_call_reduction) = check_for_ready_call(ast, expr, &lt, am) {
+            if let Some(ready_call_reduction) = check_for_ready_call(ast, expr, &lt, am, module) {
                 Some((expr, ready_call_reduction))
             } else if let Some(f_rc) =
                 find_single_redex_contraction_pair(ast, module, ast.get_func(expr), lt)

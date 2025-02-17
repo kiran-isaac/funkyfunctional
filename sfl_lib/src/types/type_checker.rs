@@ -1083,7 +1083,7 @@ pub fn infer_type(ast: &AST, expr: usize, type_map: &TypeMap) -> Result<Type, Ty
         .forall_ify())
 }
 
-pub fn check_assignment_types(
+pub fn typecheck(
     ast: &mut AST,
     module: usize,
     lt: &mut KnownTypeLabelTable,
@@ -1102,21 +1102,18 @@ pub fn check_assignment_types(
 
         let assign_expr = ast.get_assign_exp(assign);
 
-        let type_of_assignment = match &ast.get(assign).type_assignment {
+        match &ast.get(assign).type_assignment {
             Some(type_assignment) => {
                 c = c.append(ContextItem::TypeAssignment(
                     assign_var.clone(),
                     Ok(type_assignment.clone()),
                 ));
                 c = check_type(c, &type_assignment, ast, assign_expr, type_map, false)?;
-                type_assignment.clone()
             }
             None => {
                 return Err(type_error(format!("Cannot find type assignment for:  {}", &assign_var), ast, assign_expr));
             }
         };
-
-        lt.add(assign_var.clone(), type_of_assignment.clone());
     }
 
     Ok(())

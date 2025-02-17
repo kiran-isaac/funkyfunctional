@@ -28,6 +28,8 @@ pub enum TokenType {
     KWType,
     KWData,
 
+    Silence, // @
+
     LParen,
     RParen,
 

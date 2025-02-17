@@ -1,7 +1,7 @@
 pub static PRELUDE: &str = r#"
 // Use as "if _ then _ else
 if :: Bool -> a -> a -> a
-if cond x y = match cond :: Bool {
+@if cond x y = match cond :: Bool {
   | true -> x
   | false -> y
 }

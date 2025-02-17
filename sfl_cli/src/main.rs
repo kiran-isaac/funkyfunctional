@@ -1,4 +1,4 @@
-use sfl_lib::{self as lib, check_assignment_types};
+use sfl_lib::{self as lib, typecheck};
 use std::{
     env, fs,
     io::{self, Write},
@@ -41,7 +41,7 @@ fn main() {
         ast.to_string_sugar(ast.root, true),
         HORIZONTAL_SEPARATOR
     );
-    check_assignment_types(&mut ast, module, &mut lt, &tm).unwrap_or_else(|e| {
+    typecheck(&mut ast, module, &mut lt, &tm).unwrap_or_else(|e| {
         eprintln!("{:?}", e);
         std::process::exit(1)
     });

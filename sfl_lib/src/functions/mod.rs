@@ -24,15 +24,16 @@ type InbuiltFuncPointer = fn(&ASTNode, Vec<&ASTNode>) -> AST;
 #[derive(Clone, Debug)]
 pub struct Label {
     /// Arity needed to reduce the function.
-    pub reduction_arity: usize,
+    pub inbuilt_reduction_arity: usize,
 
     inbuilt: Option<InbuiltFuncPointer>,
     pub label_type: Type,
+    pub is_silent: bool,
 }
 
 impl Label {
     pub fn call_inbuilt(&self, call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-        assert!(self.reduction_arity == args.len());
+        assert!(self.inbuilt_reduction_arity == args.len());
         assert!(self.inbuilt.is_some());
         (self.inbuilt.unwrap())(call, args)
     }
@@ -94,14 +95,15 @@ impl KnownTypeLabelTable {
         self.func_map[arity].insert(
             name,
             Label {
-                reduction_arity: arity,
+                inbuilt_reduction_arity: arity,
                 inbuilt: Some(func),
                 label_type: func_type,
+                is_silent: true, // no effect for inbuilts
             },
         );
     }
 
-    pub fn add(&mut self, name: String, type_: Type) {
+    pub fn add(&mut self, name: String, type_: Type, is_silent: bool) {
         let arity = type_.get_arity();
 
         if arity >= self.func_map.len() {
@@ -111,9 +113,10 @@ impl KnownTypeLabelTable {
         self.func_map[arity].insert(
             name,
             Label {
-                reduction_arity: arity,
+                inbuilt_reduction_arity: arity,
                 inbuilt: None,
                 label_type: type_,
+                is_silent
             },
         );
     }
@@ -130,7 +133,8 @@ impl KnownTypeLabelTable {
 
     pub fn consume_from_module(&mut self, ast: &AST, module: usize) -> Result<(), TypeError> {
         for (name, assign) in ast.get_assigns_map(module) {
-            let proclaimed_type = match &ast.get(assign).type_assignment {
+            let ass_n = &ast.get(assign);
+            let proclaimed_type = match &ass_n.type_assignment {
                 None => {
                     return Err(TypeError {
                         e: format!("Label {} has no type assignment", name),
@@ -141,7 +145,7 @@ impl KnownTypeLabelTable {
                 Some(t) => t.clone(),
             };
 
-            self.add(name.clone(), proclaimed_type);
+            self.add(name.clone(), proclaimed_type, ass_n.is_silent);
         }
 
         Ok(())

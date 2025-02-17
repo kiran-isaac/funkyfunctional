@@ -344,6 +344,13 @@ impl Lexer {
                     value: "\\".to_string(),
                 })
             }
+            '@' => {
+                self.advance();
+                Ok(Token {
+                    tt: TokenType::Silence,
+                    value: "@".to_string(),
+                })
+            }
             ')' => {
                 self.advance();
                 Ok(Token {
