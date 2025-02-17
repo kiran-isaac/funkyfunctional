@@ -7,7 +7,6 @@ import {DefinitionSpawnButton, DefinitionWindow} from './help';
 import ASTHistory from './ASTHistory';
 
 function App() {
-  const [typeAssignsString, setTypeAssignsToString] = useState("");
   const [originalExprString, setOriginalExprString] = useState("");
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
   const [selectedRcFromStringHistory, setSelectedRcFromStringHistory] = useState<string[]>([]);
@@ -61,7 +60,6 @@ function App() {
       setOriginalExprString("")
       setSelectedRcFromStringHistory([])
       setSelectedRcToStringHistory([])
-      setTypeAssignsToString("")
     }
   }
 
@@ -72,7 +70,6 @@ function App() {
       setOriginalExprString(wasm.main_to_string(ast));
       setSelectedRcFromStringHistory([]);
       setSelectedRcToStringHistory([]);
-      setTypeAssignsToString(wasm.types_to_string(ast));
       generateRCs(ast, multiple);
       
       setErrorString("")
@@ -83,7 +80,6 @@ function App() {
       setOriginalExprString("")
       setSelectedRcFromStringHistory([])
       setSelectedRcToStringHistory([])
-      setTypeAssignsToString("")
     }
   };
 
@@ -100,17 +96,9 @@ function App() {
       <div id="Spacer"></div>
       <div id="TextArea">
         <div id="ASTArea">
-          {typeAssignsString && (
-            <>
-              <h4>Types:</h4>
-              <pre>{typeAssignsString}</pre>
-            </>
-          )}
-
           <ul id="RCArea">
             {rcs}
           </ul>
-
           {originalExprString && (
             <>
               <h4>Main Expression:</h4>
@@ -124,11 +112,9 @@ function App() {
         </div>
         <pre><ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToStringHistory} astHistory={astHistory} /></pre>
         <hr/>
-
         <div id="prelude">
           <h2>Prelude</h2><pre>{wasm.get_prelude()}</pre>
         </div>
-
       </div>
     </>
   )

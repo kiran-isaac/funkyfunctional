@@ -11,7 +11,8 @@
 
 #ASTArea,
 #Error,
-#ASTHistory {
+#ASTHistory,
+#prelude {
     width: 96%;
     padding-left: 2%;
     margin: 0;
