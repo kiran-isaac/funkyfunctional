@@ -1,9 +1,9 @@
 pub static PRELUDE: &str = r#"
 // Use as "if _ then _ else
 if :: Bool -> a -> a -> a
-@if cond x y = match cond :: Bool {
-  | true -> x
-  | false -> y
+@if cond then_branch else_branch = match cond {
+  | true -> then_branch
+  | false -> else_branch
 }
 
 data Either a b = Left a | Right b

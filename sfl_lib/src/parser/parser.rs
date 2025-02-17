@@ -823,7 +823,7 @@ impl Parser {
         let is_silent = ass_tk.tt == TokenType::Silence;
         if is_silent {
             self.advance();
-            ass_tk = self.consume()?;
+            ass_tk = if let Some(tk) = self.consume()? {tk} else {return Err(self.parse_error("Expected id after silence operator in assignment".to_string()))};
         }
 
         let name = ass_tk.value.clone();
