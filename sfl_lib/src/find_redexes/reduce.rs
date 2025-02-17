@@ -18,7 +18,7 @@ fn check_for_ready_call(
     ast: &AST,
     expr: usize,
     lt: &KnownTypeLabelTable,
-    am: &HashMap<String, AST>,
+    am: HashMap<String, usize>,
 ) -> Option<AST> {
     let mut f = ast.get_func(expr);
     let mut x = ast.get_arg(expr);
@@ -68,14 +68,15 @@ fn check_for_ready_call(
                         }
                     } else {
                         if !(f_node.wait_for_args && literals_only) {
-                            let assign_ast = match am.get(&name) {
-                                Some(a) => a.clone(),
+                            let assign = match am.get(&name) {
+                                Some(a) => *a,
                                 None => return None,
                             };
 
-                            let n_args = assign_ast.get_n_abstr_vars(assign_ast.root, argv.len());
+                            let assign_exp = ast.get_assign_exp(assign);
+                            let n_args = ast.get_n_abstr_vars(assign_exp, argv.len());
 
-                            if n_args.len() != argv.len() {
+                            if ast.get_n_abstr_vars(assign_exp, argv.len()).len() != argv.len() {
                                 return None;
                             }
 
@@ -88,20 +89,12 @@ fn check_for_ready_call(
                                 }
                             }
 
-                            let mut ready_call_result =
-                                assign_ast.do_multiple_abst_substs(assign_ast.root, argv_ids);
+                            let mut ready_call_result = ast.do_multiple_abst_substs(assign_exp, argv_ids);
 
                             if label.is_silent {
-                                while let Some(silent_rc) = find_single_redex_contraction_pair(
-                                    &ready_call_result,
-                                    None,
-                                    ready_call_result.root,
-                                    lt,
-                                    Some(am),
-                                ) {
-                                    ready_call_result
-                                        .do_rc_subst(ready_call_result.root, &silent_rc);
-                                }
+                                while let Some(silent_rc) = find_single_redex_contraction_pair(&ready_call_result, None, ready_call_result.root, lt) {
+                                    ready_call_result.do_rc_subst(ready_call_result.root, &silent_rc);
+                                };
                             }
 
                             Some(ready_call_result)
@@ -151,9 +144,11 @@ pub fn find_all_redex_contraction_pairs(
     #[cfg(debug_assertions)]
     let _exp_str = ast.to_string_sugar(expr, false);
 
-    let am = match module {
-        Some(m) => &ast.get_assigns_map(m),
-        None => panic!("No module or assigns map provided"),
+    // Dont need to worry about this as main must be at the end, so everything defined in
+    // the module is defined here
+    let am: HashMap<String, usize> = match module {
+        Some(m) => ast.get_assigns_map(m),
+        None => HashMap::new(),
     };
 
     match ast.get(expr).t {
@@ -176,7 +171,7 @@ pub fn find_all_redex_contraction_pairs(
             pairs.extend(right_rcs);
         }
         ASTNodeType::Match | ASTNodeType::Identifier => {
-            if let Some(rc) = find_single_redex_contraction_pair(ast, module, expr, lt, None) {
+            if let Some(rc) = find_single_redex_contraction_pair(ast, module, expr, lt) {
                 pairs.push(rc);
             }
         }
@@ -191,29 +186,26 @@ pub fn find_single_redex_contraction_pair(
     module: Option<usize>,
     expr: usize,
     lt: &KnownTypeLabelTable,
-    am: Option<&HashMap<String, AST>>,
 ) -> Option<RCPair> {
     #[cfg(debug_assertions)]
     let _exp_str = ast.to_string_sugar(expr, false);
 
-    let mut am = if am.is_some() {
-        am.unwrap()
-    } else {
-        match module {
-            Some(m) => &ast.get_assigns_map(m),
-            None => panic!("No module or assigns map provided"),
-        }
+    // Dont need to worry about this as main must be at the end, so everything defined in
+    // the module is defined here
+    let am: HashMap<String, usize> = match module {
+        Some(m) => ast.get_assigns_map(m),
+        None => HashMap::new(),
     };
 
     match ast.get(expr).t {
         ASTNodeType::Literal | ASTNodeType::Abstraction => None,
         ASTNodeType::Pair => {
             if let Some(left_rc) =
-                find_single_redex_contraction_pair(ast, module, ast.get_first(expr), lt, Some(am))
+                find_single_redex_contraction_pair(ast, module, ast.get_first(expr), lt)
             {
                 Some(left_rc)
             } else {
-                find_single_redex_contraction_pair(ast, module, ast.get_second(expr), lt, Some(am))
+                find_single_redex_contraction_pair(ast, module, ast.get_second(expr), lt)
             }
         }
         ASTNodeType::Identifier => {
@@ -230,12 +222,13 @@ pub fn find_single_redex_contraction_pair(
                             Some((expr, inbuilt))
                         } else {
                             let assign = if let Some(assign) = am.get(&value) {
-                                assign.clone()
+                                *assign
                             } else {
                                 return None;
                             };
 
-                            Some((expr, assign))
+                            let assign_exp = ast.get_assign_exp(assign);
+                            Some((expr, ast.clone_node(assign_exp)))
                         };
                     }
                 }
@@ -246,11 +239,11 @@ pub fn find_single_redex_contraction_pair(
             if let Some(ready_call_reduction) = check_for_ready_call(ast, expr, &lt, am) {
                 Some((expr, ready_call_reduction))
             } else if let Some(f_rc) =
-                find_single_redex_contraction_pair(ast, module, ast.get_func(expr), lt, Some(am))
+                find_single_redex_contraction_pair(ast, module, ast.get_func(expr), lt)
             {
                 Some(f_rc)
             } else {
-                find_single_redex_contraction_pair(ast, module, ast.get_arg(expr), lt, Some(am))
+                find_single_redex_contraction_pair(ast, module, ast.get_arg(expr), lt)
             }
         }
         ASTNodeType::Match => {
@@ -269,7 +262,7 @@ pub fn find_single_redex_contraction_pair(
                     return Some((expr, pat_expr_cloned.clone_node(pat_expr_cloned.root)));
                 }
             }
-            find_single_redex_contraction_pair(ast, module, unpack_expr, lt, Some(am))
+            find_single_redex_contraction_pair(ast, module, unpack_expr, lt)
         }
         _ => None,
     }

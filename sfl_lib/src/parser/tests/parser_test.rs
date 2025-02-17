@@ -84,21 +84,15 @@ fn multi_assign() -> Result<(), ParserError> {
 fn bound() -> Result<(), ParserError> {
     // recursive
     let str = "x = x 5";
-    Parser::from_string(str.to_string())
-        .parse_module(false)?
-        .ast;
+    Parser::from_string(str.to_string()).parse_module(false)?.ast;
 
     // add is an inbuilt
     let str = "x = add 2 x";
-    Parser::from_string(str.to_string())
-        .parse_module(false)?
-        .ast;
+    Parser::from_string(str.to_string()).parse_module(false)?.ast;
 
     // y is unbound
     let str = "x = add 2 y";
-    assert!(Parser::from_string(str.to_string())
-        .parse_module(false)
-        .is_err());
+    assert!(Parser::from_string(str.to_string()).parse_module(false).is_err());
 
     Ok(())
 }
@@ -221,10 +215,7 @@ fn ite() -> Result<(), ParserError> {
     let ast = parser.parse_module(true)?.ast;
     let module = 0;
 
-    assert_eq!(
-        ast.to_string_sugar(ast.get_assign_to(module, "x".to_string()).unwrap(), false),
-        str
-    );
+    assert_eq!(ast.to_string_sugar(ast.get_assign_to(module, "x".to_string()).unwrap(), false), str);
 
     let str = "x = \\_ :: Int. add (if true then 1 else 2) (if true then 2 else 3)";
     let mut parser = Parser::from_string(str.to_string());
@@ -262,9 +253,7 @@ fn pair() -> Result<(), ParserError> {
 #[test]
 fn type_decl() -> Result<(), ParserError> {
     let str = "type Bingus = Int\nmain :: Bingus -> Int\nmain = \\x.x";
-    let ast = Parser::from_string(str.to_string())
-        .parse_module(false)?
-        .ast;
+    let ast = Parser::from_string(str.to_string()).parse_module(false)?.ast;
     assert_eq!(
         format!("{}", ast.to_string_sugar(ast.root, true)),
         "main :: Bingus -> Int\nmain = \\x. x"

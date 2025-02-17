@@ -80,7 +80,9 @@ fn assert_eq_in_any_order<T: PartialEq>(a: &Vec<T>, b: &Vec<T>) {
 // }
 
 use crate::find_redexes::reduce::find_single_redex_contraction_pair;
-use crate::{find_all_redex_contraction_pairs, typecheck, KnownTypeLabelTable, Parser};
+use crate::{
+    find_all_redex_contraction_pairs, typecheck, KnownTypeLabelTable, Parser,
+};
 
 #[test]
 fn basic_add_test() {

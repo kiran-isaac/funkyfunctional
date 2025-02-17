@@ -818,20 +818,12 @@ impl Parser {
         type_table: &HashMap<String, Type>,
     ) -> Result<usize, ParserError> {
         let mut ass_tk = self.peek(0)?;
-        assert!(
-            ass_tk.tt == TokenType::Id
-                || ass_tk.tt == TokenType::If
-                || ass_tk.tt == TokenType::Silence
-        );
+        assert!(ass_tk.tt == TokenType::Id || ass_tk.tt == TokenType::If || ass_tk.tt == TokenType::Silence);
 
         let is_silent = ass_tk.tt == TokenType::Silence;
         if is_silent {
             self.advance();
-            ass_tk = self.consume()?;
-            if ass_tk.tt != TokenType::If && ass_tk.tt != TokenType::Id {
-                return Err(self
-                    .parse_error("Expected id after silence operator in assignment".to_string()));
-            };
+            ass_tk = if let Some(tk) = self.consume()? {tk} else {return Err(self.parse_error("Expected id after silence operator in assignment".to_string()))};
         }
 
         let name = ass_tk.value.clone();
@@ -871,14 +863,7 @@ impl Parser {
             Err(_) => None,
         };
 
-        Ok(ast.add_assignment(
-            id,
-            expr,
-            self.lexer.line,
-            self.lexer.col,
-            type_assignment,
-            is_silent,
-        ))
+        Ok(ast.add_assignment(id, expr, self.lexer.line, self.lexer.col, type_assignment, is_silent))
     }
 
     /// Takes type table, returns the name of the data and also the type constructors
@@ -1104,10 +1089,7 @@ impl Parser {
                 TokenType::Id | TokenType::If | TokenType::Silence => {
                     let next = self.peek(1)?;
                     match next.tt {
-                        TokenType::Assignment
-                        | TokenType::Id
-                        | TokenType::If
-                        | TokenType::LParen => {
+                        TokenType::Assignment | TokenType::Id | TokenType::If | TokenType::LParen => {
                             let assignment = self.parse_assignment(&mut ast, &tm.types)?;
                             let ass_node = ast.get(assignment);
                             let ass_name = ast.get_assignee(assignment);

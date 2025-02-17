@@ -116,7 +116,7 @@ impl KnownTypeLabelTable {
                 inbuilt_reduction_arity: arity,
                 inbuilt: None,
                 label_type: type_,
-                is_silent,
+                is_silent
             },
         );
     }
@@ -129,6 +129,26 @@ impl KnownTypeLabelTable {
             }
         }
         false
+    }
+
+    pub fn consume_from_module(&mut self, ast: &AST, module: usize) -> Result<(), TypeError> {
+        for (name, assign) in ast.get_assigns_map(module) {
+            let ass_n = &ast.get(assign);
+            let proclaimed_type = match &ass_n.type_assignment {
+                None => {
+                    return Err(TypeError {
+                        e: format!("Label {} has no type assignment", name),
+                        line: ast.get(assign).line,
+                        col: ast.get(assign).col,
+                    })
+                }
+                Some(t) => t.clone(),
+            };
+
+            self.add(name.clone(), proclaimed_type, ass_n.is_silent);
+        }
+
+        Ok(())
     }
 
     pub fn get_n_ary_labels(&self, arity: usize) -> Option<&HashMap<String, Label>> {

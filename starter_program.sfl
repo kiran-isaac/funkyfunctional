@@ -1,5 +1,5 @@
 filter :: (a -> Bool) -> List a -> List a
-@filter pred list = match list :: List a {
+filter pred list = match list :: List a {
   | Nil -> Nil
   | Cons x xs -> if (pred x) then Cons x (filter pred xs) else filter pred xs
 }
