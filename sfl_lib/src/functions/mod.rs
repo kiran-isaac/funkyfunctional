@@ -116,7 +116,7 @@ impl KnownTypeLabelTable {
                 inbuilt_reduction_arity: arity,
                 inbuilt: None,
                 label_type: type_,
-                is_silent
+                is_silent,
             },
         );
     }

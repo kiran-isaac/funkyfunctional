@@ -19,6 +19,7 @@ fn check_for_ready_call(
     expr: usize,
     lt: &KnownTypeLabelTable,
     am: HashMap<String, usize>,
+    module: Option<usize>
 ) -> Option<AST> {
     let mut f = ast.get_func(expr);
     let mut x = ast.get_arg(expr);
@@ -91,9 +92,26 @@ fn check_for_ready_call(
 
                             let mut ready_call_result = ast.do_multiple_abst_substs(assign_exp, argv_ids);
 
+                            #[cfg(debug_assertions)]
+                            let _ready_call_result_str = ready_call_result.to_string_sugar(ready_call_result.root, false);
+
                             if label.is_silent {
-                                while let Some(silent_rc) = find_single_redex_contraction_pair(&ready_call_result, None, ready_call_result.root, lt) {
-                                    ready_call_result.do_rc_subst(ready_call_result.root, &silent_rc);
+                                let mut ast_substituted = ast.clone();
+                                let mut expr = ast_substituted.do_rc_subst(expr, &(expr, ready_call_result.clone()));
+
+                                #[cfg(debug_assertions)]
+                                let _ast_substituted_string = ast_substituted.to_string_sugar(ast_substituted.root, false);
+
+                                while let Some(silent_rc) = find_single_redex_contraction_pair(&ast_substituted, module, expr, lt) {
+                                    expr = ast_substituted.do_rc_subst(expr, &silent_rc);
+
+                                    #[cfg(debug_assertions)]
+                                    let _ast_substituted_string = ast_substituted.to_string_sugar(ast_substituted.root, false);
+
+                                    ready_call_result = ast_substituted.clone_node(expr);
+
+                                    #[cfg(debug_assertions)]
+                                    let _ready_call_result_str = ready_call_result.to_string_sugar(ready_call_result.root, false);
                                 };
                             }
 
@@ -157,7 +175,7 @@ pub fn find_all_redex_contraction_pairs(
             let f = ast.get_func(expr);
             let x = ast.get_arg(expr);
 
-            if let Some(inbuilt_reduction) = check_for_ready_call(ast, expr, &lt, am) {
+            if let Some(inbuilt_reduction) = check_for_ready_call(ast, expr, &lt, am, module) {
                 pairs.push((expr, inbuilt_reduction));
             }
 
@@ -228,7 +246,29 @@ pub fn find_single_redex_contraction_pair(
                             };
 
                             let assign_exp = ast.get_assign_exp(assign);
-                            Some((expr, ast.clone_node(assign_exp)))
+                            let mut ready_call_result = ast.clone_node(assign_exp);
+
+                            if label.is_silent {
+                                let mut ast_substituted = ast.clone();
+                                let mut expr = ast_substituted.do_rc_subst(expr, &(expr, ready_call_result.clone()));
+
+                                #[cfg(debug_assertions)]
+                                let _ast_substituted_string = ast_substituted.to_string_sugar(ast_substituted.root, false);
+
+                                while let Some(silent_rc) = find_single_redex_contraction_pair(&ast_substituted, module, expr, lt) {
+                                    expr = ast_substituted.do_rc_subst(expr, &silent_rc);
+
+                                    #[cfg(debug_assertions)]
+                                    let _ast_substituted_string = ast_substituted.to_string_sugar(ast_substituted.root, false);
+
+                                    ready_call_result = ast_substituted.clone_node(expr);
+
+                                    #[cfg(debug_assertions)]
+                                    let _ready_call_result_str = ready_call_result.to_string_sugar(ready_call_result.root, false);
+                                };
+                            }
+
+                            Some((expr, ready_call_result))
                         };
                     }
                 }
@@ -236,7 +276,7 @@ pub fn find_single_redex_contraction_pair(
             None
         }
         ASTNodeType::Application => {
-            if let Some(ready_call_reduction) = check_for_ready_call(ast, expr, &lt, am) {
+            if let Some(ready_call_reduction) = check_for_ready_call(ast, expr, &lt, am, module) {
                 Some((expr, ready_call_reduction))
             } else if let Some(f_rc) =
                 find_single_redex_contraction_pair(ast, module, ast.get_func(expr), lt)
