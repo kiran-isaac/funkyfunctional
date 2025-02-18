@@ -321,3 +321,24 @@ fn check_ifmatch() -> Result<(), ParserError> {
 
     Ok(())
 }
+
+#[test]
+fn bind_io() -> Result<(), ParserError> {
+    let program = r#"
+    type RealWorld = Int
+    data IO a = IO (RealWorld -> (RealWorld, a))
+
+    // Bind over IO
+    main :: IO a -> (a -> IO b) -> IO b
+    main io f = IO match io {
+        | IO action -> IO (\w. match (action w) {
+            | (new_w, x) -> match f x {
+                | IO new_action -> new_action new_w
+            }
+        })
+    }"#;
+
+    mod_main_inference_test(program, "∀a. ∀b. IO a -> (a -> IO b) -> IO b");
+
+    Ok(())
+}
