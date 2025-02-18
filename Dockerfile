@@ -1,5 +1,6 @@
 FROM kiranisturt/wasm_pack:1.81 AS wasm-builder
 
+COPY prelude.sfl /build/prelude.sfl
 COPY wasm_lib /build/wasm_lib
 COPY sfl_lib /build/sfl_lib
 
