@@ -1,9 +1,8 @@
 use super::ast::AST;
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
-use super::prelude::PRELUDE;
 use super::token::*;
-use crate::{ASTNodeType, KnownTypeLabelTable, Type};
+use crate::{ASTNodeType, KnownTypeLabelTable, Type, PRELUDE};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use std::fs::File;
