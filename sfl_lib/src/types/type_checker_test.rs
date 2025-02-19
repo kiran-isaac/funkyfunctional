@@ -338,11 +338,11 @@ fn bind_io() -> Result<(), TypeError> {
 
     // Bind over IO
     main :: IO a -> (a -> IO b) -> IO b
-    main io f = match io :: IO a {
+    main io f = match io {
         | IO action -> IO (\w. match (action w) {
             | (new_w, x) -> match f x {
-                | IO new_action -> new_action new_w
-            }
+                | IO new_action -> new_action new_w // (RealWorld, b)
+            } // (RealWorld, b)
         })
     }"#
     )

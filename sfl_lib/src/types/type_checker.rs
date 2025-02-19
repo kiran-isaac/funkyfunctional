@@ -162,6 +162,11 @@ impl Context {
         let mut next_placeholder_assignvar_i = self.next_placeholder_assignvar_i;
         let mut next_exid = self.next_exid;
 
+        match item {
+            ContextItem::Existential(e2, _) => {next_exid = std::cmp::max(e2, next_exid);}
+            _ => {}
+        };
+
         for i in &self.vec {
             match i {
                 ContextItem::TypeAssignment(name, _) => {
@@ -471,7 +476,8 @@ fn instantiate_l(c: Context, exst: usize, b: &Type, type_map: &TypeMap) -> Resul
             let a2 = ContextItem::Existential(a2n, None);
             let c = c
                 .add_before_existential(exst, a1)
-                .add_before_existential(exst, a2);
+                .add_before_existential(exst, a2)
+                .set_existential_definition(exst, Type::f(Type::Existential(a1n), Type::Existential(a2n)));
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
@@ -483,6 +489,7 @@ fn instantiate_l(c: Context, exst: usize, b: &Type, type_map: &TypeMap) -> Resul
             let _to_subst_str = format!("{:?}", &to_subst);
 
             let pred2 = instantiate_l(pred1_c, a2n, &to_subst, type_map)?;
+
             Ok(pred2)
         }
 
@@ -543,12 +550,12 @@ fn instantiate_r(c: Context, exst: usize, a: &Type, type_map: &TypeMap) -> Resul
             let _c_str1 = format!("{:?}", &c);
 
             let c = c
+                .add_before_existential(exst, a2)
+                .add_before_existential(exst, a1)
                 .set_existential_definition(
                     exst,
                     Type::f(Type::Existential(a1n), Type::Existential(a2n)),
-                )
-                .add_before_existential(exst, a2)
-                .add_before_existential(exst, a1);
+                );
 
             #[cfg(debug_assertions)]
             let _c_str2 = format!("{:?}", &c);
@@ -831,6 +838,9 @@ fn synthesize_app_type(
                 c.get_next_existential_identifier(),
                 None,
             ));
+
+            #[cfg(debug_assertions)]
+            let _new_c_str = format!("{:?}", &new_c);
 
             let a_subst = match t.substitute_type_variable(
                 &var.clone(),
