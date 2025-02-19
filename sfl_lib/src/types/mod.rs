@@ -5,6 +5,14 @@ use std::fmt::Display;
 use std::hash::Hash;
 pub use type_checker::*;
 
+pub static IO_TYPE: &Type = &Type::Forall(
+    "a".to_string(),
+    Box::new(Type::Union(
+        "IO".to_string(),
+        vec![Type::TypeVariable("a".to_string())],
+    )),
+);
+
 #[cfg(test)]
 mod type_checker_test;
 

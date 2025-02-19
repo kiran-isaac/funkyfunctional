@@ -2,7 +2,7 @@ use super::ast::AST;
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
-use crate::{ASTNodeType, KnownTypeLabelTable, Type, PRELUDE};
+use crate::{ASTNodeType, KnownTypeLabelTable, Type, PRELUDE, IO_TYPE};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use std::fs::File;
@@ -31,6 +31,7 @@ impl TypeMap {
         type_decls.insert("Int".to_string(), Type::int64());
         type_decls.insert("Float".to_string(), Type::float64());
         type_decls.insert("Bool".to_string(), Type::bool());
+        type_decls.insert("IO".to_string(), IO_TYPE.clone());
         Self { types: type_decls }
     }
 }

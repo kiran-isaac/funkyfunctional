@@ -274,13 +274,6 @@ impl Lexer {
                     })
                 }
             },
-            '(' => {
-                self.advance();
-                Ok(Token {
-                    tt: TokenType::LParen,
-                    value: "(".to_string(),
-                })
-            }
             '|' => {
                 self.advance();
                 Ok(Token {
@@ -350,6 +343,22 @@ impl Lexer {
                     tt: TokenType::Silence,
                     value: "@".to_string(),
                 })
+            }
+            '(' => {
+                self.advance();
+                match self.c() {
+                    ')' => {
+                        self.advance();
+                        Ok(Token {
+                            tt: TokenType::Id,
+                            value: "()".to_string(),
+                        })
+                    }
+                    _ => Ok(Token {
+                        tt: TokenType::LParen,
+                        value: "(".to_string(),
+                    }),
+                }
             }
             ')' => {
                 self.advance();

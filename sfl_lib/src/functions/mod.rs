@@ -7,6 +7,7 @@ mod inbuilt_arith;
 
 #[cfg(test)]
 mod test;
+mod inbuilt_io;
 
 fn assert_prim_type(x: &Type, p: Primitive) {
     match x {
@@ -355,6 +356,13 @@ impl KnownTypeLabelTable {
             inbuilt_int_zero,
             Type::int64(),
         );
+
+        self.add_inbuilt(
+            "putInt",
+            1,
+
+            IO_TYPE.type_app(&Type::int64()),
+        )
     }
 
     /// Get all strings that are inbuilts so that they can be added to the bound checker

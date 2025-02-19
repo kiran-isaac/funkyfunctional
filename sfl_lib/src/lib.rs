@@ -11,7 +11,7 @@ pub use functions::KnownTypeLabelTable;
 pub use parser::ast::{ASTNode, ASTNodeType, AST};
 pub use parser::Parser;
 pub use prelude::PRELUDE;
-pub use types::{typecheck, typecheck_tl_expr, Primitive, Type, TypeError};
+pub use types::{typecheck, typecheck_tl_expr, Primitive, Type, TypeError, IO_TYPE};
 
 #[cfg(test)]
 mod lib_test;
