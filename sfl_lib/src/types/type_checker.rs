@@ -5,6 +5,8 @@ use crate::{functions::KnownTypeLabelTable, parser::TypeMap, ASTNodeType, AST};
 
 use super::{Type, TypeError};
 
+static MUST_ASSIGN: bool = true;
+
 #[derive(Clone, PartialEq, Eq)]
 enum ContextItem {
     TypeVariable(String),
@@ -1133,11 +1135,21 @@ pub fn typecheck(
                 c = check_type(c, &type_assignment, ast, assign_expr, type_map, false)?;
             }
             None => {
-                return Err(type_error(
-                    format!("Cannot find type assignment for:  {}", &assign_var),
-                    ast,
-                    assign_expr,
+                if MUST_ASSIGN {
+                    return Err(type_error(
+                        format!("Cannot find type assignment for:  {}", &assign_var),
+                        ast,
+                        assign_expr,
+                    ));
+                }
+
+                c = c.append(ContextItem::TypeAssignment(
+                    assign_var.clone(),
+                    Err(type_error(format!("Cannot infer type of expression containing recursive call. Assign a type to label '{}'", &assign_var), ast, assign_expr)),
                 ));
+                let (t, _) = infer_type_with_context(c.clone(), &ast, assign_expr, type_map)?;
+                let t = t.forall_ify();
+                ast.set_assignment_type(assign, t.clone());
             }
         };
     }
