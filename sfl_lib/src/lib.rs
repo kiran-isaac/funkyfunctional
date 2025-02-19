@@ -1,8 +1,8 @@
 mod find_redexes;
 mod functions;
 mod parser;
-mod types;
 mod prelude;
+mod types;
 
 pub use find_redexes::{
     find_all_redex_contraction_pairs, find_single_redex_contraction_pair, RCPair,

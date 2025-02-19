@@ -476,7 +476,7 @@ fn instantiate_l(c: Context, exst: usize, b: &Type, type_map: &TypeMap) -> Resul
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);
 
-            let pred1_c = instantiate_r(c, exst, from.as_ref(), type_map)?;
+            let pred1_c = instantiate_r(c, a1n, from.as_ref(), type_map)?;
             let to_subst = pred1_c.substitute(to);
 
             #[cfg(debug_assertions)]
@@ -882,7 +882,7 @@ fn synthesize_app_type(
             expr,
         )),
 
-        _ => Err(type_error("App synthesis error".to_string(), ast, expr)),
+        _ => Err(type_error(format!("App synthesis error. Failed to understand the application of type {} to expression {}", applied_type, ast.to_string_sugar(expr, false)), ast, expr)),
     }
 }
 

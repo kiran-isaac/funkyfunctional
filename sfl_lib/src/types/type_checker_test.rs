@@ -1,8 +1,7 @@
 use super::*;
-use crate::parser::ParserError;
 use crate::Parser;
 
-fn tc_test_should_pass(program: &str) {
+fn tc_test_should_pass(program: &str) -> Result<(), TypeError> {
     let pr = Parser::from_string(program.to_string())
         .parse_module(true)
         .unwrap();
@@ -10,7 +9,18 @@ fn tc_test_should_pass(program: &str) {
     let mut lt = pr.lt;
     let tm = pr.tm;
     let module = ast.root;
-    typecheck(&mut ast, module, &mut lt, &tm).unwrap();
+    typecheck(&mut ast, module, &mut lt, &tm)
+}
+
+fn tc_test_should_pass_no_prelude(program: &str) -> Result<(), TypeError> {
+    let pr = Parser::from_string(program.to_string())
+        .parse_module(false)
+        .unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
+    let module = ast.root;
+    typecheck(&mut ast, module, &mut lt, &tm)
 }
 
 fn tc_test_should_fail(program: &str) {
@@ -25,12 +35,12 @@ fn tc_test_should_fail(program: &str) {
 }
 
 #[test]
-fn type_check_int_assign() {
+fn type_check_int_assign() -> Result<(), TypeError> {
     tc_test_should_pass("x :: Int\nx=10\nmain :: Int\nmain = x")
 }
 
 #[test]
-fn type_check_int_add() {
+fn type_check_int_add() -> Result<(), TypeError> {
     tc_test_should_pass("main :: Int\nmain = add 2 2")
 }
 
@@ -40,43 +50,46 @@ fn type_check_int_add_fail() {
 }
 
 #[test]
-fn type_check_eq() {
+fn type_check_eq() -> Result<(), TypeError> {
     tc_test_should_pass("main :: Bool\nmain = eq (add 2 2) (mul 2 2)")
 }
 
 #[test]
-fn type_check_ite() {
-    tc_test_should_pass("main :: Float\nmain = if false then 2.0 else 3.0");
-    tc_test_should_pass("main :: Int\nmain = if false then 2 else 3");
-    tc_test_should_pass("main :: Bool\nmain = if true then true else false");
+fn type_check_ite() -> Result<(), TypeError> {
+    tc_test_should_pass("main :: Float\nmain = if false then 2.0 else 3.0")?;
+    tc_test_should_pass("main :: Int\nmain = if false then 2 else 3")?;
+    tc_test_should_pass("main :: Bool\nmain = if true then true else false")?;
 
     tc_test_should_fail("main :: Int\nmain = if false then 2.0 else 3");
     tc_test_should_fail("main :: Float\nmain = if false then 2.0 else true");
+    Ok(())
 }
 
 #[test]
-fn type_check_const_int_abst() {
+fn type_check_const_int_abst() -> Result<(), TypeError> {
     tc_test_should_pass(
         "const_10 :: Float -> Int\nconst_10 = \\x . 10\nmain :: Int\nmain = const_10 2.0",
-    );
+    )?;
 
     tc_test_should_fail(
         "const_10 :: Float -> Int\nconst_10 = \\x . 10\nmain :: Int\nmain = const_10 2",
     );
+
+    Ok(())
 }
 
 #[test]
-fn type_check_abst() {
-    tc_test_should_pass("main :: Int\nmain = (\\x y z.x) 10 10 10");
-    tc_test_should_pass("main :: Int\nmain = (\\x y z a.x) 10 (\\x.x) 10 true");
-    tc_test_should_pass("main :: Int -> Int\nmain = (\\x.x) (\\x.x)");
-    tc_test_should_pass("main :: Int\nmain = (\\x.x) ((\\x.x) 10)");
+fn type_check_abst() -> Result<(), TypeError> {
+    tc_test_should_pass("main :: Int\nmain = (\\x y z.x) 10 10 10")?;
+    tc_test_should_pass("main :: Int\nmain = (\\x y z a.x) 10 (\\x.x) 10 true")?;
+    tc_test_should_pass("main :: Int -> Int\nmain = (\\x.x) (\\x.x)")?;
+    tc_test_should_pass("main :: Int\nmain = (\\x.x) ((\\x.x) 10)")?;
     tc_test_should_fail("main :: Int\nmain = (\\x y. y) 10 true");
-    tc_test_should_pass("main :: Int\nmain = (\\x y. x) 10 true");
+    tc_test_should_pass("main :: Int\nmain = (\\x y. x) 10 true")?;
 
-    tc_test_should_pass("main :: Int -> Int\nmain = (\\x.x)");
+    tc_test_should_pass("main :: Int -> Int\nmain = (\\x.x)")?;
 
-    tc_test_should_pass("main :: Int -> Int\nmain = (\\x y. x) (\\x.x) (\\x.x)");
+    tc_test_should_pass("main :: Int -> Int\nmain = (\\x y. x) (\\x.x) (\\x.x)")
 }
 
 #[test]
@@ -92,33 +105,50 @@ fn type_check_extra_arg_should_fail() {
 }
 
 #[test]
-fn type_check_const_abst() {
-    tc_test_should_pass("main :: Float\nmain = (\\x y. x) 2.0 20");
-    tc_test_should_pass("main :: Int\nmain = (\\_ . 10) 2.0");
+fn type_check_const_abst() -> Result<(), TypeError> {
+    tc_test_should_pass("main :: Float\nmain = (\\x y. x) 2.0 20")?;
+    tc_test_should_pass("main :: Int\nmain = (\\_ . 10) 2.0")?;
     tc_test_should_fail("main :: Int\nmain = (\\x y . x) 2.0");
-    tc_test_should_pass("main :: Int\nmain = (\\x y. y) 2.0 20");
-    tc_test_should_pass("main :: Int\nmain = (\\x y. y) 2.0 20");
-    tc_test_should_pass("main :: Int\nmain = (\\x :: Int -> Int. x) (\\x :: Int.x) 20");
+    tc_test_should_pass("main :: Int\nmain = (\\x y. y) 2.0 20")?;
+    tc_test_should_pass("main :: Int\nmain = (\\x y. y) 2.0 20")?;
+    tc_test_should_pass("main :: Int\nmain = (\\x :: Int -> Int. x) (\\x :: Int.x) 20")
 }
 
 #[test]
-fn type_check_pair() {
-    tc_test_should_pass("triple_first :: (a, (b, c)) -> a\ntriple_first (x, (y, z)) = x");
-    tc_test_should_pass("triple_second :: (a, (b, c)) -> b\ntriple_second  (x, (y, z)) = y");
-    tc_test_should_pass("triple_third :: (a, (b, c)) -> c\ntriple_third  (x, (y, z)) = z");
+fn type_check_pair() -> Result<(), TypeError> {
+    tc_test_should_pass("triple_first :: (a, (b, c)) -> a\ntriple_first (x, (y, z)) = x")?;
+    tc_test_should_pass("triple_second :: (a, (b, c)) -> b\ntriple_second  (x, (y, z)) = y")?;
+    tc_test_should_pass("triple_third :: (a, (b, c)) -> c\ntriple_third  (x, (y, z)) = z")?;
 
-    tc_test_should_pass("first :: (a, b) -> a\nfirst (x, y) = x");
-    tc_test_should_pass("second :: (a, b) -> b\nsecond (x, y) = y");
+    tc_test_should_pass("first :: (a, b) -> a\nfirst (x, y) = x")?;
+    tc_test_should_pass("second :: (a, b) -> b\nsecond (x, y) = y")?;
 
-    tc_test_should_pass("pair :: a -> b -> (a, b)\npair x y = (x, y)");
-    tc_test_should_pass("main :: a -> b -> (a, b)\nmain = \\x y. (x, y)");
-    tc_test_should_pass("main :: a -> b -> c -> (a, (b, c))\nmain = \\x y z. (x, (y, z))");
+    tc_test_should_pass("pair :: a -> b -> (a, b)\npair x y = (x, y)")?;
+    tc_test_should_pass("main :: a -> b -> (a, b)\nmain = \\x y. (x, y)")?;
+    tc_test_should_pass("main :: a -> b -> c -> (a, (b, c))\nmain = \\x y z. (x, (y, z))")?;
     tc_test_should_pass(
         "main :: a -> b -> c -> d -> ((a, b), (c, d))\nmain = \\a b c d. ((a, b), (c, d))",
-    );
+    )
 }
 
 fn mod_main_inference_test(program: &str, type_str: &str) {
+    let pr = Parser::from_string(program.to_string())
+        .parse_module(true)
+        .unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
+    let module = ast.root;
+    typecheck(&mut ast, module, &mut lt, &tm).unwrap();
+    let main_expr_type = ast
+        .get(ast.get_main(ast.root).unwrap())
+        .clone()
+        .type_assignment
+        .unwrap();
+    assert_eq!(main_expr_type.to_string(), type_str);
+}
+
+fn mod_main_inference_test_no_prelude(program: &str, type_str: &str) {
     let pr = Parser::from_string(program.to_string())
         .parse_module(true)
         .unwrap();
@@ -155,32 +185,22 @@ fn expr_inference_should_fail(program: &str) {
 }
 
 #[test]
-fn infer() {
-    mod_main_inference_test(
-        "main:: (a -> b) -> a -> b\nmain f x = f x",
-        "∀a. ∀b. (a -> b) -> a -> b",
-    );
+fn stuff() -> Result<(), TypeError> {
+    tc_test_should_pass("main:: (a -> b) -> a -> b\nmain f x = f x")?;
 
-    mod_main_inference_test(
-        "main :: a -> b -> b\nmain = \\b . if true then (\\x . x) else (\\x . x)",
-        "∀a. ∀b. a -> b -> b",
-    );
+    tc_test_should_pass("main :: a -> b -> b\nmain = \\b . if true then (\\x . x) else (\\x . x)")?;
 
     expr_inference_should_fail("\\x . x x");
 
-    mod_main_inference_test(
-        "main::Int -> Int\nmain = if true then (\\x :: Int. x) else (\\x . x)",
-        "Int -> Int",
-    );
-    mod_main_inference_test(
+    tc_test_should_pass("main::Int -> Int\nmain = if true then (\\x :: Int. x) else (\\x . x)")?;
+    tc_test_should_pass(
         "main :: Bool -> Int -> Int\nmain = \\b . if b then (\\x . x) else (\\x . 10)",
-        "Bool -> Int -> Int",
-    );
+    )
 }
 
 #[test]
 fn alias_test() -> Result<(), TypeError> {
-    tc_test_should_pass("type IntAlias = Int\nmain :: IntAlias -> Int\nmain = \\x.x");
+    tc_test_should_pass("type IntAlias = Int\nmain :: IntAlias -> Int\nmain = \\x.x")?;
     tc_test_should_fail("type IntAlias = Bool\nmain :: IntAlias -> Int\nmain = \\x.x");
     tc_test_should_fail("type IntAlias = Int\nmain :: IntAlias -> Bool\nmain = \\x.x");
 
@@ -191,7 +211,7 @@ fn alias_test() -> Result<(), TypeError> {
 fn maybe_test() -> Result<(), TypeError> {
     tc_test_should_pass(
         "data Maybe2 a = Some2 a | None\nmain :: a -> Maybe2 a\nmain = \\x. Some2 x",
-    );
+    )?;
     tc_test_should_fail("data Maybe2 a = Some2 a | None\nmain :: a -> Int\nmain = \\x. Some2 x");
 
     Ok(())
@@ -204,45 +224,41 @@ fn either_test() -> Result<(), TypeError> {
     );
     tc_test_should_pass(
         "data Either2 a b = Left2 a | Right2 b\nmain :: a -> Either2 b a\nmain = \\x. Left2 x",
-    );
+    )?;
 
     Ok(())
 }
 
 #[test]
 fn list_text() -> Result<(), TypeError> {
-    mod_main_inference_test(
+    tc_test_should_pass(
         "data List2 a = Cons2 a (List2 a) | Nil2\ndata IntListEither a = List2 (List2 Int) | Right a\nmain::Int -> IntListEither a\nmain = \\x.List2 (Cons2 x Nil2)",
-        "∀a. Int -> IntListEither a"
-    );
-    mod_main_inference_test(
+    )?;
+    tc_test_should_pass(
         "data List2 a = Cons2 a (List2 a) | Nil2\ndata IntListEither a = Left (List2 Int) | Right a\nmain::Int -> IntListEither a\nmain = \\x.Left (Cons2 x (Cons2 10 Nil2))",
-        "∀a. Int -> IntListEither a"
-    );
+    )?;
 
-    tc_test_should_pass("data List2 a = Cons2 a (List2 a) | Nil2\ndata IntListEither a = Left2 (List2 Int) | Right2 a\nmain :: Int -> (IntListEither a)\nmain = \\x.Left2 (Cons2 x (Cons2 10 Nil2))");
+    tc_test_should_pass("data List2 a = Cons2 a (List2 a) | Nil2\ndata IntListEither a = Left2 (List2 Int) | Right2 a\nmain :: Int -> (IntListEither a)\nmain = \\x.Left2 (Cons2 x (Cons2 10 Nil2))")?;
 
     Ok(())
 }
 
 #[test]
 fn triple_test() -> Result<(), TypeError> {
-    mod_main_inference_test(
+    tc_test_should_pass(
         "data Triple a b c = Triple a b c | NoTriple\nmain :: a -> b -> c -> Triple a b c\nmain = \\x y z. Triple x y z",
-        "∀a. ∀b. ∀c. a -> b -> c -> Triple a b c",
-    );
+    )?;
 
-    mod_main_inference_test(
+    tc_test_should_pass(
         "data Triple a b c = Triple a b c | NoTriple\nmain::Triple a b c\nmain = NoTriple",
-        "∀a. ∀b. ∀c. Triple a b c",
-    );
+    )?;
 
     Ok(())
 }
 
 #[test]
-fn check_match_is_less_than_2_long() -> Result<(), ParserError> {
-    let program = r#"
+fn check_match_is_less_than_2_long() -> Result<(), TypeError> {
+    tc_test_should_pass(r#"
     len_less_than_2 :: List a -> Bool
     len_less_than_2 lst = match lst {
         | Nil       -> true
@@ -251,16 +267,12 @@ fn check_match_is_less_than_2_long() -> Result<(), ParserError> {
     }
 
     main :: Bool
-    main = len_less_than_2 (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
-
-    mod_main_inference_test(program, "Bool");
-
-    Ok(())
+    main = len_less_than_2 (Cons 1 (Cons 2 (Cons 3 Nil)))"#)
 }
 
 #[test]
-fn check_match_map() -> Result<(), ParserError> {
-    let program = r#"
+fn check_match_map() -> Result<(), TypeError> {
+    tc_test_should_pass(r#"
     map :: (a -> b) -> List a -> List b
     map f lst = match lst {
        | Nil       -> Nil
@@ -268,15 +280,11 @@ fn check_match_map() -> Result<(), ParserError> {
     }
 
     main :: List Int
-    main = map (\x.x) (Cons 1 (Cons 2 (Cons 3 Nil)))"#;
-
-    mod_main_inference_test(program, "List Int");
-
-    Ok(())
+    main = map (\x.x) (Cons 1 (Cons 2 (Cons 3 Nil)))"#)
 }
 
 #[test]
-fn check_match_map_ifnot_zero() -> Result<(), ParserError> {
+fn check_match_map_ifnot_zero() -> Result<(), TypeError> {
     let program = r#"
     // Map a function over a list, skipping zeros
     mapNoZero :: (Int -> b) -> List Int -> List b
@@ -309,7 +317,7 @@ fn check_match_map_ifnot_zero() -> Result<(), ParserError> {
 }
 
 #[test]
-fn check_ifmatch() -> Result<(), ParserError> {
+fn check_ifmatch() -> Result<(), TypeError> {
     let program = r#"
     main :: Bool -> a -> a -> a
     main cond x y = match cond :: Bool {
@@ -323,22 +331,19 @@ fn check_ifmatch() -> Result<(), ParserError> {
 }
 
 #[test]
-fn bind_io() -> Result<(), ParserError> {
-    let program = r#"
+fn bind_io() -> Result<(), TypeError> {
+    tc_test_should_pass_no_prelude(r#"
     type RealWorld = Int
     data IO a = IO (RealWorld -> (RealWorld, a))
 
     // Bind over IO
     main :: IO a -> (a -> IO b) -> IO b
-    main io f = IO match io {
+    main io f = match io :: IO a {
         | IO action -> IO (\w. match (action w) {
             | (new_w, x) -> match f x {
                 | IO new_action -> new_action new_w
             }
         })
-    }"#;
-
-    mod_main_inference_test(program, "∀a. ∀b. IO a -> (a -> IO b) -> IO b");
-
-    Ok(())
+    }"#
+    )
 }

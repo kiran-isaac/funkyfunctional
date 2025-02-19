@@ -19,7 +19,7 @@ fn check_for_ready_call(
     expr: usize,
     lt: &KnownTypeLabelTable,
     am: HashMap<String, usize>,
-    module: Option<usize>
+    module: Option<usize>,
 ) -> Option<AST> {
     let mut f = ast.get_func(expr);
     let mut x = ast.get_arg(expr);
@@ -90,29 +90,40 @@ fn check_for_ready_call(
                                 }
                             }
 
-                            let mut ready_call_result = ast.do_multiple_abst_substs(assign_exp, argv_ids);
+                            let mut ready_call_result =
+                                ast.do_multiple_abst_substs(assign_exp, argv_ids);
 
                             #[cfg(debug_assertions)]
-                            let _ready_call_result_str = ready_call_result.to_string_sugar(ready_call_result.root, false);
+                            let _ready_call_result_str =
+                                ready_call_result.to_string_sugar(ready_call_result.root, false);
 
                             if label.is_silent {
                                 let mut ast_substituted = ast.clone();
-                                let mut expr = ast_substituted.do_rc_subst(expr, &(expr, ready_call_result.clone()));
+                                let mut expr = ast_substituted
+                                    .do_rc_subst(expr, &(expr, ready_call_result.clone()));
 
                                 #[cfg(debug_assertions)]
-                                let _ast_substituted_string = ast_substituted.to_string_sugar(ast_substituted.root, false);
+                                let _ast_substituted_string =
+                                    ast_substituted.to_string_sugar(ast_substituted.root, false);
 
-                                while let Some(silent_rc) = find_single_redex_contraction_pair(&ast_substituted, module, expr, lt) {
+                                while let Some(silent_rc) = find_single_redex_contraction_pair(
+                                    &ast_substituted,
+                                    module,
+                                    expr,
+                                    lt,
+                                ) {
                                     expr = ast_substituted.do_rc_subst(expr, &silent_rc);
 
                                     #[cfg(debug_assertions)]
-                                    let _ast_substituted_string = ast_substituted.to_string_sugar(ast_substituted.root, false);
+                                    let _ast_substituted_string = ast_substituted
+                                        .to_string_sugar(ast_substituted.root, false);
 
                                     ready_call_result = ast_substituted.clone_node(expr);
 
                                     #[cfg(debug_assertions)]
-                                    let _ready_call_result_str = ready_call_result.to_string_sugar(ready_call_result.root, false);
-                                };
+                                    let _ready_call_result_str = ready_call_result
+                                        .to_string_sugar(ready_call_result.root, false);
+                                }
                             }
 
                             Some(ready_call_result)
@@ -250,22 +261,31 @@ pub fn find_single_redex_contraction_pair(
 
                             if label.is_silent {
                                 let mut ast_substituted = ast.clone();
-                                let mut expr = ast_substituted.do_rc_subst(expr, &(expr, ready_call_result.clone()));
+                                let mut expr = ast_substituted
+                                    .do_rc_subst(expr, &(expr, ready_call_result.clone()));
 
                                 #[cfg(debug_assertions)]
-                                let _ast_substituted_string = ast_substituted.to_string_sugar(ast_substituted.root, false);
+                                let _ast_substituted_string =
+                                    ast_substituted.to_string_sugar(ast_substituted.root, false);
 
-                                while let Some(silent_rc) = find_single_redex_contraction_pair(&ast_substituted, module, expr, lt) {
+                                while let Some(silent_rc) = find_single_redex_contraction_pair(
+                                    &ast_substituted,
+                                    module,
+                                    expr,
+                                    lt,
+                                ) {
                                     expr = ast_substituted.do_rc_subst(expr, &silent_rc);
 
                                     #[cfg(debug_assertions)]
-                                    let _ast_substituted_string = ast_substituted.to_string_sugar(ast_substituted.root, false);
+                                    let _ast_substituted_string = ast_substituted
+                                        .to_string_sugar(ast_substituted.root, false);
 
                                     ready_call_result = ast_substituted.clone_node(expr);
 
                                     #[cfg(debug_assertions)]
-                                    let _ready_call_result_str = ready_call_result.to_string_sugar(ready_call_result.root, false);
-                                };
+                                    let _ready_call_result_str = ready_call_result
+                                        .to_string_sugar(ready_call_result.root, false);
+                                }
                             }
 
                             Some((expr, ready_call_result))
