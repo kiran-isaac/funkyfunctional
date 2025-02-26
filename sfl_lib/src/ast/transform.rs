@@ -225,7 +225,7 @@ impl AST {
                 let var = self.append(other, n.children[0]);
                 let exp = self.append(other, other.get_abstr_expr(node));
                 let s = self.add_abstraction(var, exp, n.line, n.col);
-                if n.implicit_tl_match {
+                if n.fancy_assign_abst_syntax {
                     self.fancy_assign_abst_syntax(s);
                 }
                 if n.wait_for_args {

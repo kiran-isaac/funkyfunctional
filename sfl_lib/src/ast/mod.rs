@@ -2,8 +2,7 @@ mod building;
 mod output;
 mod transform;
 
-use super::token::*;
-use crate::{find_redexes::RCPair, Primitive, Type};
+use crate::{find_redexes::RCPair, Primitive, Type, TokenType, Token};
 use std::collections::HashSet;
 use std::iter::zip;
 use std::{collections::HashMap, fmt::Debug, vec};
@@ -35,7 +34,7 @@ pub struct ASTNode {
     pub col: usize,
     pub type_assignment: Option<Type>,
     pub wait_for_args: bool,
-    pub implicit_tl_match: bool,
+    pub fancy_assign_abst_syntax: bool,
     pub dollar_app: bool,
     pub is_silent: bool,
 }
@@ -87,7 +86,7 @@ impl ASTNode {
             col,
             type_assignment: None,
             wait_for_args: false,
-            implicit_tl_match: false,
+            fancy_assign_abst_syntax: false,
             dollar_app: false,
             is_silent: false,
         }
@@ -102,7 +101,7 @@ impl ASTNode {
             col,
             type_assignment: None,
             wait_for_args: false,
-            implicit_tl_match: false,
+            fancy_assign_abst_syntax: false,
             dollar_app: false,
             is_silent: false,
         }
@@ -117,7 +116,7 @@ impl ASTNode {
             col,
             type_assignment: None,
             wait_for_args: false,
-            implicit_tl_match: false,
+            fancy_assign_abst_syntax: false,
             dollar_app: false,
             is_silent: false,
         }
@@ -132,7 +131,7 @@ impl ASTNode {
             col,
             type_assignment: None,
             wait_for_args: false,
-            implicit_tl_match: false,
+            fancy_assign_abst_syntax: false,
             dollar_app: dollar,
             is_silent: false,
         }
@@ -147,7 +146,7 @@ impl ASTNode {
             col,
             type_assignment: None,
             wait_for_args: false,
-            implicit_tl_match: false,
+            fancy_assign_abst_syntax: false,
             dollar_app: false,
             is_silent: false,
         }
@@ -169,7 +168,7 @@ impl ASTNode {
             col,
             type_assignment: t,
             wait_for_args: false,
-            implicit_tl_match: false,
+            fancy_assign_abst_syntax: false,
             dollar_app: false,
             is_silent,
         }
@@ -184,7 +183,7 @@ impl ASTNode {
             col,
             type_assignment: None,
             wait_for_args: false,
-            implicit_tl_match: false,
+            fancy_assign_abst_syntax: false,
             dollar_app: false,
             is_silent: false,
         }
@@ -199,7 +198,7 @@ impl ASTNode {
             col,
             type_assignment: None,
             wait_for_args: false,
-            implicit_tl_match: false,
+            fancy_assign_abst_syntax: false,
             dollar_app: false,
             is_silent: false,
         }

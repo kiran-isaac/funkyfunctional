@@ -1,4 +1,3 @@
-pub mod ast;
 mod bound;
 mod lexer;
 pub mod parser;

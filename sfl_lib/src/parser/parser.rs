@@ -1,4 +1,4 @@
-use super::ast::AST;
+use crate::ast::AST;
 use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;

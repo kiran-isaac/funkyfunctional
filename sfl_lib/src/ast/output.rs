@@ -96,7 +96,7 @@ impl AST {
                 let mut fancy_syntax_abst_vars = "".to_string();
                 let mut ass_abst = self.get_assign_exp(node);
 
-                while self.get(ass_abst).implicit_tl_match {
+                while self.get(ass_abst).fancy_assign_abst_syntax {
                     assert_eq!(self.get(ass_abst).t, ASTNodeType::Abstraction);
                     fancy_syntax_abst_vars += " ";
                     fancy_syntax_abst_vars += self

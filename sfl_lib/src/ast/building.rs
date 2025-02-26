@@ -13,7 +13,7 @@ impl AST {
     }
 
     pub fn fancy_assign_abst_syntax(&mut self, node: usize) {
-        self.vec[node].implicit_tl_match = true;
+        self.vec[node].fancy_assign_abst_syntax = true;
     }
 
     pub fn set_type(&mut self, node: usize, t: Type) {
