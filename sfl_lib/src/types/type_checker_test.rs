@@ -94,7 +94,7 @@ fn type_check_abst() -> Result<(), TypeError> {
 
 #[test]
 fn type_y_combinator() {
-    tc_test_should_fail("y :: Int -> Int -> Int\ny f = (\\x. f (x x)) (\\x. f (x x)) ");
+    tc_test_should_fail("y :: a -> a -> a\ny f = (\\x. f (x x)) (\\x. f (x x))\nmain::Int\nmain = 10");
 }
 
 #[test]
@@ -116,14 +116,14 @@ fn type_check_const_abst() -> Result<(), TypeError> {
 
 #[test]
 fn type_check_pair() -> Result<(), TypeError> {
-    tc_test_should_pass("triple_first :: (a, (b, c)) -> a\ntriple_first (x, (y, z)) = x")?;
-    tc_test_should_pass("triple_second :: (a, (b, c)) -> b\ntriple_second  (x, (y, z)) = y")?;
-    tc_test_should_pass("triple_third :: (a, (b, c)) -> c\ntriple_third  (x, (y, z)) = z")?;
+    tc_test_should_pass("main :: (a, (b, c)) -> a\nmain (x, (y, z)) = x")?;
+    tc_test_should_pass("main :: (a, (b, c)) -> b\nmain  (x, (y, z)) = y")?;
+    tc_test_should_pass("main :: (a, (b, c)) -> c\nmain  (x, (y, z)) = z")?;
 
-    tc_test_should_pass("first :: (a, b) -> a\nfirst (x, y) = x")?;
-    tc_test_should_pass("second :: (a, b) -> b\nsecond (x, y) = y")?;
+    tc_test_should_pass("main :: (a, b) -> a\nmain (x, y) = x")?;
+    tc_test_should_pass("main :: (a, b) -> b\nmain (x, y) = y")?;
 
-    tc_test_should_pass("pair :: a -> b -> (a, b)\npair x y = (x, y)")?;
+    tc_test_should_pass("main :: a -> b -> (a, b)\nmain x y = (x, y)")?;
     tc_test_should_pass("main :: a -> b -> (a, b)\nmain = \\x y. (x, y)")?;
     tc_test_should_pass("main :: a -> b -> c -> (a, (b, c))\nmain = \\x y z. (x, (y, z))")?;
     tc_test_should_pass(
@@ -276,12 +276,6 @@ fn check_match_is_less_than_2_long() -> Result<(), TypeError> {
 fn check_match_map() -> Result<(), TypeError> {
     tc_test_should_pass(
         r#"
-    map :: (a -> b) -> List a -> List b
-    map f lst = match lst {
-       | Nil       -> Nil
-       | Cons x xs -> Cons (f x) Nil
-    }
-
     main :: List Int
     main = map (\x.x) (Cons 1 (Cons 2 (Cons 3 Nil)))"#,
     )
