@@ -855,7 +855,6 @@ impl Parser {
                 let (expr, abst_vars) = self.parse_abstraction(ast, true, type_table)?;
                 for var in abst_vars.into_iter().rev() {
                     ast.fancy_assign_abst_syntax(var);
-                    ast.wait_for_args(var);
                 }
                 expr
             }

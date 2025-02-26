@@ -267,3 +267,29 @@ fn redexes_match() {
     let rc = find_single_redex_contraction_pair(&ast, Some(module), exp, &lt).unwrap();
     assert_eq!("false", rc.1.to_string_sugar(rc.1.root, false));
 }
+
+#[test]
+fn weird_halt_bug() {
+    let program = r#"
+    fac :: Int -> Int
+    fac n = if n <= 1 then 1 else n * (fac (n - 1))
+
+    main :: Int
+    main = fac 5"#;
+
+    let pr = Parser::from_string(program.to_string()).parse_module(true).unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
+    let module = ast.root;
+
+    let exp = ast.get_assign_exp(ast.get_main(module).unwrap());
+    typecheck(&mut ast, module, &mut lt, &tm).unwrap();
+
+    let rcs = find_all_redex_contraction_pairs(&ast, Some(module), exp, &lt);
+    assert_eq!(rcs.len(), 2);
+
+    ast.do_rc_subst(exp, &rcs[1]);
+    let rcs = find_all_redex_contraction_pairs(&ast, Some(module), exp, &lt);
+    assert_eq!(rcs.len(), 1);
+}
