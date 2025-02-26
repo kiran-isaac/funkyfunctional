@@ -47,8 +47,11 @@ button.rc {
     margin: 5px 0;
     padding: 10px 0;
     display: grid;
+    min-height: 60px;
+}
+
+button.rc.multiple {
     grid-template-columns: 1fr 2em 1fr;
-    min-height: 50px;
 }
 
 button.rc > div  {
@@ -72,6 +75,11 @@ button.rc > div > * {
 
 button.rc > div#rarrow > * {
     font-size: 2em;
+}
+
+button.rc > div#progress {
+    margin: auto;
+    font-size: 1.5em;
 }
 
 button:hover {
