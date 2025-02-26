@@ -103,7 +103,7 @@ function App() {
             <>
               <h4>Main Expression:</h4>
               <pre>{originalExprString}</pre>
-              <hr></hr>
+              <hr/>
             </>
           )}
         </div>

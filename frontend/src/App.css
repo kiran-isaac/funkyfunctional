@@ -9,7 +9,6 @@
     margin: 0;
 }
 
-#ASTArea,
 #Error,
 #ASTHistory,
 #prelude {
@@ -19,8 +18,18 @@
     overflow-x: auto;
 }
 
+#ASTArea pre {
+    width: 96%;
+    padding-left: 2%;
+    margin: 0;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    padding-top: 10px;
+}
+
 #ASTArea h4 {
     margin: 0;
+    margin-left: 2%;
     padding: 0;
     text-decoration: underline;
 }
@@ -98,4 +107,10 @@ button:focus-visible {
 .expr_history .old {
     background-color: #ff00004f;
     color: white;
+}
+
+@media only screen and (max-width: 1000px) {
+    button.rc > div#progress {
+        font-size: 1em;
+    }
 }

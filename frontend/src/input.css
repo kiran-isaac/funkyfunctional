@@ -18,6 +18,11 @@
     overflow-x: hidden;
 }
 
+#inputContainer hr {
+    display: none;
+    position: absolute;
+}
+
 #ProgramInput {
     position: relative;
     /* Whole column 1*/
@@ -63,6 +68,7 @@ button#RunButtonMultiple {
         grid-column-gap: 0px;
         grid-row-gap: 5px;
         overflow-x: hidden;
+        width: 99%;
     }
 
     #ProgramInput {
@@ -82,6 +88,11 @@ button#RunButtonMultiple {
     button#RunButtonMultiple {
         height: 98%;
         grid-area:  4 / 1 / 5 / 2;
+    }
+
+    #inputContainer hr {
+        display: block;
+        position: relative;
     }
 }
 

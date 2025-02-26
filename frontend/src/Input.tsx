@@ -76,6 +76,7 @@ function Input({ onRunMultiple, onRunSingle }: InputProps) {
             <ProgramDropdown inbuiltPrograms={egProgramsMap} setEditorValue={setEditorValue}/>
             <button className="runbutton" id="RunButtonSingle" onClick={() => onRunSingle(editorValue)}>Lazy</button>
             <button className="runbutton" id="RunButtonMultiple" onClick={() => onRunMultiple(editorValue)}>Free Choice</button>
+            <hr/>
         </>
     );
 }
