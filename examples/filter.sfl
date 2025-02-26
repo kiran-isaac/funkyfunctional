@@ -1,11 +1,5 @@
-filter :: (a -> Bool) -> List a -> List a
-filter pred list = match list :: List a {
-  | Nil -> Nil
-  | Cons x xs -> if (pred x) then Cons x (filter pred xs) else filter pred xs
-}
-
 isEven :: Int -> Bool
 isEven x = (((x / 2) * 2) == x)
 
 main :: Int
-main = length $ filter isEven $ range 1 (Just 5)
+main = length $ filter isEven $ range 1 5
