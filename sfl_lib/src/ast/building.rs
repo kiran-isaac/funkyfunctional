@@ -1,13 +1,6 @@
 use super::*;
 
 impl AST {
-    pub fn new() -> Self {
-        Self {
-            vec: vec![],
-            root: 0,
-        }
-    }
-
     pub fn wait_for_args(&mut self, node: usize) {
         self.vec[node].wait_for_args();
     }

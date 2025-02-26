@@ -1,5 +1,4 @@
 use crate::ast::AST;
-use super::bound::BoundChecker;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
 use crate::{ASTNodeType, KnownTypeLabelTable, Type, PRELUDE};
@@ -11,8 +10,8 @@ use std::io::{self, prelude::*};
 pub struct Parser {
     t_queue: VecDeque<Token>,
     lexer: Lexer,
-    bound: BoundChecker,
     type_assignment_map: HashMap<String, Type>,
+    bound: HashSet<String>
 }
 
 pub struct ParserError {
@@ -71,7 +70,7 @@ impl Parser {
         Ok(Self {
             t_queue: VecDeque::new(),
             lexer: Lexer::new(contents, Some(filename)),
-            bound: BoundChecker::new(),
+            bound: HashSet::new(),
             type_assignment_map: HashMap::new(),
         })
     }
@@ -80,17 +79,17 @@ impl Parser {
         Self {
             t_queue: VecDeque::new(),
             lexer: Lexer::new(str, None),
-            bound: BoundChecker::new(),
+            bound: KnownTypeLabelTable::get_starting_bindings_map().iter().cloned().collect(),
             type_assignment_map: HashMap::new(),
         }
     }
 
     pub fn add_bindings_from(&mut self, other: &Parser) {
-        self.bound.append(&other.bound);
+        self.bound.extend(other.bound.clone());
     }
 
     pub fn bind(&mut self, name: String) {
-        self.bound.add_binding(name);
+        self.bound.insert(name);
     }
 
     pub fn bind_node(&mut self, ast: &mut AST, node: usize) -> Result<(), ParserError> {
@@ -98,7 +97,7 @@ impl Parser {
         match n.t {
             ASTNodeType::Identifier => {
                 let str = n.get_value().clone();
-                if self.bound.is_bound(str.as_str()) {
+                if self.bound.contains(str.as_str()) {
                     return Err(self.parse_error(format!(
                         "Variable {} is already bound, and cannot be rebound for abstraction",
                         str
@@ -136,7 +135,7 @@ impl Parser {
     }
 
     pub fn unbind(&mut self, name: &String) {
-        self.bound.remove_binding(name);
+        self.bound.remove(name);
     }
 
     fn parse_error(&self, msg: String) -> ParserError {
@@ -385,7 +384,7 @@ impl Parser {
         match t.tt {
             TokenType::Id | TokenType::UppercaseId => {
                 let id_name = t.value.clone();
-                if !self.bound.is_bound(&id_name) {
+                if !self.bound.contains(&id_name) {
                     return Err(self.parse_error(format!("Unbound identifier: {}", id_name)));
                 }
                 Ok(ast.add_id(t, line, col))
@@ -491,7 +490,7 @@ impl Parser {
 
                 match id_name.chars().next().unwrap() {
                     'A'..='Z' => {
-                        if !self.bound.is_bound(&id_name) {
+                        if !self.bound.contains(&id_name) {
                             Err(self.parse_error(format!(
                                 "Unbound constructor identifier: {}",
                                 id_name
@@ -503,7 +502,7 @@ impl Parser {
                     '_' => Ok((ast.add_id(t, line, col), bound_set)),
                     'a'..='z' => {
                         if unpack {
-                            if self.bound.is_bound(&id_name) {
+                            if self.bound.contains(&id_name) {
                                 return Err(self.parse_error(format!(
                                     "Cannot rebind already bound identifier: {}",
                                     id_name
@@ -511,7 +510,7 @@ impl Parser {
                             } else {
                                 bound_set.insert(id_name.clone());
                             }
-                        } else if !unpack && !self.bound.is_bound(&id_name) {
+                        } else if !unpack && !self.bound.contains(&id_name) {
                             return Err(
                                 self.parse_error(format!("Unbound Identifier: {}", id_name))
                             );
@@ -600,11 +599,11 @@ impl Parser {
                     };
 
                     for item in bound_set.iter() {
-                        self.bound.add_binding(item.clone())
+                        self.bind(item.clone())
                     }
                     let expr = self.parse_expression(ast, type_table)?;
                     for item in bound_set.iter() {
-                        self.bound.remove_binding(item)
+                        self.unbind(item)
                     }
                     children.push(case);
                     children.push(expr);
@@ -835,7 +834,7 @@ impl Parser {
 
         let name = ass_tk.value.clone();
 
-        if self.bound.is_bound(name.as_str()) {
+        if self.bound.contains(name.as_str()) {
             return Err(self.parse_error(format!("Variable already assigned: {}", name)));
         }
 
@@ -1080,7 +1079,7 @@ impl Parser {
                 Ok(pr) => pr,
                 Err(e) => panic!("Failed to parse prelude: {:?}", e),
             };
-            for binding in parser.bound.bound {
+            for binding in parser.bound {
                 self.bind(binding);
             }
             (pr.lt, pr.tm, pr.ast)
@@ -1147,7 +1146,7 @@ impl Parser {
 
                     for (constructor_name, constructor_type) in constructors {
                         lt.add(constructor_name.clone(), constructor_type, false);
-                        self.bound.add_binding(constructor_name);
+                        self.bind(constructor_name);
                     }
                 }
                 TokenType::Newline => {
