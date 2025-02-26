@@ -1095,6 +1095,7 @@ impl Parser {
     pub fn parse_module(&mut self, with_prelude: bool) -> Result<ParseResult, ParserError> {
         let (mut lt, mut tm, mut ast) = self.init_parser(with_prelude);
         let module = ast.root;
+        let mut main_found = false;
 
         'assloop: loop {
             let t = self.peek(0)?;
@@ -1112,6 +1113,9 @@ impl Parser {
                             let ass_name = ast.get_assignee(assignment);
                             if let Some(ass_type) = &ass_node.type_assignment {
                                 lt.add(ass_name.clone(), ass_type.clone(), ass_node.is_silent)
+                            }
+                            if ass_name == "main" {
+                                main_found = true;
                             }
                             ast.add_to_module(module, assignment);
                         }
@@ -1154,6 +1158,10 @@ impl Parser {
                 }
                 _ => return Err(self.parse_error(format!("Unexpected Token: {:?}", t))),
             }
+        }
+
+        if with_prelude && !main_found {
+            return Err(self.parse_error("Assignment to 'main' is missing. This is the programs entry point.".to_string()));
         }
 
         Ok(ParseResult { ast, lt, tm })
