@@ -2,4 +2,4 @@ fac :: Int -> Int
 fac n = if n <= 1 then 1 else n * (fac (n - 1))
 
 main :: Int
-main = sum $ map fac $ range 1 (Just 5)
+main = sum $ map fac $ range 1 5
