@@ -1,7 +1,6 @@
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
-use crate::ast::AST;
-use crate::{ASTNodeType, KnownTypeLabelTable, Type, PRELUDE};
+use crate::{AST, ASTNodeType, KnownTypeLabelTable, Type, PRELUDE};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use std::fs::File;
@@ -440,6 +439,7 @@ impl Parser {
                 | TokenType::LBrace
                 | TokenType::EOF
                 | TokenType::DoubleColon
+                | TokenType::Assignment
                 | TokenType::Newline => {
                     return Ok((left, bound_set));
                 }
@@ -846,18 +846,27 @@ impl Parser {
         self.advance();
 
         let t = self.peek(0)?;
+        let mut patterns = vec![];
+        let mut bound_set = HashSet::new();
+
+        loop {
+            match t.tt {
+                TokenType::Id | TokenType::UppercaseId | TokenType::LParen => {
+                    let (pattern, _) =
+                        self.parse_pattern(ast, type_table, true, &mut bound_set)?;
+
+                    patterns.push(pattern);
+                }
+                _ => break
+            }
+        }
+
         let expr = match t.tt {
             TokenType::Assignment => {
                 self.advance();
                 self.parse_expression(ast, type_table)?
             }
-            TokenType::Id | TokenType::LParen => {
-                let (expr, abst_vars) = self.parse_abstraction(ast, true, type_table)?;
-                for var in abst_vars.into_iter().rev() {
-                    ast.fancy_assign_abst_syntax(var);
-                }
-                expr
-            }
+
             _ => {
                 return Err(self.parse_error(format!("Unexpected token in assignment: {}", t.value)))
             }
