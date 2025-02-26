@@ -165,7 +165,9 @@ impl Context {
         let mut next_exid = self.next_exid;
 
         match item {
-            ContextItem::Existential(e2, _) => {next_exid = std::cmp::max(e2, next_exid);}
+            ContextItem::Existential(e2, _) => {
+                next_exid = std::cmp::max(e2, next_exid);
+            }
             _ => {}
         };
 
@@ -479,7 +481,10 @@ fn instantiate_l(c: Context, exst: usize, b: &Type, type_map: &TypeMap) -> Resul
             let c = c
                 .add_before_existential(exst, a1)
                 .add_before_existential(exst, a2)
-                .set_existential_definition(exst, Type::f(Type::Existential(a1n), Type::Existential(a2n)));
+                .set_existential_definition(
+                    exst,
+                    Type::f(Type::Existential(a1n), Type::Existential(a2n)),
+                );
 
             #[cfg(debug_assertions)]
             let _c_str = format!("{:?}", &c);

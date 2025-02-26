@@ -258,7 +258,8 @@ fn triple_test() -> Result<(), TypeError> {
 
 #[test]
 fn check_match_is_less_than_2_long() -> Result<(), TypeError> {
-    tc_test_should_pass(r#"
+    tc_test_should_pass(
+        r#"
     len_less_than_2 :: List a -> Bool
     len_less_than_2 lst = match lst {
         | Nil       -> true
@@ -267,12 +268,14 @@ fn check_match_is_less_than_2_long() -> Result<(), TypeError> {
     }
 
     main :: Bool
-    main = len_less_than_2 (Cons 1 (Cons 2 (Cons 3 Nil)))"#)
+    main = len_less_than_2 (Cons 1 (Cons 2 (Cons 3 Nil)))"#,
+    )
 }
 
 #[test]
 fn check_match_map() -> Result<(), TypeError> {
-    tc_test_should_pass(r#"
+    tc_test_should_pass(
+        r#"
     map :: (a -> b) -> List a -> List b
     map f lst = match lst {
        | Nil       -> Nil
@@ -280,7 +283,8 @@ fn check_match_map() -> Result<(), TypeError> {
     }
 
     main :: List Int
-    main = map (\x.x) (Cons 1 (Cons 2 (Cons 3 Nil)))"#)
+    main = map (\x.x) (Cons 1 (Cons 2 (Cons 3 Nil)))"#,
+    )
 }
 
 #[test]
@@ -332,7 +336,8 @@ fn check_ifmatch() -> Result<(), TypeError> {
 
 #[test]
 fn bind_io() -> Result<(), TypeError> {
-    tc_test_should_pass_no_prelude(r#"
+    tc_test_should_pass_no_prelude(
+        r#"
     type RealWorld = Int
     data IO a = IO (RealWorld -> (RealWorld, a))
 
@@ -344,6 +349,6 @@ fn bind_io() -> Result<(), TypeError> {
                 | IO new_action -> new_action new_w // (RealWorld, b)
             } // (RealWorld, b)
         })
-    }"#
+    }"#,
     )
 }
