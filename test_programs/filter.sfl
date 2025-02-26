@@ -5,7 +5,7 @@ filter pred list = match list :: List a {
 }
 
 isEven :: Int -> Bool
-@isEven x = (((x / 2) * 2) == x)
+isEven x = (((x / 2) * 2) == x)
 
 main :: Int
 main = length $ filter isEven $ range 1 (Just 5)

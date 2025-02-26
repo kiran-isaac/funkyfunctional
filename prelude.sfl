@@ -1,6 +1,6 @@
 // Use as "if _ then _ else
 if :: Bool -> a -> a -> a
-@if cond then_branch else_branch = match cond {
+if cond then_branch else_branch = match cond {
   | true -> then_branch
   | false -> else_branch
 }
