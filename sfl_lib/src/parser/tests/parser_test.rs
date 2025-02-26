@@ -222,7 +222,10 @@ fn ite() -> Result<(), ParserError> {
     let module = 0;
 
     assert_eq!(
-        ast.to_string_sugar(ast.get_assign_to(module, "main".to_string()).unwrap(), false),
+        ast.to_string_sugar(
+            ast.get_assign_to(module, "main".to_string()).unwrap(),
+            false
+        ),
         str
     );
 

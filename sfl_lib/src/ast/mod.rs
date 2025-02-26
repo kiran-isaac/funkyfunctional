@@ -1,13 +1,13 @@
 mod building;
+mod node;
 mod output;
 mod transform;
-mod node;
 
-use crate::{find_redexes::RCPair, Primitive, Type, Token};
+use crate::{find_redexes::RCPair, Primitive, Token, Type};
+pub use node::*;
 use std::collections::HashSet;
 use std::iter::zip;
 use std::{collections::HashMap, fmt::Debug, vec};
-pub use node::*;
 
 #[derive(Clone)]
 pub struct AST {

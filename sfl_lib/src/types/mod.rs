@@ -1,12 +1,11 @@
-mod type_checker;
-
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::hash::Hash;
-pub use type_checker::*;
 
+mod checker;
 #[cfg(test)]
 mod type_checker_test;
+pub use checker::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Primitive {
@@ -28,25 +27,6 @@ pub enum Type {
     Product(Box<Type>, Box<Type>),
     Union(String, Vec<Type>),
     Alias(String, Box<Type>),
-}
-
-#[derive(Clone, PartialEq, Eq)]
-pub struct TypeError {
-    pub e: String,
-    pub line: usize,
-    pub col: usize,
-}
-
-impl std::fmt::Debug for TypeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "Type Error at [{}:{}]: {}",
-            self.line + 1,
-            self.col + 1,
-            self.e
-        )
-    }
 }
 
 impl Type {

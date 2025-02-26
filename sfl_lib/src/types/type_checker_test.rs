@@ -94,7 +94,9 @@ fn type_check_abst() -> Result<(), TypeError> {
 
 #[test]
 fn type_y_combinator() {
-    tc_test_should_fail("y :: a -> a -> a\ny f = (\\x. f (x x)) (\\x. f (x x))\nmain::Int\nmain = 10");
+    tc_test_should_fail(
+        "y :: a -> a -> a\ny f = (\\x. f (x x)) (\\x. f (x x))\nmain::Int\nmain = 10",
+    );
 }
 
 #[test]

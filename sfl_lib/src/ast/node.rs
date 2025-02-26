@@ -1,6 +1,6 @@
-use std::fmt::Debug;
-use crate::{Primitive, Type};
 use crate::parser::{Token, TokenType};
+use crate::{Primitive, Type};
+use std::fmt::Debug;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ASTNodeType {

@@ -1,6 +1,6 @@
-use crate::ast::AST;
 use super::lexer::{Lexer, LexerError};
 use super::token::*;
+use crate::ast::AST;
 use crate::{ASTNodeType, KnownTypeLabelTable, Type, PRELUDE};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
@@ -11,7 +11,7 @@ pub struct Parser {
     t_queue: VecDeque<Token>,
     lexer: Lexer,
     type_assignment_map: HashMap<String, Type>,
-    bound: HashSet<String>
+    bound: HashSet<String>,
 }
 
 pub struct ParserError {
@@ -79,7 +79,10 @@ impl Parser {
         Self {
             t_queue: VecDeque::new(),
             lexer: Lexer::new(str, None),
-            bound: KnownTypeLabelTable::get_starting_bindings_map().iter().cloned().collect(),
+            bound: KnownTypeLabelTable::get_starting_bindings_map()
+                .iter()
+                .cloned()
+                .collect(),
             type_assignment_map: HashMap::new(),
         }
     }
@@ -1160,7 +1163,9 @@ impl Parser {
         }
 
         if with_prelude && !main_found {
-            return Err(self.parse_error("Assignment to 'main' is missing. This is the programs entry point.".to_string()));
+            return Err(self.parse_error(
+                "Assignment to 'main' is missing. This is the programs entry point.".to_string(),
+            ));
         }
 
         Ok(ParseResult { ast, lt, tm })
