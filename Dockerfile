@@ -17,6 +17,8 @@ COPY --from=wasm-builder /build/wasm_lib/pkg /build/wasm_lib/pkg
 COPY definition.md /build/definition.md
 COPY starter_program.sfl /build/starter_program.sfl
 COPY frontend /build/frontend
+COPY examples /build/examples
+
 
 WORKDIR /build/frontend
 # Remove node modules if they exist
