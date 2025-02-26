@@ -345,11 +345,12 @@ impl Lexer {
                 })
             }
             '@' => {
-                self.advance();
-                Ok(Token {
-                    tt: TokenType::Silence,
-                    value: "@".to_string(),
-                })
+                Err(self.error(format!("Unexpected char: {}", self.c())))
+                // self.advance();
+                // Ok(Token {
+                //     tt: TokenType::Silence,
+                //     value: "@".to_string(),
+                // })
             }
             ')' => {
                 self.advance();
