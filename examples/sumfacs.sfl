@@ -1,27 +1,5 @@
-data Maybe a = Just a | Nothing
-data List a = Cons a (List a) | Nil
-
-ifMatch cond x y = match cond :: Bool {
-  | true -> x
-  | false -> y
-}
-
 fac :: Int -> Int
-fac n = ifMatch (n <= 1) 1 (n * (fac (n - 1)))
+fac n = if n <= 1 then 1 else n * (fac (n - 1))
 
-foldr :: (a -> b -> b) -> b -> List a -> b
-foldr f acc list = match list :: List a {
-  | Nil -> acc
-  | Cons x xs -> f x (foldr f acc xs)
-}
-
-range :: Int -> Maybe Int -> List Int
-range lower upperMaybe = match upperMaybe :: Maybe Int {
-  | Just upper  -> ifMatch (lower >= upper) Nil (Cons lower (range (lower + 1) upperMaybe))
-  | Nothing     -> Cons lower (range (lower + 1) upperMaybe)
-}
-
-// Sum of first n factorials
-sumFacs n = foldr (\x acc. (fac x) + acc) 0 (range 1 (Just (n + 1)))
-
-main = sumFacs 3
+main :: Int
+main = sum $ map fac $ range 1 (Just 5)

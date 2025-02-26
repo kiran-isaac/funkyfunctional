@@ -1078,7 +1078,6 @@ pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), 
     }
 }
 
-#[cfg(test)]
 fn infer_type_with_context(
     c: Context,
     ast: &AST,

@@ -1,6 +1,6 @@
 // Use as "if _ then _ else
 if :: Bool -> a -> a -> a
-@if cond then_branch else_branch = match cond {
+if cond then_branch else_branch = match cond {
   | true -> then_branch
   | false -> else_branch
 }
@@ -10,9 +10,15 @@ data Maybe a = Just a | Nothing
 data List a = Cons a (List a) | Nil
 
 foldr :: (a -> b -> b) -> b -> List a -> b
-foldr f acc list = match list :: List a {
+foldr f acc list = match list {
   | Nil -> acc
   | Cons x xs -> f x (foldr f acc xs)
+}
+
+map :: (a -> b) -> List a -> List b
+map f list = match list {
+  | Nil -> Nil
+  | Cons x xs -> Cons (f x) (map f xs)
 }
 
 repeat :: a -> List a
@@ -20,8 +26,8 @@ repeat n = Cons n $ repeat n
 
 take :: Int -> List a -> List a
 take n list = match list {
-    | Nil -> Nil
-    | Cons x xs -> if n > 0 then Cons x $ take (n - 1) xs else Nil
+  | Nil -> Nil
+  | Cons x xs -> if n > 0 then Cons x $ take (n - 1) xs else Nil
 }
 
 length :: List a -> Int
@@ -32,3 +38,6 @@ range lower upperMaybe = match upperMaybe :: Maybe Int {
   | Just upper  -> if lower >= upper then Nil else Cons lower (range (lower + 1) upperMaybe)
   | Nothing     -> Cons lower (range (lower + 1) upperMaybe)
 }
+
+sum :: List Int -> Int
+sum = foldr (\x acc. x + acc) 0
