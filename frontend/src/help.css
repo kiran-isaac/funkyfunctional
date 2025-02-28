@@ -5,10 +5,10 @@ div#definition {
     background-color: #303030;
     width: calc(80% - 20px);
     z-index: 9999;
-    border-radius: 5px;
-    border: 2px solid rgba(255, 255, 255, 0.29);
+    border-radius: 10px;
+    border: 3px solid rgba(255, 255, 255, 0.808);
     padding: 10px;
-    margin: 20px 10%;
+    margin: 5px 10%;
     word-break: break-word; /* Breaks words to fit within the container */
     white-space: normal; /* Allows text to wrap normally */
 }
@@ -33,4 +33,10 @@ button#definitionspawn {
     position: absolute;
     top: 5px;
     z-index: 9999;
+    height:30px;
+    background-color: #1a1a1a;
+    cursor: pointer;
+    transition: border-color 0.25s;
+    border: 1px solid rgba(255, 255, 255, 0.349);
+    border-radius: 10px;
 }
