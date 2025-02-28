@@ -7,7 +7,7 @@
     grid-template-columns: 90% 1fr;
     display: grid;
     grid-template-columns: 90% 1fr;
-    grid-template-rows: 50px repeat(2, 1fr);
+    grid-template-rows: auto 50px repeat(2, 1fr);      
     grid-column-gap: 0px;
     grid-row-gap: 0px; 
     grid-column-gap: 0px;
@@ -26,7 +26,7 @@
 #ProgramInput {
     position: relative;
     /* Whole column 1*/
-    grid-area: 1 / 1 / 4 / 2;    
+    grid-area: 2 / 1 / 5 / 2; 
     width: 99%;
     height: 100%;
     margin: 5px auto;
@@ -34,7 +34,7 @@
     min-height: 300px;
 }
 
-button.runbutton, select#program_dropdown {
+button.runbutton, select#program_dropdown, div#prelude_dropdown button {
     background-color: #1a1a1a;
     cursor: pointer;
     transition: border-color 0.25s;
@@ -47,17 +47,33 @@ button.runbutton, select#program_dropdown {
 
 select#program_dropdown {
     /* second row, first column */
-    grid-area: 1 / 2 / 2 / 3;
+    grid-area: 2 / 2 / 3 / 3;
 }
 
 button#RunButtonSingle {
     /* second row, second column */
-    grid-area: 2 / 2 / 3 / 3;
+    grid-area: 3 / 2 / 4 / 3; 
 }
 
 button#RunButtonMultiple {
     /* second row, third column */
-    grid-area: 3 / 2 / 4 / 3;
+    grid-area: 4 / 2 / 5 / 3; 
+}
+
+div#prelude_dropdown {
+    grid-area:  1 / 1 / 2 / 3;
+    max-height: 300px;
+    padding: 0px;
+    overflow-y: auto;
+    background-color: #1a1a1a;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+
+div#prelude_dropdown button {
+    width: 100%;
+    padding: 0px;
+    height: 30px;
 }
  
 @media only screen and (max-width: 1000px) {
