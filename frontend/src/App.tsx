@@ -112,9 +112,6 @@ function App() {
         </div>
         <pre><ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToStringHistory} astHistory={astHistory} /></pre>
         <hr/>
-        <div id="prelude">
-          <h2>Prelude</h2><pre>{wasm.get_prelude()}</pre>
-        </div>
       </div>
     </>
   )

@@ -2,6 +2,7 @@ import "./input.css";
 import CodeMirror from '@uiw/react-codemirror';
 import { SetStateAction, useCallback, useEffect, useState } from "react";
 import { okaidia } from '@uiw/codemirror-theme-okaidia';
+import * as wasm from "sfl_wasm_lib";
 
 const eg_programs = import.meta.glob("./../../examples/*", {
     query: '?raw',
@@ -9,10 +10,49 @@ const eg_programs = import.meta.glob("./../../examples/*", {
 });
 
 
+function PreludeDropdown() {
+    const prelude = wasm.get_prelude();
+
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+        const button = document.getElementById("prelude_dropdown_button");
+        const prelude = document.getElementById("prelude");
+
+        if (button == null || prelude == null) { return; }
+
+        const handleClick = () => {
+            if (isVisible) {
+                prelude.style.display = "none";
+                setIsVisible(false);
+            } else {
+                prelude.style.display = "block";
+                setIsVisible(true);
+            }
+        };
+
+        button.addEventListener("click", handleClick);
+
+        return () => {
+            button.removeEventListener("click", handleClick);
+        };
+    }, [isVisible]);
+
+    return (
+        <div id="prelude_dropdown">
+            <button type="button" id="prelude_dropdown_button">See Prelude</button>
+            <div id="prelude" style={{ display: "none" }}>
+                <h2>Prelude</h2><pre>{prelude}</pre>
+            </div>
+        </div>
+    );
+}
+
+
 function ProgramDropdown({ inbuiltPrograms, setEditorValue }: { inbuiltPrograms: Map<string, string>, setEditorValue: (x : string) => void}) {    
     const name_options : JSX.Element[] = [];
     inbuiltPrograms.forEach((_, name) => {
-        name_options.push(<option value={name}>{name}</option>);
+        name_options.push(<option key={name} value={name}>{name}</option>);
     });
     const onChange = () => {
         const e = document.getElementById("program_dropdown") as HTMLSelectElement;
@@ -65,6 +105,7 @@ function Input({ onRunMultiple, onRunSingle }: InputProps) {
 
     return (
         <>
+            <PreludeDropdown/>
             <div id="ProgramInput"><CodeMirror
                 id="CodeMirrorEditor"
                 height="300px"
