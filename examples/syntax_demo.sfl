@@ -1,0 +1,19 @@
+// We declare that "five" is an Int
+five :: Int
+// We assign 5 to the variable "five" so that all future mentions of "five" mean the literal 5
+five = 5
+
+// We declare that "five'" is a function that takes anything (represented by type variable "a") and returns an int
+five' :: a -> Int
+// \x . five creates a function 
+five' = \x . 5
+
+// We declare that ID has the type of a function that takes anything and returns it.
+// "a" here is a type variable, encoding the fact that the thing id takes in, and the thing it returns, have the same type
+id :: a -> a
+id = \x.x
+
+
+
+main :: Int
+main = x + y
