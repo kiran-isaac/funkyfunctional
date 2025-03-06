@@ -57,6 +57,7 @@ button.rc {
     padding: 10px 0;
     display: grid;
     min-height: 60px;
+    color: white;
 }
 
 button.rc.multiple {
