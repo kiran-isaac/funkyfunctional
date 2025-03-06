@@ -1,0 +1,14 @@
+fix :: (a -> a) -> a
+fix f = f $ fix f
+
+fac :: (Int -> Int) -> Int -> Int
+fac f n = if n <= 1 then 1 else n * (f (n - 1))
+
+fib :: (Int -> Int) -> Int -> Int
+fib f x = if x <= 2 then 1 else (f (x - 1)) + (f (x - 2))
+
+main :: Int
+main = fix fac 5
+
+// main :: Int
+// main = fix fib 5
