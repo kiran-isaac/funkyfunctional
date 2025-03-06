@@ -1,5 +1,5 @@
 isEven :: Int -> Bool
 isEven x = (((x / 2) * 2) == x)
 
-main :: Int
-main = length $ filter isEven $ range 1 5
+main :: List Int
+main = filter isEven $ range 1 5

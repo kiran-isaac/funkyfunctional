@@ -1,0 +1,9 @@
+square :: Int -> Int
+square x = x * x
+
+// List of the square numbers from lower to upper
+list_of_squares :: Int -> Int -> List Int
+list_of_squares lower upper = map square $ range lower upper
+
+main :: Int
+main = sum $ list_of_squares 1 5
