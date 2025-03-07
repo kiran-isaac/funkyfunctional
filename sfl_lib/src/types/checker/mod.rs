@@ -4,7 +4,7 @@ mod subtype;
 mod synthesis;
 
 use super::Type;
-use crate::parser::TypeMap;
+use crate::parsing::TypeMap;
 use crate::{KnownTypeLabelTable, AST};
 use checking::check_type;
 use context::*;

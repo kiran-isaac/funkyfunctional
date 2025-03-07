@@ -1,4 +1,4 @@
-use crate::parser::{Token, TokenType};
+use crate::parsing::{Token, TokenType};
 use crate::{Primitive, Type};
 use std::fmt::Debug;
 

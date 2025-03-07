@@ -1,4 +1,4 @@
-use crate::parser::*;
+use crate::parsing::*;
 
 #[test]
 fn assign() -> Result<(), ParserError> {

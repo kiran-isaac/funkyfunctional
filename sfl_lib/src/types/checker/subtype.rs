@@ -1,5 +1,5 @@
 use super::*;
-use crate::parser::TypeMap;
+use crate::parsing::TypeMap;
 use crate::Type;
 use std::iter::zip;
 

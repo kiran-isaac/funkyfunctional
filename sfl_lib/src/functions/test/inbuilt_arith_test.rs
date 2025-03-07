@@ -1,4 +1,4 @@
-use parser::Token;
+use parsing::Token;
 
 use super::super::*;
 use crate::AST;
@@ -24,11 +24,11 @@ fn test_basic_int_arith() {
         };
 
         let a = Token {
-            tt: parser::TokenType::IntLit,
+            tt: parsing::TokenType::IntLit,
             value: format!("{}", a_int),
         };
         let b = Token {
-            tt: parser::TokenType::IntLit,
+            tt: parsing::TokenType::IntLit,
             value: format!("{}", b_int),
         };
 
@@ -41,7 +41,7 @@ fn test_basic_int_arith() {
         let mut call_ast = AST::new();
         call_ast.add_id(
             Token {
-                tt: parser::TokenType::Id,
+                tt: parsing::TokenType::Id,
                 value: "_".to_string(),
             },
             0,
@@ -105,11 +105,11 @@ fn test_basic_float_arith() {
         let b_float = rand::random::<f64>() * 10.;
 
         let a = Token {
-            tt: parser::TokenType::FloatLit,
+            tt: parsing::TokenType::FloatLit,
             value: format!("{}", a_float),
         };
         let b = Token {
-            tt: parser::TokenType::FloatLit,
+            tt: parsing::TokenType::FloatLit,
             value: format!("{}", b_float),
         };
 
@@ -119,7 +119,7 @@ fn test_basic_float_arith() {
         let mut call_ast = AST::new();
         call_ast.add_id(
             Token {
-                tt: parser::TokenType::Id,
+                tt: parsing::TokenType::Id,
                 value: "_".to_string(),
             },
             0,
