@@ -113,7 +113,7 @@ function App() {
           <div id="Error">
             <p>{errorString}</p>
           </div>
-          <pre><ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToStringHistory} astHistory={astHistory} /></pre>
+          <ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToStringHistory} astHistory={astHistory} />
         </div>
       </div>
     </>

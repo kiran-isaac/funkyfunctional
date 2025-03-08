@@ -2,8 +2,51 @@
     width: calc(50% - 10px);
     height: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
     position: absolute;
     right: 5px;
     top: 0;
     padding-top: 5px;
+}
+
+table#ASTHistory {
+    border-collapse: collapse; /* Ensures that borders are not doubled */
+    overflow-x: hidden;
+    width: 100%;
+    margin-left: 2.5%;
+    margin-right: 2.5%;
+}
+
+div#ASTHistoryWrapper {
+    width: 50%;
+}
+
+table#ASTHistory th,
+table#ASTHistory td {
+    padding: 8px; 
+    vertical-align: middle;
+}
+
+table#ASTHistory tr {
+    border-top: 1px solid #ddd;
+    min-height: 50px;  
+}
+
+li.expr_history {
+    overflow-x: auto;
+    width: 100%;
+}
+
+table#ASTHistory tr.top {
+    border-top: none;
+}
+
+table#ASTHistory .index {
+    border-right: 1px solid #ddd;
+    width: 5%;
+    min-width: 10px;
+}
+
+table#ASTHistory td.ast {
+    padding-bottom: 20px;
 }

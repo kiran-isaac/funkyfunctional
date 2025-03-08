@@ -3,6 +3,12 @@
     width: 100%;
 }
 
+html {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
 #ASTHistory {
     list-style: none;
     padding: 0;
@@ -10,7 +16,6 @@
 }
 
 #Error,
-#ASTHistory,
 #prelude {
     width: 96%;
     padding-left: 2%;
@@ -26,7 +31,7 @@
 }
 
 #Title {
-    font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
     font-weight: lighter;
     text-align: center;
     height: 45px;

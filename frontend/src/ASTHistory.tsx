@@ -39,7 +39,7 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
         } else if (i == astStrings.length - 2) {
             const next_from_this = rcFromHistory[i];
             const parts = current.split(next_from_this);
-            
+
             for (let j = 0; j < parts.length; j++) {
                 list.push(<span key={`${i}-${j}`}>{parts[j]}</span>);
                 if (j < parts.length - 1) {
@@ -50,19 +50,24 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
             list.push(<span key={i}>{current}</span>);
         }
 
-        astLIs.push(<li className='expr_history' key={i}>{list}<br /></li>);
+        astLIs.push(<li className='expr_history' key={i}><pre>{list}</pre></li>);
     }
     // astLIs = astLIs.reverse();   
 
     return (
-        <ul id="ASTHistory">
-            {astLIs.map((li, index) => (
-                <React.Fragment key={index}>
-                    {li}
-                    {index < astLIs.length - 1 && <hr />}
-                </React.Fragment>
-            ))}
-        </ul>
+        <div id="ASTHistoryWrapper">
+            <table id="ASTHistory">
+                <tbody>
+                    {astLIs.map((li, index) => (
+                        <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''}>
+                            <td className='index'>{astLIs.length - index - 1}</td>
+                            <td className='ast'>{li}</td>
+                            {/* {index < astLIs.length - 1 && <hr />} */}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
     );
 }
 
