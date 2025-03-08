@@ -1,5 +1,5 @@
 import "./input.css";
-import { UnControlled as CodeMirror } from 'react-codemirror2';
+import { Controlled as CodeMirror } from 'react-codemirror2';
 import { SetStateAction, useCallback, useEffect, useState } from "react";
 import "codemirror/lib/codemirror.css";
 import "codemirror/theme/monokai.css";
@@ -125,7 +125,7 @@ function Input({ onRunMultiple, onRunSingle }: InputProps) {
                                 autoCloseBrackets: true,
                             }
                         }
-                        onChange={(_, data, value) => {
+                        onBeforeChange={(_, data, value) => {
                             editorOnChange(value, data);
                         }}
                     />
