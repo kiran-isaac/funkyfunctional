@@ -19,16 +19,20 @@ function PreludeDropdown() {
     useEffect(() => {
         const button = document.getElementById("prelude_dropdown_button");
         const prelude = document.getElementById("prelude");
+        const editor = document.querySelector(".code-mirror-wrapper") as HTMLElement;
 
         if (button == null || prelude == null) { return; }
 
         const handleClick = () => {
             if (isVisible) {
                 prelude.style.display = "none";
-                // codeEditor.style.height = "90vh";
+                prelude.style.height = "0";
+                editor.style.height = "calc(100% - 45px)";
                 setIsVisible(false);
             } else {
                 prelude.style.display = "block";
+                prelude.style.height = "45vh";
+                editor.style.height = "calc(100% - 45px - 45vh)";
                 setIsVisible(true);
             }
         };
@@ -107,7 +111,6 @@ function Input({ onRunMultiple, onRunSingle }: InputProps) {
 
     return (
         <>
-
             <div id="ProgramInput">
                 <PreludeDropdown />
                     <CodeMirror

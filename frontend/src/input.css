@@ -1,7 +1,11 @@
+#lhs {
+    width: 55%;
+    margin-left: 5px;
+}
+
 #inputContainer {
     background-color: #242424;
     position: sticky;
-    height: 50%;
     margin: 0px;
 
     display: grid;
@@ -9,10 +13,7 @@
     grid-template-rows: 1fr;
     grid-column-gap: 0px;
     grid-row-gap: 0px; 
-
-    width: 55%;
-    margin-left: 5px;
-    margin-top: 5px;
+    
     overflow-y: hidden;
     overflow-x: hidden;
 }
@@ -26,10 +27,9 @@
     position: relative;
     /* Whole column 1*/
     width: 99%;
-    height: 100%;
-    margin: 5px auto;
+    /* margin: 5px auto; */
     overflow-x: auto;
-    min-height: 300px;
+    height: calc(100vh - 50px);
 }
 
 button.runbutton, select#program_dropdown, div#prelude_dropdown button {
@@ -39,15 +39,20 @@ button.runbutton, select#program_dropdown, div#prelude_dropdown button {
     border: 1px solid rgba(255, 255, 255, 0.349);
     border-radius: 10px;
     width: 100%;
-    height: 98%;
     padding: 10px;
+    height: 100%;
     color: white;
 }
 
 div#Buttons {
     display: grid;
-    padding-left: 10px;
-    padding-right: 10px;
+    /* padding-left: 10px;
+    padding-right: 10px; */
+    margin: 0;
+    height: 100%;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(1fr, 3);
+    grid-row-gap: 5px;
 }
 
 /* div#inputlhs {
@@ -61,6 +66,11 @@ div#Buttons {
     border: 2px solid rgba(255, 255, 255, 0.349);
     background-color: #272822;
     border-radius: 10px;
+    flex-grow: 1;
+    flex-basis: 0%;
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 45px);
 }
 
 .CodeMirror {
@@ -74,7 +84,6 @@ div#Buttons {
 }
 
 div#prelude_dropdown {
-    max-height: 300px;
     padding: 0px;
     overflow-y: auto;
     background-color: #1a1a1a;
@@ -85,14 +94,9 @@ div#prelude_dropdown {
 div#prelude_dropdown button {
     width: 100%;
     padding: 0px;
-    height: 5vh;
-    min-height: 30px;
+    height: 30px;
 }
 
-#prelude {
-    height: 40vh;
-}
- 
 @media only screen and (max-width: 1000px) {
     #inputContainer {
         display: grid;

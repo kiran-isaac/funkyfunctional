@@ -18,6 +18,40 @@
     overflow-x: auto;
 }
 
+#Title {
+    font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-weight: lighter;
+    text-align: center;
+    height: 45px;
+    align-items: center;
+    width: 100%;
+}
+
+#TitleFlex * {
+    margin: 0px;
+    padding: 0px;
+    height: 45px;
+    vertical-align: middle;
+    text-decoration: underline;
+    margin-top: 6.5px;
+    display: inline-block;
+    margin: auto;
+}
+
+#TitleFlex p, #TitleFlex a {
+    margin-top: 10px;
+    line-height: 40px;
+    text-decoration: none;
+}
+
+#TitleFlex a {
+    color: #646cff;
+}
+
+#TitleFlex p {
+    padding: 0px 5px;
+}
+
 #ASTArea pre {
     width: 96%;
     padding-left: 2%;
