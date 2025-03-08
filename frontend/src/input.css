@@ -69,6 +69,10 @@ div#Buttons {
     margin-left: 3px;
 }
 
+.cm-s-monokai .CodeMirror-linenumber {
+    color: #d0d0d094 !important;
+}
+
 div#prelude_dropdown {
     max-height: 300px;
     padding: 0px;

@@ -3,7 +3,6 @@ import { UnControlled as CodeMirror } from 'react-codemirror2';
 import { SetStateAction, useCallback, useEffect, useState } from "react";
 import "codemirror/lib/codemirror.css";
 import "codemirror/theme/monokai.css";
-import "codemirror/mode/haskell/haskell"; // Haskell mode for syntax highlighting
 import * as wasm from "sfl_wasm_lib";
 
 const eg_programs = import.meta.glob("./../../examples/*", {
@@ -116,7 +115,7 @@ function Input({ onRunMultiple, onRunSingle }: InputProps) {
                         className="code-mirror-wrapper"
                         options={
                             {
-                                mode: 'haskell',
+                                mode: 'scheme',
                                 theme: 'monokai',
                                 lineNumbers: true,
                                 tabSize: 2,
