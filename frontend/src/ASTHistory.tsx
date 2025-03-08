@@ -1,3 +1,4 @@
+import React from 'react';
 import * as wasm from 'sfl_wasm_lib'
 
 interface ASTHistoryProps {
@@ -55,7 +56,12 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
 
     return (
         <ul id="ASTHistory">
-            {astLIs}
+            {astLIs.map((li, index) => (
+                <React.Fragment key={index}>
+                    {li}
+                    {index < astLIs.length - 1 && <hr />}
+                </React.Fragment>
+            ))}
         </ul>
     );
 }
