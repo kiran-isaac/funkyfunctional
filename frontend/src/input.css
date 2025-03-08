@@ -3,17 +3,16 @@
     position: sticky;
     height: 50%;
     margin: 0px;
+
     display: grid;
-    grid-template-columns: 90% 1fr;
-    display: grid;
-    grid-template-columns: 90% 1fr;
-    grid-template-rows: auto 50px repeat(2, 1fr);      
+    grid-template-columns: 80% 1fr;
+    grid-template-rows: 1fr;
     grid-column-gap: 0px;
     grid-row-gap: 0px; 
-    grid-column-gap: 0px;
-    grid-row-gap: 0px;
-    width: calc(99% - 20px);
-    margin: 5px auto;
+
+    width: 55%;
+    margin-left: 5px;
+    margin-top: 5px;
     overflow-y: hidden;
     overflow-x: hidden;
 }
@@ -26,7 +25,6 @@
 #ProgramInput {
     position: relative;
     /* Whole column 1*/
-    grid-area: 2 / 1 / 5 / 2; 
     width: 99%;
     height: 100%;
     margin: 5px auto;
@@ -46,23 +44,32 @@ button.runbutton, select#program_dropdown, div#prelude_dropdown button {
     color: white;
 }
 
-select#program_dropdown {
-    /* second row, first column */
-    grid-area: 2 / 2 / 3 / 3;
+div#Buttons {
+    display: grid;
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
-button#RunButtonSingle {
-    /* second row, second column */
-    grid-area: 3 / 2 / 4 / 3; 
+/* div#inputlhs {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+} */
+
+/* CodeMirror styling: https://codemirror.net/examples/styling/ */
+.code-mirror-wrapper {
+    border: 2px solid rgba(255, 255, 255, 0.349);
+    background-color: #272822;
+    border-radius: 10px;
 }
 
-button#RunButtonMultiple {
-    /* second row, third column */
-    grid-area: 4 / 2 / 5 / 3; 
+.CodeMirror {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    margin-left: 3px;
 }
 
 div#prelude_dropdown {
-    grid-area:  1 / 1 / 2 / 3;
     max-height: 300px;
     padding: 0px;
     overflow-y: auto;
@@ -74,7 +81,12 @@ div#prelude_dropdown {
 div#prelude_dropdown button {
     width: 100%;
     padding: 0px;
-    height: 30px;
+    height: 5vh;
+    min-height: 30px;
+}
+
+#prelude {
+    height: 40vh;
 }
  
 @media only screen and (max-width: 1000px) {

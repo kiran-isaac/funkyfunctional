@@ -1,7 +1,9 @@
 import "./input.css";
-import CodeMirror from '@uiw/react-codemirror';
+import { UnControlled as CodeMirror } from 'react-codemirror2';
 import { SetStateAction, useCallback, useEffect, useState } from "react";
-import { okaidia } from '@uiw/codemirror-theme-okaidia';
+import "codemirror/lib/codemirror.css";
+import "codemirror/theme/monokai.css";
+import "codemirror/mode/haskell/haskell"; // Haskell mode for syntax highlighting
 import * as wasm from "sfl_wasm_lib";
 
 const eg_programs = import.meta.glob("./../../examples/*", {
@@ -24,6 +26,7 @@ function PreludeDropdown() {
         const handleClick = () => {
             if (isVisible) {
                 prelude.style.display = "none";
+                // codeEditor.style.height = "90vh";
                 setIsVisible(false);
             } else {
                 prelude.style.display = "block";
@@ -49,8 +52,8 @@ function PreludeDropdown() {
 }
 
 
-function ProgramDropdown({ inbuiltPrograms, setEditorValue }: { inbuiltPrograms: Map<string, string>, setEditorValue: (x : string) => void}) {    
-    const name_options : JSX.Element[] = [];
+function ProgramDropdown({ inbuiltPrograms, setEditorValue }: { inbuiltPrograms: Map<string, string>, setEditorValue: (x: string) => void }) {
+    const name_options: JSX.Element[] = [];
     inbuiltPrograms.forEach((_, name) => {
         name_options.push(<option key={name} value={name}>{name}</option>);
     });
@@ -83,7 +86,7 @@ function Input({ onRunMultiple, onRunSingle }: InputProps) {
             const eg_programs_map: Map<string, string> = new Map();
             for (const path in eg_programs) {
                 const program = await eg_programs[path]();
-                
+
                 const eg_name = path.split('\\').pop()?.split('/').pop()?.replace(".sfl", "");
                 if (eg_name == undefined) { return; }
                 eg_programs_map.set(eg_name, program as string)
@@ -105,19 +108,34 @@ function Input({ onRunMultiple, onRunSingle }: InputProps) {
 
     return (
         <>
-            <PreludeDropdown/>
-            <div id="ProgramInput"><CodeMirror
-                id="CodeMirrorEditor"
-                height="300px"
-                width="100%"
-                value={editorValue}
-                onChange={editorOnChange}
-                theme={okaidia}
-            /></div>
-            <ProgramDropdown inbuiltPrograms={egProgramsMap} setEditorValue={setEditorValue}/>
-            <button className="runbutton" id="RunButtonSingle" onClick={() => onRunSingle(editorValue)}>Lazy</button>
-            <button className="runbutton" id="RunButtonMultiple" onClick={() => onRunMultiple(editorValue)}>Free Choice</button>
-            <hr/>
+
+            <div id="ProgramInput">
+                <PreludeDropdown />
+                    <CodeMirror
+                        value={editorValue}
+                        className="code-mirror-wrapper"
+                        options={
+                            {
+                                mode: 'haskell',
+                                theme: 'monokai',
+                                lineNumbers: true,
+                                tabSize: 2,
+                                lineWrapping: true,
+                                
+                                matchBrackets: true,
+                                autoCloseBrackets: true,
+                            }
+                        }
+                        onChange={(_, data, value) => {
+                            editorOnChange(value, data);
+                        }}
+                    />
+            </div>
+            <div id="Buttons">
+                <ProgramDropdown inbuiltPrograms={egProgramsMap} setEditorValue={setEditorValue} />
+                <button className="runbutton" id="RunButtonSingle" onClick={() => onRunSingle(editorValue)}>Lazy</button>
+                <button className="runbutton" id="RunButtonMultiple" onClick={() => onRunMultiple(editorValue)}>Free Choice</button>
+            </div>
         </>
     );
 }

@@ -85,8 +85,8 @@ function App() {
 
   return (
     <>
-      <DefinitionSpawnButton definitionIsVisible={definitionIsVisible} setDefinitionIsVisible={setDefinitionIsVisible} />
-      <DefinitionWindow definitionIsVisible={definitionIsVisible} setDefinitionIsVisible={setDefinitionIsVisible} />
+      {/* <DefinitionSpawnButton definitionIsVisible={definitionIsVisible} setDefinitionIsVisible={setDefinitionIsVisible} />
+      <DefinitionWindow definitionIsVisible={definitionIsVisible} setDefinitionIsVisible={setDefinitionIsVisible} /> */}
       <div id="inputContainer">
         <Input
           onRunMultiple={(editorValue) => handleRun(editorValue, true)}
@@ -95,7 +95,7 @@ function App() {
       </div>
       <div id="Spacer"></div>
       <div id="TextArea">
-        <div id="ASTArea">
+        {/* <div id="ASTArea">
           <ul id="RCArea">
             {rcs}
           </ul>
@@ -106,12 +106,12 @@ function App() {
               <hr/>
             </>
           )}
-        </div>
-        <div id="Error">
+        </div> */}
+        {/* <div id="Error">
           <pre>{errorString}</pre>
-        </div>
-        <pre><ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToStringHistory} astHistory={astHistory} /></pre>
-        <hr/>
+        </div> */}
+        {/* <pre><ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToStringHistory} astHistory={astHistory} /></pre>
+        <hr/> */}
       </div>
     </>
   )
