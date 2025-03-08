@@ -18,6 +18,10 @@
     overflow-x: auto;
 }
 
+#Error {
+    color: rgb(255, 143, 143);
+}
+
 #Title {
     font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
     font-weight: lighter;

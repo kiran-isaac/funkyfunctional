@@ -1,6 +1,10 @@
 #lhs {
-    width: 55%;
-    margin-left: 5px;
+    border-right: 1px solid rgba(255, 255, 255, 0.349);
+    position: absolute;
+    width: calc(50% - 10px);
+    height: 100%;
+    padding-left: 5px;
+    padding-right: 5px;
 }
 
 #inputContainer {
@@ -12,7 +16,6 @@
     grid-template-columns: 80% 1fr;
     grid-template-rows: 1fr;
     grid-column-gap: 0px;
-    grid-row-gap: 0px; 
     
     overflow-y: hidden;
     overflow-x: hidden;
@@ -55,12 +58,6 @@ div#Buttons {
     grid-row-gap: 5px;
 }
 
-/* div#inputlhs {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-} */
-
 /* CodeMirror styling: https://codemirror.net/examples/styling/ */
 .code-mirror-wrapper {
     border: 2px solid rgba(255, 255, 255, 0.349);
@@ -77,6 +74,7 @@ div#Buttons {
     margin-top: 5px;
     margin-bottom: 5px;
     margin-left: 3px;
+    height: 100% !important;
 }
 
 .cm-s-monokai .CodeMirror-linenumber {

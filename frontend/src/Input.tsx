@@ -1,4 +1,4 @@
-import "./input.css";
+import "./lhs.css";
 import { Controlled as CodeMirror } from 'react-codemirror2';
 import { SetStateAction, useCallback, useEffect, useState } from "react";
 import "codemirror/lib/codemirror.css";

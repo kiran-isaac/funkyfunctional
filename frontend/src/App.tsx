@@ -2,17 +2,15 @@ import {useState} from 'react'
 import Input from './Input'
 import * as wasm from 'sfl_wasm_lib'
 import './App.css'
+import './rhs.css'
 import RC from './RC';
-import {DefinitionSpawnButton, DefinitionWindow} from './help';
 import ASTHistory from './ASTHistory';
 
 function App() {
-  const [originalExprString, setOriginalExprString] = useState("");
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
   const [selectedRcFromStringHistory, setSelectedRcFromStringHistory] = useState<string[]>([]);
   const [selectedRcToStringHistory, setSelectedRcToStringHistory] = useState<string[]>([]);
   const [errorString, setErrorString] = useState("");
-  const [definitionIsVisible, setDefinitionIsVisible] = useState(true);
   const [astHistory, setAstHistory] = useState<wasm.RawASTInfo[]>([]);
 
   const generateRCs = (ast: wasm.RawASTInfo, multiple: boolean) => {
@@ -40,7 +38,6 @@ function App() {
           return [...prev, to_string];
         });
         ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
-        setOriginalExprString(wasm.main_to_string(ast));
         generateRCs(ast, multiple);
       };
 
@@ -57,7 +54,6 @@ function App() {
       setErrorString(e as string)
       setRcs([])
       setAstHistory([])
-      setOriginalExprString("")
       setSelectedRcFromStringHistory([])
       setSelectedRcToStringHistory([])
     }
@@ -67,7 +63,6 @@ function App() {
     try {
       const ast = wasm.parse(programInput);
       setAstHistory([ast]);
-      setOriginalExprString(wasm.main_to_string(ast));
       setSelectedRcFromStringHistory([]);
       setSelectedRcToStringHistory([]);
       generateRCs(ast, multiple);
@@ -77,7 +72,6 @@ function App() {
       setErrorString(e as string)
       setRcs([])
       setAstHistory([])
-      setOriginalExprString("")
       setSelectedRcFromStringHistory([])
       setSelectedRcToStringHistory([])
     }
@@ -90,7 +84,7 @@ function App() {
           <div id="TitleFlex">
             <h1>SFL Explorer</h1>
             <p> by </p>
-            <a href='https://github.com/kiran-isaac'>Kiran Sturt</a>
+            <a href='https://github.com/kiran-isaac' target='blank'>Kiran Sturt</a>
           </div>
         </div>
         <div id="inputContainer">
@@ -100,25 +94,27 @@ function App() {
           />
         </div>
       </div>
-      <div id="Spacer"></div>
-      <div id="TextArea">
-        <div id="ASTArea">
-          <ul id="RCArea">
-            {rcs}
-          </ul>
-          {originalExprString && (
-            <>
-              <h4>Main Expression:</h4>
-              <pre>{originalExprString}</pre>
-              <hr/>
-            </>
-          )}
+
+
+      <div id="rhs">
+        <div id="Spacer"></div>
+        <div id="TextArea">
+          <div id="ASTArea">
+            {/* {originalExprString && (
+              <>
+                <h4>Main Expression:</h4>
+                <pre>{originalExprString}</pre>
+              </>
+            )} */}
+            <ul id="RCArea">
+              {rcs}
+            </ul>
+          </div>
+          <div id="Error">
+            <pre>{errorString}</pre>
+          </div>
+          <pre><ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToStringHistory} astHistory={astHistory} /></pre>
         </div>
-        <div id="Error">
-          <pre>{errorString}</pre>
-        </div>
-        <pre><ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToStringHistory} astHistory={astHistory} /></pre>
-        <hr/>
       </div>
     </>
   )
