@@ -5,9 +5,11 @@ import './App.css'
 import './rhs.css'
 import RC from './RC';
 import ASTHistory from './ASTHistory';
+import Buttons from './Buttons'
 
 function App() {
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
+  const [editorValue, setEditorValue] = useState("");
   const [selectedRcFromStringHistory, setSelectedRcFromStringHistory] = useState<string[]>([]);
   const [selectedRcToStringHistory, setSelectedRcToStringHistory] = useState<string[]>([]);
   const [errorString, setErrorString] = useState("");
@@ -89,29 +91,27 @@ function App() {
         </div>
         <div id="inputContainer">
           <Input
-            onRunMultiple={(editorValue) => handleRun(editorValue, true)}
-            onRunSingle={(editorValue) => handleRun(editorValue, false)}
+            editorValue={editorValue}
+            setEditorValue={setEditorValue}
+          />
+          <Buttons 
+            handleRun={handleRun}
+            setEditorValue={setEditorValue}
+            editorValue={editorValue}
           />
         </div>
       </div>
-
 
       <div id="rhs">
         <div id="Spacer"></div>
         <div id="TextArea">
           <div id="ASTArea">
-            {/* {originalExprString && (
-              <>
-                <h4>Main Expression:</h4>
-                <pre>{originalExprString}</pre>
-              </>
-            )} */}
             <ul id="RCArea">
               {rcs}
             </ul>
           </div>
           <div id="Error">
-            <pre>{errorString}</pre>
+            <p>{errorString}</p>
           </div>
           <pre><ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToStringHistory} astHistory={astHistory} /></pre>
         </div>
