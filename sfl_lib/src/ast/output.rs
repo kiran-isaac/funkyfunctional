@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ASTDiffElem {
     Similar(String),
     Different(String, String),

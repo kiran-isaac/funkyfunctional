@@ -7,51 +7,36 @@ interface ASTHistoryProps {
 }
 
 const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps) => {
-    const astStrings = [];
-    for (let i = 0; i < astHistory.length; i++) {
-        astStrings.push(wasm.main_to_string(astHistory[i]) + "\n");
-    }
-
-    if (astStrings.length === 0) {
+    if (astHistory.length == 0) {
         return <></>;
     }
 
-    // Get diffs between each string
-    // console.log(astStrings, rcFromHistory, rcToHistory);
-
     const astLIs = [];
-    for (let i = astStrings.length - 1; i >= 0; i--) {
-        const list: JSX.Element[] = [];
-        const prev_to_this = rcToHistory[i - 1];
 
-        const current = astStrings[i];
+    for (let i = astHistory.length - 1; i >= 1; i--) {
+        const prev = astHistory[i - 1];
+        const current = astHistory[i];
 
-        // Get all occurences of rc_from in current, and make them bold
-        if (i == astStrings.length - 1) {
-            const parts = current.split(prev_to_this);
-            for (let j = 0; j < parts.length; j++) {
-                list.push(<span key={`${i}-${j}`}>{parts[j]}</span>);
-                if (j < parts.length - 1) {
-                    list.push(<span className="new" key={`${i}-${j}-new`}>{prev_to_this}</span>);
-                }
+        const diff = wasm.diff(prev, current);
+
+        const spanList = [];
+
+        for (let j = 0; j < wasm.get_diff_len(diff); j += 1) {
+            if (wasm.diff_is_similar(diff, j)) {
+                spanList.push(<span>{wasm.diff_get_similar(diff, j)}</span>);
+            } else {
+                const pair = wasm.diff_get_diff(diff, j);
+                const str1 = wasm.stringpair_one(pair);
+                const str2 = wasm.stringpair_two(pair);
+                spanList.push(<span className="old">{str1}</span>);
+                spanList.push(<span className="new">{str2}</span>);
             }
-        } else if (i == astStrings.length - 2) {
-            const next_from_this = rcFromHistory[i];
-            const parts = current.split(next_from_this);
-            
-            for (let j = 0; j < parts.length; j++) {
-                list.push(<span key={`${i}-${j}`}>{parts[j]}</span>);
-                if (j < parts.length - 1) {
-                    list.push(<span className="old" key={`${i}-${j}-old`}>{next_from_this}</span>);
-                }
-            }
-        } else {
-            list.push(<span key={i}>{current}</span>);
         }
 
-        astLIs.push(<li className='expr_history' key={i}>{list}<br /></li>);
-    }
-    // astLIs = astLIs.reverse();   
+        astLIs.push(<li className='expr_history' key={i}>{spanList}<br/></li>)
+    }   
+
+    astLIs.push(<li className='expr_history' key={0}>{wasm.main_to_string(astHistory[0])}</li>);
 
     return (
         <ul id="ASTHistory">

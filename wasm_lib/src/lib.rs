@@ -256,6 +256,17 @@ pub struct RawDiff {
 }
 
 #[wasm_bindgen]
+pub unsafe fn diff(ast1: &RawASTInfo, ast2: &RawASTInfo) -> RawDiff {
+    let ast1 = &*ast1.ast;
+    let ast2 = &*ast2.ast;
+
+    let ast1_main = ast1.get_assign_exp(ast1.get_main(ast1.root).unwrap());
+    let ast2_main = ast2.get_assign_exp(ast2.get_main(ast2.root).unwrap());
+
+    RawDiff { diff: Box::into_raw(Box::new(AST::diff(ast1, ast2, ast1_main, ast2_main))) }
+}
+
+#[wasm_bindgen]
 pub unsafe fn get_diff_len(diff: &RawDiff) -> usize {
     let diff = &*diff.diff;
     diff.len()
@@ -264,6 +275,8 @@ pub unsafe fn get_diff_len(diff: &RawDiff) -> usize {
 #[wasm_bindgen]
 pub unsafe fn diff_is_similar(diff: &RawDiff, index: usize) -> bool {
     let diff = &*diff.diff;
+
+    log!("DIFF: {:?}", diff.get(index).unwrap());
 
     match diff.get(index).unwrap() {
         ASTDiffElem::Similar(_) => true,
@@ -292,7 +305,7 @@ pub unsafe fn diff_get_diff(diff: &RawDiff, index: usize) -> StringPair {
     let diff = &*diff.diff;
 
     match diff.get(index).unwrap() {
-        ASTDiffElem::Similar(_) => panic!("Expected diff, got similar"),
+        ASTDiffElem::Similar(s) => panic!("Expected diff, got similar {}", s),
         ASTDiffElem::Different(str1, str2) => StringPair {str1: str1.clone(), str2: str2.clone()}
     }
 }
