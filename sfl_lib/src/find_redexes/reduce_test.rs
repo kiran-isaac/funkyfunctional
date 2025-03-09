@@ -277,7 +277,9 @@ fn weird_halt_bug() {
     main :: Int
     main = fac 5"#;
 
-    let pr = Parser::from_string(program.to_string()).parse_module(true).unwrap();
+    let pr = Parser::from_string(program.to_string())
+        .parse_module(true)
+        .unwrap();
     let mut ast = pr.ast;
     let mut lt = pr.lt;
     let tm = pr.tm;

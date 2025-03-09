@@ -149,26 +149,24 @@ impl AST {
     }
 
     pub fn expr_eq(&self, expr1: usize, expr2: usize) -> bool {
-       AST::two_ast_eq(&self, &self, expr1, expr2)
+        AST::eq(&self, &self, expr1, expr2)
     }
 
-    pub fn two_ast_eq(ast1: &AST, ast2: &AST, expr1: usize, expr2: usize) -> bool {
+    pub fn eq(ast1: &AST, ast2: &AST, expr1: usize, expr2: usize) -> bool {
         let n1 = ast1.get(expr1);
         let n2 = ast2.get(expr2);
 
-        match (&n1.t, &n2.t) {
-            (ASTNodeType::Identifier, ASTNodeType::Identifier) |
-            (ASTNodeType::Literal, ASTNodeType::Literal) => {
-                n1.get_value() == n2.get_value()
-            }
+        match (n1.t, n2.t) {
+            (ASTNodeType::Identifier, ASTNodeType::Identifier)
+            | (ASTNodeType::Literal, ASTNodeType::Literal) => n1.get_value() == n2.get_value(),
             (a, b) => {
                 if a != b {
-                    return false
+                    return false;
                 }
-                
+
                 for (c1, c2) in zip(&n1.children, &n2.children) {
-                    if !AST::two_ast_eq(ast1, ast2, *c1, *c2) {
-                        return false
+                    if !AST::eq(ast1, ast2, *c1, *c2) {
+                        return false;
                     }
                 }
                 true

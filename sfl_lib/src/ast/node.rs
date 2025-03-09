@@ -2,7 +2,7 @@ use crate::parsing::{Token, TokenType};
 use crate::{Primitive, Type};
 use std::fmt::Debug;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ASTNodeType {
     Identifier,
     Literal,

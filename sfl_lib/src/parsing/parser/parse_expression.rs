@@ -88,7 +88,6 @@ impl Parser {
         }
     }
 
-    
     fn parse_ite(
         &mut self,
         ast: &mut AST,

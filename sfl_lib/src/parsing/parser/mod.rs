@@ -7,9 +7,9 @@ use std::fmt::Debug;
 use std::fs::File;
 use std::io::{self, prelude::*};
 
-mod parse_types;
-mod parse_match;
 mod parse_expression;
+mod parse_match;
+mod parse_types;
 
 pub struct Parser {
     t_queue: VecDeque<Token>,
@@ -203,7 +203,6 @@ impl Parser {
         }
     }
 
-    
     fn parse_assignment(
         &mut self,
         ast: &mut AST,
