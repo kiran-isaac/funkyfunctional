@@ -15,7 +15,10 @@ function ProgramDropdown({ setEditorValue }: { setEditorValue: (x: string) => vo
                 const program = await eg_programs[path]();
 
                 const eg_name = path.split('\\').pop()?.split('/').pop()?.replace(".sfl", "");
-                if (eg_name == undefined) { return; }
+                if (eg_name == undefined) { continue; }
+
+                // Skip programs that have the same value syntax as the local storage key
+                if (eg_name.startsWith("__") && eg_name.endsWith("__")) { continue; }
                 eg_programs_map.set(eg_name, program as string)
             }
 
