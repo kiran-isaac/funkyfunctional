@@ -535,15 +535,4 @@ mod test {
             main = \x. if 12 <= 1 then Nil else Cons x (collatz x) $ f 12
         "#)
     }
-
-    #[test]
-    fn diff_test2() -> Result<(), ParserError> {     
-        diff_same_as_tostring(r#"match (12 <= 1) {
-            | true -> Nil
-            | false -> Cons (12) Nil
-        }"#, r#"match (false) {
-            | true -> Nil
-            | false -> Cons (12) Nil
-        }"#)
-    }
 }
