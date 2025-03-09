@@ -536,4 +536,21 @@ mod test {
             main = \x. if 12 <= 1 then Nil else Cons x (collatz x) $ f 12
         "#)
     }
+
+    #[test]
+    fn diff_test_fac() -> Result<(), ParserError> {     
+        diff_same_as_tostring(r#"
+            fac :: Int -> Int
+            fac n = if n <= 1 then 1 else n * (fac (n - 1))
+
+            main :: Int
+            main = fac 5
+        "#, r#"
+            fac :: Int -> Int
+            fac n = if n <= 1 then 1 else n * (fac (n - 1))
+
+            main :: Int
+            main = if (5 <= 1) then 1 else 5 * (fac (5 - 1))    
+        "#)
+    }
 }
