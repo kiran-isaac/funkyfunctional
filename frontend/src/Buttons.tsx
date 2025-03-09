@@ -33,8 +33,9 @@ function ProgramDropdown({ setEditorValue }: { setEditorValue: (x: string) => vo
         const val = e?.value;
         if (val == "__local__") {
             setEditorValue(localStorage.getItem("program") || "");
+        } else {
+            setEditorValue(egProgramsMap.get(val) || "")
         }
-        setEditorValue(egProgramsMap.get(val) || "")
     };
 
     return <select onChange={onChange} id="program_dropdown">
