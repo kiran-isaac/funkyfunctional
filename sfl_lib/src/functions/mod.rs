@@ -28,7 +28,6 @@ pub struct Label {
 
     inbuilt: Option<InbuiltFuncPointer>,
     pub label_type: Type,
-    pub is_silent: bool,
 }
 
 impl Label {
@@ -98,12 +97,11 @@ impl KnownTypeLabelTable {
                 inbuilt_reduction_arity: arity,
                 inbuilt: Some(func),
                 label_type: func_type,
-                is_silent: true, // no effect for inbuilts
             },
         );
     }
 
-    pub fn add(&mut self, name: String, type_: Type, is_silent: bool) {
+    pub fn add(&mut self, name: String, type_: Type) {
         let arity = type_.get_arity();
 
         if arity >= self.func_map.len() {
@@ -116,7 +114,6 @@ impl KnownTypeLabelTable {
                 inbuilt_reduction_arity: arity,
                 inbuilt: None,
                 label_type: type_,
-                is_silent,
             },
         );
     }
@@ -145,7 +142,7 @@ impl KnownTypeLabelTable {
                 Some(t) => t.clone(),
             };
 
-            self.add(name.clone(), proclaimed_type, ass_n.is_silent);
+            self.add(name.clone(), proclaimed_type);
         }
 
         Ok(())

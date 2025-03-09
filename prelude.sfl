@@ -1,6 +1,5 @@
-// Use as "if _ then _ else
-if :: Bool -> a -> a -> a
-if cond then_branch else_branch = match cond {
+ifthenelse :: Bool -> a -> a -> a
+ifthenelse cond then_branch else_branch = match cond {
   | true -> then_branch
   | false -> else_branch
 }
@@ -25,7 +24,7 @@ foldr f acc list = match list {
 filter :: (a -> Bool) -> List a -> List a
 filter pred list = match list :: List a {
   | Nil -> Nil
-  | Cons x xs -> if (pred x) then Cons x (filter pred xs) else filter pred xs
+  | Cons x xs -> ifthenelse (pred x) (Cons x (filter pred xs)) (filter pred xs)
 }
 
 repeat :: a -> List a
@@ -37,11 +36,11 @@ length xs = foldr (\_ i. i + 1) 0 xs
 take :: Int -> List a -> List a
 take n list = match list {
   | Nil -> Nil
-  | Cons x xs -> if n > 0 then Cons x $ take (n - 1) xs else Nil
+  | Cons x xs -> ifthenelse (n > 0) (Cons x (take (n - 1) xs)) (Nil)
 }
 
 range :: Int -> Int -> List Int
-range lower upper = if lower >= upper then Nil else Cons lower (range (lower + 1) upper)
+range lower upper = ifthenelse (lower >= upper) (Nil) (Cons lower (range (lower + 1) upper))
 
 infiniteFrom :: Int -> List Int
 infiniteFrom x = Cons x (infiniteFrom (x + 1))

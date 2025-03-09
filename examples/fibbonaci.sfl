@@ -1,5 +1,5 @@
 fib :: Int -> Int
-fib x = if x <= 2 then 1 else (fib (x - 1)) + (fib (x - 2))
+fib x = ifthenelse (x <= 2) (1) ((fib (x - 1)) + (fib (x - 2)))
 
 main :: Int
 main = fib 5

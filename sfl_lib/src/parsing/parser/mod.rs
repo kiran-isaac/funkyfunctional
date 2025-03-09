@@ -209,22 +209,10 @@ impl Parser {
         ast: &mut AST,
         type_table: &HashMap<String, Type>,
     ) -> Result<usize, ParserError> {
-        let mut ass_tk = self.peek(0)?;
+        let ass_tk = self.peek(0)?;
         assert!(
             ass_tk.tt == TokenType::Id
-                || ass_tk.tt == TokenType::If
-                || ass_tk.tt == TokenType::Silence
         );
-
-        let is_silent = ass_tk.tt == TokenType::Silence;
-        if is_silent {
-            self.advance();
-            ass_tk = self.consume()?;
-            if ass_tk.tt != TokenType::If && ass_tk.tt != TokenType::Id {
-                return Err(self
-                    .parse_error("Expected id after silence operator in assignment".to_string()));
-            };
-        }
 
         let name = ass_tk.value.clone();
 
@@ -268,7 +256,6 @@ impl Parser {
             self.lexer.line,
             self.lexer.col,
             type_assignment,
-            is_silent,
         ))
     }
 
@@ -281,18 +268,17 @@ impl Parser {
             let t = self.peek(0)?;
 
             match t.tt {
-                TokenType::Id | TokenType::If | TokenType::Silence => {
+                TokenType::Id => {
                     let next = self.peek(1)?;
                     match next.tt {
                         TokenType::Assignment
                         | TokenType::Id
-                        | TokenType::If
                         | TokenType::LParen => {
                             let assignment = self.parse_assignment(&mut ast, &tm.types)?;
                             let ass_node = ast.get(assignment);
                             let ass_name = ast.get_assignee(assignment);
                             if let Some(ass_type) = &ass_node.type_assignment {
-                                lt.add(ass_name.clone(), ass_type.clone(), ass_node.is_silent)
+                                lt.add(ass_name.clone(), ass_type.clone())
                             }
                             if ass_name == "main" {
                                 main_found = true;
@@ -326,7 +312,7 @@ impl Parser {
                     let constructors = self.parse_data_decl(&mut tm.types)?;
 
                     for (constructor_name, constructor_type) in constructors {
-                        lt.add(constructor_name.clone(), constructor_type, false);
+                        lt.add(constructor_name.clone(), constructor_type);
                         self.bind(constructor_name);
                     }
                 }
