@@ -361,6 +361,7 @@ impl AST {
                 match (old_is_infix, new_is_infix) {
                     (true, true) => {
                         diff.extend(arg_diff);
+                        diff.const_str(" ");
                         diff.extend(func_diff);
                     }
                     (false, false) => {

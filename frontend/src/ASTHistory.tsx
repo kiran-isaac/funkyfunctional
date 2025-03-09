@@ -1,4 +1,5 @@
 import * as wasm from 'sfl_wasm_lib'
+import diff from 'fast-diff';
 
 interface ASTHistoryProps {
     astHistory: wasm.RawASTInfo[];
@@ -19,29 +20,40 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
 
         const diff = wasm.diff(prev, current);
 
-        const spanList = [];
+        const exprSpanList = [];
+        const diffSpanList = [];
 
         for (let j = 0; j < wasm.get_diff_len(diff); j += 1) {
             if (wasm.diff_is_similar(diff, j)) {
-                spanList.push(<span>{wasm.diff_get_similar(diff, j)}</span>);
+                exprSpanList.push(<span>{wasm.diff_get_similar(diff, j)}</span>);
             } else {
                 const pair = wasm.diff_get_diff(diff, j);
                 const str1 = wasm.stringpair_one(pair);
                 const str2 = wasm.stringpair_two(pair);
-                spanList.push(<span className="old">{str1}</span>);
-                spanList.push(<span className="new">{str2}</span>);
+                exprSpanList.push(<span className="changed">{str2}</span>);
+                diffSpanList.push(<div><span className="old">{str1}</span><span className="new">{str2}</span></div>);
             }
         }
 
-        astLIs.push(<li className='expr_history' key={i}>{spanList}<br/></li>)
-    }   
+        astLIs.push(<li className='expr_history' key={i}><pre>{exprSpanList}</pre><pre>{diffSpanList}</pre></li>)
+    }
 
-    astLIs.push(<li className='expr_history' key={0}>{wasm.main_to_string(astHistory[0])}</li>);
+    astLIs.push(<li className='expr_history' key={0}><pre>{wasm.main_to_string(astHistory[0])}</pre></li>);
 
     return (
-        <ul id="ASTHistory">
-            {astLIs}
-        </ul>
+        <div id="ASTHistoryWrapper">
+            <table id="ASTHistory">
+                <tbody>
+                    {astLIs.map((li, index) => (
+                        <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''}>
+                            <td className='index'>{astLIs.length - index - 1}</td>
+                            <td className='ast'>{li}</td>
+                            {/* {index < astLIs.length - 1 && <hr />} */}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
     );
 }
 
