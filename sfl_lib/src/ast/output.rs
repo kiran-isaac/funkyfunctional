@@ -1,9 +1,68 @@
 use super::*;
 
-
-enum DiffElem {
+#[derive(Clone)]
+pub enum ASTDiffElem {
     Similar(String),
-    Different(String, String)
+    Different(String, String),
+}
+
+#[derive(Clone)]
+pub struct ASTDiff {
+    vec: Vec<ASTDiffElem>,
+}
+
+impl ASTDiff {
+    fn new() -> Self {
+        Self { vec: vec![] }
+    }
+
+    fn const_str(&mut self, str: &str) {
+        self.str(str.to_string());
+    }
+
+    fn str(&mut self, str: String) {
+        self.vec.push(ASTDiffElem::Similar(str))
+    }
+
+    fn diff(&mut self, str1: String, str2: String) {
+        self.vec.push(ASTDiffElem::Different(str1, str2));
+    }
+
+    fn extend(&mut self, other: ASTDiff) {
+        self.vec.extend(other.vec);
+    }
+
+    fn prepend(&mut self, elem: ASTDiffElem) {
+        self.vec.insert(0, elem);
+    }
+
+    pub fn len(&self) -> usize {
+        self.vec.len()
+    }
+
+    pub fn get(&self, index: usize) -> Option<&ASTDiffElem> {
+        self.vec.get(index)
+    }
+
+    pub fn str_1(&self) -> String {
+        let mut str = String::new();
+        for elem in &self.vec {
+            match elem {
+                ASTDiffElem::Similar(str2) | ASTDiffElem::Different(str2, _) => str.push_str(str2),
+            }
+        }
+        str
+    }
+
+    pub fn str_2(&self) -> String {
+        let mut str = String::new();
+        for elem in &self.vec {
+            match elem {
+                ASTDiffElem::Similar(str2) | ASTDiffElem::Different(_, str2) => str.push_str(str2),
+            }
+        }
+        str
+    }
 }
 
 impl AST {
@@ -160,54 +219,48 @@ impl AST {
 
     /// Generate the strings for old and new as a diff
     /// returns similarieies, and pairs of differences
-    pub fn diff(
-        old: &AST,
-        new: &AST,
-        expr1: usize,
-        expr2: usize,
-    ) -> (Vec<String>, Vec<(String, String)>) {
+    pub fn diff(old: &AST, new: &AST, expr1: usize, expr2: usize) -> ASTDiff {
         let n1 = old.get(expr1);
         let n2 = new.get(expr2);
 
-        let mut similarities = vec![];
-        let mut changes = vec![];
+        let mut diff = ASTDiff::new();
 
         // Expr eq is identical to str_eq im pretty sure, and they both require tree traversal
 
         match (&n1.t, &n2.t) {
             (ASTNodeType::Pair, ASTNodeType::Pair) => {
-                similarities.push("(".to_string());
-                let (sim1, change1) =
-                    AST::diff(old, new, old.get_first(expr1), new.get_first(expr2));
-                let (sim2, change2) =
-                    AST::diff(old, new, old.get_second(expr1), new.get_second(expr2));
-                similarities.extend(sim1);
-                changes.extend(change1);
-                similarities.push(",".to_string());
-                similarities.extend(sim2);
-                changes.extend(change2);
-                similarities.push(")".to_string());
-            }
+                diff.const_str("(");
 
+                diff.extend(AST::diff(
+                    old,
+                    new,
+                    old.get_first(expr1),
+                    new.get_first(expr2),
+                ));
+                diff.const_str(",");
+                diff.extend(AST::diff(
+                    old,
+                    new,
+                    old.get_second(expr1),
+                    new.get_second(expr2),
+                ));
+                diff.const_str(")");
+            }
             (ASTNodeType::Abstraction, ASTNodeType::Abstraction) => {
-                similarities.push("\\".to_string());
-                let (sim1, change1) = AST::diff(
+                diff.const_str("\\");
+                diff.extend(AST::diff(
                     old,
                     new,
                     old.get_abstr_var(expr1),
-                    new.get_abstr_expr(expr2),
-                );
-                let (sim2, change2) = AST::diff(
+                    new.get_abstr_var(expr2),
+                ));
+                diff.const_str(". ");
+                diff.extend(AST::diff(
                     old,
                     new,
-                    old.get_abstr_var(expr1),
+                    old.get_abstr_expr(expr1),
                     new.get_abstr_expr(expr2),
-                );
-                similarities.extend(sim1);
-                changes.extend(change1);
-                similarities.push(". ".to_string());
-                similarities.extend(sim2);
-                changes.extend(change2);
+                ));
             }
             (ASTNodeType::Match, ASTNodeType::Match) => {
                 let old_cases = old.get_match_cases(expr1);
@@ -219,7 +272,7 @@ impl AST {
                         if !AST::eq(old, new, *old_case, *new_case) {
                             cases_are_different = true;
                             break;
-                        }   
+                        }
                     }
                 }
 
@@ -229,34 +282,72 @@ impl AST {
                     let str_new = new.to_string_sugar(expr2, false);
                     #[cfg(debug_assertions)]
                     assert_ne!(str_new, str_old);
-                    changes.push((str_old, str_new));
+                    diff.diff(str_old, str_new);
                 }
 
-                similarities.push("match (".to_string());
-                let (pat_sim, pat_change) = AST::diff(old, new, expr1, expr2);
-                similarities.extend(pat_sim);
-                changes.extend(pat_change);
-                similarities.push(") {\n".to_string());
+                diff.const_str("match (");
+                diff.extend(AST::diff(old, new, old.get_match_unpack_pattern(expr1), new.get_match_unpack_pattern(expr2)));
+                diff.const_str(") {\n");
 
                 // We know the cases are the same by here
                 for ((old_case, old_expr), (_, new_expr)) in zip(old_cases, new_cases) {
-                    similarities.push("  | ".to_string());
-                    similarities.push(old.to_string_sugar(old_case, false));
-                    similarities.push(" -> ".to_string());
-                    let (expr_sim, expr_diff) = AST::diff(old, new, old_expr, new_expr);
-                    similarities.extend(expr_sim);
-                    changes.extend(expr_diff);   
-                    similarities.push("\n".to_string());
+                    diff.const_str("  | ");
+                    diff.str(old.to_string_sugar(old_case, false));
+                    diff.const_str(" -> ");
+                    diff.extend(AST::diff(old, new, old_expr, new_expr));
+                    diff.const_str("\n");
                 }
+                diff.const_str("}");
             }
 
             (ASTNodeType::Application, ASTNodeType::Application) => {
-                similarities.push("".to_string());
-                let (sim1, change1) = AST::diff(old, new, old.get_func(expr1), new.get_func(expr2));
-                let (sim2, change2) = AST::diff(old, new, old.get_arg(expr1), new.get_arg(expr2));
+                diff.const_str("");
+                let mut func_diff = AST::diff(old, new, old.get_func(expr1), new.get_func(expr2));
+                let mut arg_diff = AST::diff(old, new, old.get_arg(expr1), new.get_arg(expr2));
 
                 let old_func = old.get(old.get_func(expr1));
                 let new_func = new.get(new.get_func(expr2));
+                let old_arg = old.get(old.get_arg(expr1));
+                let new_arg = new.get(new.get_arg(expr2));
+
+                let old_func_needs_brackets = old_func.t == ASTNodeType::Abstraction;
+                let new_func_needs_brackets = new_func.t == ASTNodeType::Abstraction;
+                let old_arg_needs_brackets =
+                    old_arg.t == ASTNodeType::Abstraction || old_arg.t == ASTNodeType::Application;
+                let new_arg_needs_brackets =
+                    new_arg.t == ASTNodeType::Abstraction || old_arg.t == ASTNodeType::Application;
+
+                match (old_func_needs_brackets, new_func_needs_brackets) {
+                    (true, true) => {
+                        func_diff.prepend(ASTDiffElem::Similar("(".to_string()));
+                        func_diff.const_str(")");
+                    }
+                    (true, false) => {
+                        func_diff.prepend(ASTDiffElem::Different("(".to_string(), "".to_string()));
+                        func_diff.diff(")".to_string(), "".to_string());
+                    }
+                    (false, true) => {
+                        func_diff.prepend(ASTDiffElem::Different("".to_string(), ")".to_string()));
+                        func_diff.diff("".to_string(), ")".to_string());
+                    }
+                    (false, false) => {}
+                }
+
+                match (old_arg_needs_brackets, new_arg_needs_brackets) {
+                    (true, true) => {
+                        arg_diff.prepend(ASTDiffElem::Similar("(".to_string()));
+                        arg_diff.const_str(")");
+                    }
+                    (true, false) => {
+                        arg_diff.prepend(ASTDiffElem::Different("(".to_string(), "".to_string()));
+                        arg_diff.diff(")".to_string(), "".to_string());
+                    }
+                    (false, true) => {
+                        arg_diff.prepend(ASTDiffElem::Different("".to_string(), ")".to_string()));
+                        arg_diff.diff("".to_string(), ")".to_string());
+                    }
+                    (false, false) => {}
+                }
 
                 let old_is_infix = match old_func.t {
                     ASTNodeType::Identifier => old_func.info.clone().unwrap().is_infix_id(),
@@ -269,27 +360,22 @@ impl AST {
 
                 match (old_is_infix, new_is_infix) {
                     (true, true) => {
-                        similarities.extend(sim2);
-                        changes.extend(change2);
-
-                        similarities.extend(sim1);
-                        changes.extend(change1);
+                        diff.extend(arg_diff);
+                        diff.extend(func_diff);
                     }
                     (false, false) => {
-                        similarities.extend(sim1);
-                        changes.extend(change1);
+                        diff.extend(func_diff);
                         if n1.dollar_app && n2.dollar_app {
-                            similarities.push(" $ ".to_string());
+                            diff.const_str(" $ ");
                         } else {
-                            similarities.push(" ".to_string());
+                            diff.const_str(" ");
                         }
-                        similarities.extend(sim2);
-                        changes.extend(change2);
+                        diff.extend(arg_diff);
                     }
                     _ => {
                         let str_old = old.to_string_sugar(expr1, false);
                         let str_new = new.to_string_sugar(expr2, false);
-                        changes.push((str_old, str_new));
+                        diff.diff(str_old, str_new);
                     }
                 }
             }
@@ -299,14 +385,14 @@ impl AST {
                 let str_old = old.to_string_sugar(expr1, false);
                 let str_new = new.to_string_sugar(expr2, false);
                 if &str_old == &str_new {
-                    similarities.push(str_old);
+                    diff.str(str_old);
                 } else {
-                    changes.push((str_old, str_new));
+                    diff.diff(str_old, str_new);
                 }
             }
         }
 
-        (similarities, changes)
+        diff
     }
 
     pub fn type_assigns_to_string(&self, module: usize) -> String {
@@ -410,15 +496,54 @@ impl AST {
 #[cfg(test)]
 mod test {
     use super::AST;
-    use crate::parsing::{ParserError, Parser};
+    use crate::parsing::{Parser, ParserError};
+
+    fn diff_same_as_tostring(str1: &str, str2: &str) -> Result<(), ParserError> {
+        let ast1 = Parser::from_string(str1.to_string()).parse_module(true)?.ast;
+        let ast2 = Parser::from_string(str2.to_string()).parse_module(true)?.ast;
+
+        let ast1_main = ast1.get_assign_exp(ast1.get_main(ast1.root).unwrap());
+        let ast2_main = ast1.get_assign_exp(ast1.get_main(ast1.root).unwrap());
+
+        let diff = AST::diff(&ast1, &ast2, ast1_main, ast2_main);
+        assert_eq!(diff.str_1(), ast1.to_string_sugar(ast1_main, false));
+        assert_eq!(diff.str_2(), ast2.to_string_sugar(ast2_main, false));
+        Ok(())
+    }
 
     #[test]
-    fn diff_test() -> Result<(), ParserError> {
-        let expr1 = "(\\x.x) 1".to_string();
-        let expr2 = "1".to_string();
-        let ast1 = Parser::from_string(expr1).parse_tl_expression(false)?.ast;
-        let ast2 = Parser::from_string(expr2).parse_tl_expression(false)?.ast;
-        println!("{:?}", AST::diff(&ast1, &ast2, ast1.root, ast2.root));
-        Ok(())
+    fn diff_test1() -> Result<(), ParserError> {     
+        diff_same_as_tostring(r#"
+            f :: Int -> Int
+            f n = if (n % 2) == 0 then n / 2 else (3 * n) + 1
+
+            // Get collatz sequence
+            collatz :: Int -> List Int
+            collatz n = (\x. if n <= 1 then Nil else Cons x (collatz x)) $ f n
+
+            main :: List Int
+            main = collatz 12
+        "#, r#"
+            f :: Int -> Int
+            f n = if (n % 2) == 0 then n / 2 else (3 * n) + 1
+
+            // Get collatz sequence
+            collatz :: Int -> List Int
+            collatz n = (\x. if n <= 1 then Nil else Cons x (collatz x)) $ f n
+
+            main :: List Int
+            main = \x. if 12 <= 1 then Nil else Cons x (collatz x) $ f 12
+        "#)
+    }
+
+    #[test]
+    fn diff_test2() -> Result<(), ParserError> {     
+        diff_same_as_tostring(r#"match (12 <= 1) {
+            | true -> Nil
+            | false -> Cons (12) Nil
+        }"#, r#"match (false) {
+            | true -> Nil
+            | false -> Cons (12) Nil
+        }"#)
     }
 }

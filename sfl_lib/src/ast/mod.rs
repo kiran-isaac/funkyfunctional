@@ -8,6 +8,7 @@ pub use node::*;
 use std::collections::HashSet;
 use std::iter::zip;
 use std::{collections::HashMap, fmt::Debug, vec};
+pub use output::{ASTDiff, ASTDiffElem};
 
 #[derive(Clone)]
 pub struct AST {
@@ -93,6 +94,7 @@ impl AST {
         names
     }
 
+    /// Get the main assignment (not just the expr)
     pub fn get_main(&self, module: usize) -> Option<usize> {
         self.get_assign_to(module, "main".to_string())
     }
