@@ -151,6 +151,34 @@ impl AST {
         }
     }
 
+
+    /// Returns similarities, removals and, additions (in that order) 
+    // pub fn diff(old: &AST, expr1: usize, new: &AST, expr2: usize) -> (Vec<String>, Vec<(String, String)>) {
+    //     let n1 = old.get(expr1);
+    //     let n2 = new.get(expr2);
+
+    //     let mut similarities = vec![];
+    //     let mut changes = vec![];
+
+    //     if ast.expr_eq(rc.0, expr) {
+    //         let str_old = ast.to_string_sugar(expr, false);
+    //         let str_new = rc.1.to_string_sugar(rc1expr, false);
+    //     } else {
+    //         match (n.t, rc0n.t) {
+
+                
+    //             // Catchall
+    //             (_, _) => {
+    //                 let str_old = ast.to_string_sugar(expr, false);
+    //                 let str_new = rc.1.to_string_sugar(rc1expr, false);
+    //                 changes.push((str_old, str_new));
+    //             }
+    //         }
+    //     }
+
+    //     (similarities,changes )
+    // }
+
     pub fn type_assigns_to_string(&self, module: usize) -> String {
         let n = self.get(module);
         let mut s = String::new();
