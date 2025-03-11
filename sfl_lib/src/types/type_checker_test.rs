@@ -56,12 +56,12 @@ fn type_check_eq() -> Result<(), TypeError> {
 
 #[test]
 fn type_check_ite() -> Result<(), TypeError> {
-    tc_test_should_pass("main :: Float\nmain = if false then 2.0 else 3.0")?;
-    tc_test_should_pass("main :: Int\nmain = if false then 2 else 3")?;
-    tc_test_should_pass("main :: Bool\nmain = if true then true else false")?;
+    tc_test_should_pass("main :: Float\nmain = if false 2.0 3.0")?;
+    tc_test_should_pass("main :: Int\nmain = if false 2 3")?;
+    tc_test_should_pass("main :: Bool\nmain = if true true false")?;
 
-    tc_test_should_fail("main :: Int\nmain = if false then 2.0 else 3");
-    tc_test_should_fail("main :: Float\nmain = if false then 2.0 else true");
+    tc_test_should_fail("main :: Int\nmain = if false 2.0 3");
+    tc_test_should_fail("main :: Float\nmain = if false 2.0 true");
     Ok(())
 }
 
@@ -191,13 +191,13 @@ fn expr_inference_should_fail(program: &str) {
 fn stuff() -> Result<(), TypeError> {
     tc_test_should_pass("main:: (a -> b) -> a -> b\nmain f x = f x")?;
 
-    tc_test_should_pass("main :: a -> b -> b\nmain = \\b . if true then (\\x . x) else (\\x . x)")?;
+    tc_test_should_pass("main :: a -> b -> b\nmain = \\b . if true (\\x . x) (\\x . x)")?;
 
     expr_inference_should_fail("\\x . x x");
 
-    tc_test_should_pass("main::Int -> Int\nmain = if true then (\\x :: Int. x) else (\\x . x)")?;
+    tc_test_should_pass("main::Int -> Int\nmain = if true (\\x :: Int. x) (\\x . x)")?;
     tc_test_should_pass(
-        "main :: Bool -> Int -> Int\nmain = \\b . if b then (\\x . x) else (\\x . 10)",
+        "main :: Bool -> Int -> Int\nmain = \\b . if b (\\x . x) (\\x . 10)",
     )
 }
 
