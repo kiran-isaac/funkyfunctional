@@ -2,11 +2,9 @@ import * as wasm from 'sfl_wasm_lib'
 
 interface ASTHistoryProps {
     astHistory: wasm.RawASTInfo[];
-    rcFromHistory: string[];
-    rcToHistory: string[];
 }
 
-const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps) => {
+const ASTHistory = ({ astHistory }: ASTHistoryProps) => {
     if (astHistory.length == 0) {
         return <></>;
     }
@@ -20,6 +18,7 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
 
         const exprSpanList = [];
         const diffSpanList = [];
+        const hasOccured : Set<string> = new Set();
 
         for (let j = 0; j < wasm.get_diff_len(diff); j += 1) {
             if (wasm.diff_is_similar(diff, j)) {
@@ -29,7 +28,11 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
                 const str1 = wasm.stringpair_one(pair);
                 const str2 = wasm.stringpair_two(pair);
                 exprSpanList.push(<span className="changed">{str2}</span>);
-                diffSpanList.push(<div><span className="old">{str1}</span><span className="new">{str2}</span></div>);
+                const setIdent = str1 + '\0' + str2;
+                if (!hasOccured.has(setIdent)) {
+                    diffSpanList.push(<div><span className="old">{str1}</span><span>{" => "}</span><span className="new">{str2}</span></div>);
+                    hasOccured.add(setIdent);
+                }
             }
         }
 
@@ -46,7 +49,6 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
                         <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''}>
                             <td className='index'>{astLIs.length - index - 1}</td>
                             <td className='ast'>{li}</td>
-                            {/* {index < astLIs.length - 1 && <hr />} */}
                         </tr>
                     ))}
                 </tbody>

@@ -209,9 +209,7 @@ impl Parser {
         type_table: &HashMap<String, Type>,
     ) -> Result<usize, ParserError> {
         let ass_tk = self.peek(0)?;
-        assert!(
-            ass_tk.tt == TokenType::Id
-        );
+        assert!(ass_tk.tt == TokenType::Id);
 
         let name = ass_tk.value.clone();
 
@@ -249,13 +247,7 @@ impl Parser {
             Err(_) => None,
         };
 
-        Ok(ast.add_assignment(
-            id,
-            expr,
-            self.lexer.line,
-            self.lexer.col,
-            type_assignment,
-        ))
+        Ok(ast.add_assignment(id, expr, self.lexer.line, self.lexer.col, type_assignment))
     }
 
     pub fn parse_module(&mut self, with_prelude: bool) -> Result<ParseResult, ParserError> {
@@ -270,9 +262,7 @@ impl Parser {
                 TokenType::Id => {
                     let next = self.peek(1)?;
                     match next.tt {
-                        TokenType::Assignment
-                        | TokenType::Id
-                        | TokenType::LParen => {
+                        TokenType::Assignment | TokenType::Id | TokenType::LParen => {
                             let assignment = self.parse_assignment(&mut ast, &tm.types)?;
                             let ass_node = ast.get(assignment);
                             let ass_name = ast.get_assignee(assignment);

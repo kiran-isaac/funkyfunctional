@@ -6,7 +6,7 @@ pub enum ASTDiffElem {
     Different(String, String),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ASTDiff {
     vec: Vec<ASTDiffElem>,
 }
@@ -17,23 +17,71 @@ impl ASTDiff {
     }
 
     fn const_str(&mut self, str: &str) {
-        self.str(str.to_string());
+        let len = self.vec.len();
+        if let Some(ASTDiffElem::Similar(str1)) = &self.vec.last() {
+            self.vec[len - 1] = ASTDiffElem::Similar(str1.clone() + str);
+        } else {
+            self.vec.push(ASTDiffElem::Similar(str.to_string()));
+        }
     }
 
     fn str(&mut self, str: String) {
-        self.vec.push(ASTDiffElem::Similar(str))
+        self.const_str(&str);
     }
 
     fn diff(&mut self, str1: String, str2: String) {
-        self.vec.push(ASTDiffElem::Different(str1, str2));
+        let len = self.vec.len();
+        if let Some(ASTDiffElem::Different(s1, s2)) = &self.vec.last() {
+            self.vec[len - 1] = ASTDiffElem::Different(s1.clone() + &str1, s2.clone() + &str2);
+        } else {
+            self.vec.push(ASTDiffElem::Different(str1, str2));
+        }
     }
 
     fn extend(&mut self, other: ASTDiff) {
-        self.vec.extend(other.vec);
+        for elem in other.vec {
+            match elem {
+                ASTDiffElem::Similar(s) => self.str(s),
+                ASTDiffElem::Different(s1, s2) => self.diff(s1, s2),
+            }
+        }
+    }
+
+    fn insert_diffs_with_separator(&mut self, diff1: ASTDiff, diff2: ASTDiff, separator: &str) {
+        match (diff1.vec.last(), diff2.vec.first()) {
+            (Some(ASTDiffElem::Different(_, _)), Some(ASTDiffElem::Different(_, _))) => {
+                self.extend(diff1);
+                self.diff(separator.to_string(), separator.to_string());
+                self.extend(diff2);
+            }
+            (_, _) => {
+                self.extend(diff1);
+                self.const_str(separator);
+                self.extend(diff2);
+            }
+        }
+    }
+
+    fn bracket(&mut self, diff: bool) {
+        if diff {
+            self.prepend(ASTDiffElem::Different("(".to_string(), "(".to_string()));
+            self.diff(")".to_string(), ")".to_string())
+        } else {
+            self.prepend(ASTDiffElem::Similar("(".to_string()));
+            self.const_str(")")
+        }
     }
 
     fn prepend(&mut self, elem: ASTDiffElem) {
-        self.vec.insert(0, elem);
+        match (self.vec.first(), elem.clone()) {
+            (Some(ASTDiffElem::Different(s1, s2)), ASTDiffElem::Different(news1, news2)) => {
+                self.vec[0] = ASTDiffElem::Different(news1 + s1, news2 + s2);
+            }
+            (Some(ASTDiffElem::Similar(s)), ASTDiffElem::Similar(news)) => {
+                self.vec[0] = ASTDiffElem::Similar(news + s);
+            }
+            _ => self.vec.insert(0, elem),
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -193,6 +241,11 @@ impl AST {
         let n1 = old.get(expr1);
         let n2 = new.get(expr2);
 
+        #[cfg(debug_assertions)]
+        let _expr1_str = old.to_string_sugar(expr1, false);
+        #[cfg(debug_assertions)]
+        let _expr2_str = new.to_string_sugar(expr2, false);
+
         let mut diff = ASTDiff::new();
 
         // Expr eq is identical to str_eq im pretty sure, and they both require tree traversal
@@ -200,20 +253,10 @@ impl AST {
         match (&n1.t, &n2.t) {
             (ASTNodeType::Pair, ASTNodeType::Pair) => {
                 diff.const_str("(");
+                let diff1 = AST::diff(old, new, old.get_first(expr1), new.get_first(expr2));
+                let diff2 = AST::diff(old, new, old.get_second(expr1), new.get_second(expr2));
+                diff.insert_diffs_with_separator(diff1, diff2, ",");
 
-                diff.extend(AST::diff(
-                    old,
-                    new,
-                    old.get_first(expr1),
-                    new.get_first(expr2),
-                ));
-                diff.const_str(",");
-                diff.extend(AST::diff(
-                    old,
-                    new,
-                    old.get_second(expr1),
-                    new.get_second(expr2),
-                ));
                 diff.const_str(")");
             }
             (ASTNodeType::Abstraction, ASTNodeType::Abstraction) => {
@@ -256,7 +299,12 @@ impl AST {
                 }
 
                 diff.const_str("match (");
-                diff.extend(AST::diff(old, new, old.get_match_unpack_pattern(expr1), new.get_match_unpack_pattern(expr2)));
+                diff.extend(AST::diff(
+                    old,
+                    new,
+                    old.get_match_unpack_pattern(expr1),
+                    new.get_match_unpack_pattern(expr2),
+                ));
                 diff.const_str(") {\n");
 
                 // We know the cases are the same by here
@@ -271,7 +319,6 @@ impl AST {
             }
 
             (ASTNodeType::Application, ASTNodeType::Application) => {
-                diff.const_str("");
                 let mut func_diff = AST::diff(old, new, old.get_func(expr1), new.get_func(expr2));
                 let mut arg_diff = AST::diff(old, new, old.get_arg(expr1), new.get_arg(expr2));
 
@@ -285,29 +332,27 @@ impl AST {
                 let old_arg_needs_brackets =
                     old_arg.t == ASTNodeType::Abstraction || old_arg.t == ASTNodeType::Application;
                 let new_arg_needs_brackets =
-                    new_arg.t == ASTNodeType::Abstraction || old_arg.t == ASTNodeType::Application;
+                    new_arg.t == ASTNodeType::Abstraction || new_arg.t == ASTNodeType::Application;
+
+                let first_arg_is_diff = if let Some(ASTDiffElem::Different(_, _)) = arg_diff.vec.first() {true} else {false};
+                let last_func_is_diff = if let Some(ASTDiffElem::Different(_, _)) = func_diff.vec.last() {true} else {false};
+
 
                 match (old_func_needs_brackets, new_func_needs_brackets) {
-                    (true, true) => {
-                        func_diff.prepend(ASTDiffElem::Similar("(".to_string()));
-                        func_diff.const_str(")");
-                    }
+                    (true, true) => func_diff.bracket(first_arg_is_diff),
                     (true, false) => {
                         func_diff.prepend(ASTDiffElem::Different("(".to_string(), "".to_string()));
                         func_diff.diff(")".to_string(), "".to_string());
                     }
                     (false, true) => {
-                        func_diff.prepend(ASTDiffElem::Different("".to_string(), ")".to_string()));
+                        func_diff.prepend(ASTDiffElem::Different("".to_string(), "(".to_string()));
                         func_diff.diff("".to_string(), ")".to_string());
                     }
                     (false, false) => {}
                 }
 
                 match (old_arg_needs_brackets, new_arg_needs_brackets) {
-                    (true, true) => {
-                        arg_diff.prepend(ASTDiffElem::Similar("(".to_string()));
-                        arg_diff.const_str(")");
-                    }
+                    (true, true) => arg_diff.bracket(last_func_is_diff),
                     (true, false) => {
                         arg_diff.prepend(ASTDiffElem::Different("(".to_string(), "".to_string()));
                         arg_diff.diff(")".to_string(), "".to_string());
@@ -330,18 +375,14 @@ impl AST {
 
                 match (old_is_infix, new_is_infix) {
                     (true, true) => {
-                        diff.extend(arg_diff);
-                        diff.const_str(" ");
-                        diff.extend(func_diff);
+                        diff.insert_diffs_with_separator(arg_diff, func_diff, " ");
                     }
                     (false, false) => {
-                        diff.extend(func_diff);
                         if n1.dollar_app && n2.dollar_app {
-                            diff.const_str(" $ ");
+                            diff.insert_diffs_with_separator(func_diff, arg_diff, " $ ");
                         } else {
-                            diff.const_str(" ");
+                            diff.insert_diffs_with_separator(func_diff, arg_diff, " ");
                         }
-                        diff.extend(arg_diff);
                     }
                     _ => {
                         let str_old = old.to_string_sugar(expr1, false);
@@ -355,7 +396,7 @@ impl AST {
             (_, _) => {
                 let str_old = old.to_string_sugar(expr1, false);
                 let str_new = new.to_string_sugar(expr2, false);
-                if &str_old == &str_new {
+                if str_new == str_old {
                     diff.str(str_old);
                 } else {
                     diff.diff(str_old, str_new);
@@ -468,13 +509,18 @@ impl AST {
 mod test {
     use super::AST;
     use crate::parsing::{Parser, ParserError};
+    use crate::ASTDiff;
 
     fn diff_same_as_tostring(str1: &str, str2: &str) -> Result<(), ParserError> {
-        let ast1 = Parser::from_string(str1.to_string()).parse_module(true)?.ast;
-        let ast2 = Parser::from_string(str2.to_string()).parse_module(true)?.ast;
+        let ast1 = Parser::from_string(str1.to_string())
+            .parse_module(true)?
+            .ast;
+        let ast2 = Parser::from_string(str2.to_string())
+            .parse_module(true)?
+            .ast;
 
         let ast1_main = ast1.get_assign_exp(ast1.get_main(ast1.root).unwrap());
-        let ast2_main = ast1.get_assign_exp(ast1.get_main(ast1.root).unwrap());
+        let ast2_main = ast2.get_assign_exp(ast2.get_main(ast2.root).unwrap());
 
         let diff = AST::diff(&ast1, &ast2, ast1_main, ast2_main);
         assert_eq!(diff.str_1(), ast1.to_string_sugar(ast1_main, false));
@@ -482,45 +528,110 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn diff_test1() -> Result<(), ParserError> {     
-        diff_same_as_tostring(r#"
-            f :: Int -> Int
-            f n = if ((n % 2) == 0) (n / 2) ((3 * n) + 1)
+    fn get_diff(str1: &str, str2: &str) -> Result<ASTDiff, ParserError> {
+        let ast1 = Parser::from_string(str1.to_string())
+            .parse_module(true)?
+            .ast;
+        let ast2 = Parser::from_string(str2.to_string())
+            .parse_module(true)?
+            .ast;
 
-            // Get collatz sequence
-            collatz :: Int -> List Int
-            collatz n = (\x. if (n <= 1) (Nil) (Cons x (collatz x))) $ f n
+        let ast1_main = ast1.get_assign_exp(ast1.get_main(ast1.root).unwrap());
+        let ast2_main = ast2.get_assign_exp(ast2.get_main(ast2.root).unwrap());
 
-            main :: List Int
-            main = collatz 12
-        "#, r#"
-            f :: Int -> Int
-            f n = if ((n % 2) == 0) (n / 2) ((3 * n) + 1)
-
-            // Get collatz sequence
-            collatz :: Int -> List Int
-            collatz n = (\x. if (n <= 1) (Nil) (Cons x (collatz x))) $ f n
-
-            main :: List Int
-            main = (\x. if (12 <= 1) Nil (Cons x (collatz x))) $ f 12
-        "#)
+        Ok(AST::diff(&ast1, &ast2, ast1_main, ast2_main))
     }
 
     #[test]
-    fn diff_test_fac() -> Result<(), ParserError> {     
-        diff_same_as_tostring(r#"
+    fn diff_test_4() -> Result<(), ParserError> {
+        let diff = get_diff(
+            r#"
+            fac :: Int -> Int
+            fac n = if (n <= 1) 1 (n * (fac (n - 1)))
+
+            main :: Int
+            main = 5 * match ((5 - 1) <= 1) {
+              | true -> 1
+              | false -> (5 - 1) * (fac ((5 - 1) - 1))
+            }
+        "#,
+            r#"
+            fac :: Int -> Int
+            fac n = if (n <= 1) 1 (n * (fac (n - 1)))
+
+            main :: Int
+            main = 5 * match (4 <= 1) {
+              | true -> 1
+              | false -> 4 * (fac (4 - 1))
+            }
+        "#,
+        )?;
+        dbg!(diff);
+        Ok(())
+    }
+
+    #[test]
+    fn diff_test_3() -> Result<(), ParserError> {
+        diff_same_as_tostring(
+            r#"
+            fac :: Int -> Int
+            fac n = if (n <= 1) 1 (n * (fac (n - 1)))
+
+            main :: Int
+            main = 5 * (4 * (fac (4 - 1)))
+        "#,
+            r#"
+            fac :: Int -> Int
+            fac n = if (n <= 1) 1 (n * (fac (n - 1)))
+
+            main :: Int
+            main = 5 * (4 * (if ((4 - 1) <= 1) 1 ((4 - 1) * (fac ((4 - 1) - 1)))))
+        "#,
+        )
+    }
+
+    // #[test]
+    // fn diff_test1() -> Result<(), ParserError> {
+    //     diff_same_as_tostring(r#"
+    //         f :: Int -> Int
+    //         f n = if ((n % 2) == 0) (n / 2) ((3 * n) + 1)
+    //
+    //         // Get collatz sequence
+    //         collatz :: Int -> List Int
+    //         collatz n = (\x. if (n <= 1) (Nil) (Cons x (collatz x))) $ f n
+    //
+    //         main :: List Int
+    //         main = collatz 12
+    //     "#, r#"
+    //         f :: Int -> Int
+    //         f n = if ((n % 2) == 0) (n / 2) ((3 * n) + 1)
+    //
+    //         // Get collatz sequence
+    //         collatz :: Int -> List Int
+    //         collatz n = (\x. if (n <= 1) (Nil) (Cons x (collatz x))) $ f n
+    //
+    //         main :: List Int
+    //         main = (\x. if (12 <= 1) Nil (Cons x (collatz x))) $ f 12
+    //     "#)
+    // }
+
+    #[test]
+    fn diff_test_fac() -> Result<(), ParserError> {
+        diff_same_as_tostring(
+            r#"
             fac :: Int -> Int
             fac n = if (n <= 1) 1 (n * (fac (n - 1)))
 
             main :: Int
             main = fac 5
-        "#, r#"
+        "#,
+            r#"
             fac :: Int -> Int
             fac n = if (n <= 1) 1 (n * (fac (n - 1)))
 
             main :: Int
             main = if (5 <= 1) 1 (5 * (fac (5 - 1)))
-        "#)
+        "#,
+        )
     }
 }

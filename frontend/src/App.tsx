@@ -10,8 +10,6 @@ import Buttons from './Buttons'
 function App() {
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
   const [editorValue, setEditorValue] = useState("");
-  const [selectedRcFromStringHistory, setSelectedRcFromStringHistory] = useState<string[]>([]);
-  const [selectedRcToStringHistory, setSelectedRcToStringHistory] = useState<string[]>([]);
   const [errorString, setErrorString] = useState("");
   const [astHistory, setAstHistory] = useState<wasm.RawASTInfo[]>([]);
 
@@ -33,12 +31,6 @@ function App() {
         setAstHistory((prevAstHistory) => {
           return [...prevAstHistory, ast];
         });
-        setSelectedRcFromStringHistory((prev) => {
-          return [...prev, from_string];
-        });
-        setSelectedRcToStringHistory((prev) => {
-          return [...prev, to_string];
-        });
         ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
         generateRCs(ast, multiple);
       };
@@ -56,8 +48,6 @@ function App() {
       setErrorString(e as string)
       setRcs([])
       setAstHistory([])
-      setSelectedRcFromStringHistory([])
-      setSelectedRcToStringHistory([])
     }
   }
 
@@ -65,8 +55,6 @@ function App() {
     try {
       const ast = wasm.parse(programInput);
       setAstHistory([ast]);
-      setSelectedRcFromStringHistory([]);
-      setSelectedRcToStringHistory([]);
       generateRCs(ast, multiple);
       
       setErrorString("")
@@ -74,8 +62,6 @@ function App() {
       setErrorString(e as string)
       setRcs([])
       setAstHistory([])
-      setSelectedRcFromStringHistory([])
-      setSelectedRcToStringHistory([])
     }
   };
 
@@ -113,7 +99,7 @@ function App() {
           <div id="Error">
             <p>{errorString}</p>
           </div>
-          <ASTHistory rcFromHistory={selectedRcFromStringHistory} rcToHistory={selectedRcToStringHistory} astHistory={astHistory} />
+          <ASTHistory astHistory={astHistory} />
         </div>
       </div>
     </>

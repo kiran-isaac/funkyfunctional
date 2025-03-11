@@ -5,10 +5,10 @@ mod transform;
 
 use crate::{find_redexes::RCPair, Token, Type};
 pub use node::*;
+pub use output::{ASTDiff, ASTDiffElem};
 use std::collections::HashSet;
 use std::iter::zip;
 use std::{collections::HashMap, fmt::Debug, vec};
-pub use output::{ASTDiff, ASTDiffElem};
 
 #[derive(Clone)]
 pub struct AST {
