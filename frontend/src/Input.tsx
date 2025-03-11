@@ -1,8 +1,9 @@
 import "./lhs.css";
-import { Controlled as CodeMirror } from 'react-codemirror2';
-import { SetStateAction, useCallback, useEffect, useState } from "react";
+import { Controlled as CodeMirrorControllerd } from 'react-codemirror2';
+import { useEffect, useState } from "react";
 import "codemirror/lib/codemirror.css";
 import "codemirror/theme/monokai.css";
+import "./sfl_codemirror.js";
 import * as wasm from "sfl_wasm_lib";
 
 function PreludeDropdown() {
@@ -58,19 +59,16 @@ function Input({ editorValue, setEditorValue }: InputProps) {
         <>
             <div id="ProgramInput">
                 <PreludeDropdown />
-                    <CodeMirror
+                    <CodeMirrorControllerd
                         value={editorValue}
                         className="code-mirror-wrapper"
                         options={
                             {
-                                mode: 'scheme',
+                                mode: "sfl",
                                 theme: 'monokai',
                                 lineNumbers: true,
                                 tabSize: 2,
                                 lineWrapping: true,
-                                
-                                matchBrackets: true,
-                                autoCloseBrackets: true,
                             }
                         }
                         onBeforeChange={(_0, _1, value) => {

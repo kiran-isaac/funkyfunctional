@@ -77,7 +77,7 @@ div#Buttons {
     height: 100% !important;
 }
 
-.cm-s-monokai .CodeMirror-linenumber {
+.CodeMirror-linenumber {
     color: #d0d0d094 !important;
 }
 

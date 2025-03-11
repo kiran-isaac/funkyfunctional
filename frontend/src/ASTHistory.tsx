@@ -1,5 +1,4 @@
 import * as wasm from 'sfl_wasm_lib'
-import diff from 'fast-diff';
 
 interface ASTHistoryProps {
     astHistory: wasm.RawASTInfo[];
@@ -11,7 +10,6 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
     if (astHistory.length == 0) {
         return <></>;
     }
-
     const astLIs = [];
 
     for (let i = astHistory.length - 1; i >= 1; i--) {

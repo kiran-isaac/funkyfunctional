@@ -9,17 +9,15 @@
     "build-rust": "cd ../wasm_lib && wasm-pack build --target web && cd ../frontend",
     "build-with-rust": "npm run build-rust && npm run build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "serve": "serve dist/"
   },
   "dependencies": {
-    "@types/diff": "^7.0.0",
-    "@uiw/codemirror-theme-okaidia": "^4.23.7",
-    "diff": "^7.0.0",
     "esbuild": ">=0.25.0",
-    "fast-diff": "^1.3.0",
     "markdown-to-jsx": "^7.7.3",
     "react": "^18.3.1",
     "react-codemirror2": "^8.0.1",
+    "codemirror": "5.x",
     "react-dom": "^18.3.1",
     "react-responsive": "^10.0.0",
     "react-router-dom": "^7.1.3",
@@ -31,12 +29,14 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
+    "@types/codemirror": "5.x",
     "eslint": "^9.17.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.18.2",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "serve": "^14.2.4"
   }
 }
