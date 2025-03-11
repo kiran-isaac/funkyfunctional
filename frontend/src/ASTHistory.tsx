@@ -1,5 +1,4 @@
 import * as wasm from 'sfl_wasm_lib'
-import diff from 'fast-diff';
 
 interface ASTHistoryProps {
     astHistory: wasm.RawASTInfo[];
@@ -16,13 +15,7 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
     if (astStrings.length === 0) {
         return <></>;
     }
-
-    // Get diffs between each string
-    // console.log(astStrings, rcFromHistory, rcToHistory);
-    if (astStrings.length > 1) {
-        console.log(diff(astStrings[1], astStrings[0]));
-    }
-
+    
     const astLIs = [];
     for (let i = astStrings.length - 1; i >= 0; i--) {
         const list: JSX.Element[] = [];
