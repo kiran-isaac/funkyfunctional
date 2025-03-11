@@ -3,7 +3,7 @@ import { Controlled as CodeMirrorControllerd } from 'react-codemirror2';
 import { useEffect, useState } from "react";
 import "codemirror/lib/codemirror.css";
 import "codemirror/theme/monokai.css";
-import "./sfl_codemirror";
+import "./sfl_codemirror.js";
 import * as wasm from "sfl_wasm_lib";
 
 function PreludeDropdown() {

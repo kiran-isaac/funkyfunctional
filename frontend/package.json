@@ -9,7 +9,8 @@
     "build-rust": "cd ../wasm_lib && wasm-pack build --target web && cd ../frontend",
     "build-with-rust": "npm run build-rust && npm run build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "serve": "serve dist/"
   },
   "dependencies": {
     "esbuild": ">=0.25.0",
@@ -35,6 +36,7 @@
     "globals": "^15.14.0",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.18.2",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "serve": "^14.2.4"
   }
 }

@@ -23,15 +23,18 @@ CodeMirror.defineMode("sfl", function (_config, modeConfig) {
         }
 
         var ch = source.next();
-        if (specialRE.test(ch)) {
-            if (ch == '{' && source.eat('-')) {
+
+        if (ch == '/') {
+            if (source.eat(/\//)) {
+                source.eatWhile(/\//);
+                source.skipToEnd();
+                return "comment";
+            }
+
+            if (source.eat('*')) {
                 var t = "comment";
-                if (source.eat('#')) {
-                    t = "meta";
-                }
                 return switchState(source, setState, ncomment(t, 1));
             }
-            return null;
         }
 
         if (ch == '\'') {
@@ -92,13 +95,6 @@ CodeMirror.defineMode("sfl", function (_config, modeConfig) {
             return "keyword";
 
         if (symbolRE.test(ch)) {
-            if (ch == '-' && source.eat(/-/)) {
-                source.eatWhile(/-/);
-                if (!source.eat(symbolRE)) {
-                    source.skipToEnd();
-                    return "comment";
-                }
-            }
             var t = "variable";
             if (ch == ':') {
                 t = "variable-2";
@@ -110,7 +106,7 @@ CodeMirror.defineMode("sfl", function (_config, modeConfig) {
         return "error";
     }
 
-    function ncomment(type, nest) {
+    function ncomment(type, nest) {            
         if (nest == 0) {
             return normal;
         }
@@ -118,10 +114,10 @@ CodeMirror.defineMode("sfl", function (_config, modeConfig) {
             var currNest = nest;
             while (!source.eol()) {
                 var ch = source.next();
-                if (ch == '{' && source.eat('-')) {
+                if (ch == '/' && source.eat('*')) {
                     ++currNest;
                 }
-                else if (ch == '-' && source.eat('}')) {
+                else if (ch == '*' && source.eat('/')) {
                     --currNest;
                     if (currNest == 0) {
                         setState(normal);
@@ -134,37 +130,37 @@ CodeMirror.defineMode("sfl", function (_config, modeConfig) {
         };
     }
 
-    function stringLiteral(source, setState) {
-        while (!source.eol()) {
-            var ch = source.next();
-            if (ch == '"') {
-                setState(normal);
-                return "string";
-            }
-            if (ch == '\\') {
-                if (source.eol() || source.eat(whiteCharRE)) {
-                    setState(stringGap);
-                    return "string";
-                }
-                if (source.eat('&')) {
-                }
-                else {
-                    source.next(); // should handle other escapes here
-                }
-            }
-        }
-        setState(normal);
-        return "string error";
-    }
+    // function stringLiteral(source, setState) {
+    //     while (!source.eol()) {
+    //         var ch = source.next();
+    //         if (ch == '"') {
+    //             setState(normal);
+    //             return "string";
+    //         }
+    //         if (ch == '\\') {
+    //             if (source.eol() || source.eat(whiteCharRE)) {
+    //                 setState(stringGap);
+    //                 return "string";
+    //             }
+    //             if (source.eat('&')) {
+    //             }
+    //             else {
+    //                 source.next(); // should handle other escapes here
+    //             }
+    //         }
+    //     }
+    //     setState(normal);
+    //     return "string error";
+    // }
 
-    function stringGap(source, setState) {
-        if (source.eat('\\')) {
-            return switchState(source, setState, stringLiteral);
-        }
-        source.next();
-        setState(normal);
-        return "error";
-    }
+    // function stringGap(source, setState) {
+    //     if (source.eat('\\')) {
+    //         return switchState(source, setState, stringLiteral);
+    //     }
+    //     source.next();
+    //     setState(normal);
+    //     return "error";
+    // }
 
 
     var wellKnownWords = (function () {
@@ -177,51 +173,17 @@ CodeMirror.defineMode("sfl", function (_config, modeConfig) {
         }
 
         setType("keyword")(
-            "match", "data", "type", "_");
+            "match", "data", "type", "_", "splungles");
 
         setType("keyword")(
-            "\.\.", ":", "::", "=", "\\", "<-", "->", "@", "~", "=>");
+            ":", "::", "=", "->");
+
+        setType("builtin")("+", "-", "*", "/", "%", "==", "<=", "<", ">=", ">")
+
+        setType("builtin")("List", "Maybe", "Either");
 
         setType("builtin")(
-            "!!", "$!", "$", "&&", "+", "++", "-", ".", "/", "/=", "<", "<*", "<=",
-            "<$>", "<*>", "=<<", "==", ">", ">=", ">>", ">>=", "^", "^^", "||", "*",
-            "*>", "**");
-
-        setType("builtin")(
-            "Applicative", "Bool", "Bounded", "Char", "Double", "EQ", "Either", "Enum",
-            "Eq", "False", "FilePath", "Float", "Floating", "Fractional", "Functor",
-            "GT", "IO", "IOError", "Int", "Integer", "Integral", "Just", "LT", "Left",
-            "Maybe", "Monad", "Nothing", "Num", "Ord", "Ordering", "Rational", "Read",
-            "ReadS", "Real", "RealFloat", "RealFrac", "Right", "Show", "ShowS",
-            "String", "True");
-
-        setType("builtin")(
-            "abs", "acos", "acosh", "all", "and", "any", "appendFile", "asTypeOf",
-            "asin", "asinh", "atan", "atan2", "atanh", "break", "catch", "ceiling",
-            "compare", "concat", "concatMap", "const", "cos", "cosh", "curry",
-            "cycle", "decodeFloat", "div", "divMod", "drop", "dropWhile", "either",
-            "elem", "encodeFloat", "enumFrom", "enumFromThen", "enumFromThenTo",
-            "enumFromTo", "error", "even", "exp", "exponent", "fail", "filter",
-            "flip", "floatDigits", "floatRadix", "floatRange", "floor", "fmap",
-            "foldl", "foldl1", "foldr", "foldr1", "fromEnum", "fromInteger",
-            "fromIntegral", "fromRational", "fst", "gcd", "getChar", "getContents",
-            "getLine", "head", "id", "init", "interact", "ioError", "isDenormalized",
-            "isIEEE", "isInfinite", "isNaN", "isNegativeZero", "iterate", "last",
-            "lcm", "length", "lex", "lines", "log", "logBase", "lookup", "map",
-            "mapM", "mapM_", "max", "maxBound", "maximum", "maybe", "min", "minBound",
-            "minimum", "mod", "negate", "not", "notElem", "null", "odd", "or",
-            "otherwise", "pi", "pred", "print", "product", "properFraction", "pure",
-            "putChar", "putStr", "putStrLn", "quot", "quotRem", "read", "readFile",
-            "readIO", "readList", "readLn", "readParen", "reads", "readsPrec",
-            "realToFrac", "recip", "rem", "repeat", "replicate", "return", "reverse",
-            "round", "scaleFloat", "scanl", "scanl1", "scanr", "scanr1", "seq",
-            "sequence", "sequence_", "show", "showChar", "showList", "showParen",
-            "showString", "shows", "showsPrec", "significand", "signum", "sin",
-            "sinh", "snd", "span", "splitAt", "sqrt", "subtract", "succ", "sum",
-            "tail", "take", "takeWhile", "tan", "tanh", "toEnum", "toInteger",
-            "toRational", "truncate", "uncurry", "undefined", "unlines", "until",
-            "unwords", "unzip", "unzip3", "userError", "words", "writeFile", "zip",
-            "zip3", "zipWith", "zipWith3");
+            "if", "map", "foldr", "filter", "repeat", "length", "take", "range", "infiniteFrom", "sum");
 
         var override = modeConfig.overrideKeywords;
         if (override) for (var word in override) if (override.hasOwnProperty(word))
