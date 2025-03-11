@@ -2,10 +2,10 @@ fix :: (a -> a) -> a
 fix f = f $ fix f
 
 fac :: (Int -> Int) -> Int -> Int
-fac f n = ifthenelse (n <= 1) (1) (n * (f (n - 1)))
+fac f n = if (n <= 1) (1) (n * (f (n - 1)))
 
 fib :: (Int -> Int) -> Int -> Int
-fib f x = ifthenelse (x <= 2) (1) ((f (x - 1)) + (f (x - 2)))
+fib f x = if (x <= 2) (1) ((f (x - 1)) + (f (x - 2)))
 
 main :: Int
 main = fix fac 5

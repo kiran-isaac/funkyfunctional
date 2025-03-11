@@ -1,5 +1,5 @@
 fac :: Int -> Int
-fac n = ifthenelse (n <= 1) (1) (n * (fac (n - 1)))
+fac n = if (n <= 1) (1) (n * (fac (n - 1)))
 
 main :: Int
 main = fac 5

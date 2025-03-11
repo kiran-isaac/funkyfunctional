@@ -334,7 +334,7 @@ fn list_decl() -> Result<(), ParserError> {
 fn list_maybe() -> Result<(), ParserError> {
     let program = r#"
     fac :: Int -> Int
-    fac n = ifthenelse (n <= 1) (1) (n * (fac (n - 1)))
+    fac n = if (n <= 1) (1) (n * (fac (n - 1)))
 
     fromMaybes :: Either a (Maybe a) -> List a
     fromMaybes a = a

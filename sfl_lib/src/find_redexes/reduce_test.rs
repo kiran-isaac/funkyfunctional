@@ -99,7 +99,7 @@ fn redexes_match() {
 fn weird_halt_bug() {
     let program = r#"
     fac :: Int -> Int
-    fac n = ifthenelse (n <= 1) (1) (n * (fac (n - 1)))
+    fac n = if (n <= 1) (1) (n * (fac (n - 1)))
 
     main :: Int
     main = fac 5"#;
