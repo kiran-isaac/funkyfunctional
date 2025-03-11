@@ -1,0 +1,104 @@
+#lhs {
+    border-right: 1px solid rgba(255, 255, 255, 0.349);
+    position: absolute;
+    width: calc(50% - 10px);
+    height: 100%;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+#inputContainer {
+    background-color: #242424;
+    position: sticky;
+    margin: 0px;
+
+    display: grid;
+    grid-template-columns: 80% 1fr;
+    grid-template-rows: 1fr;
+    grid-column-gap: 0px;
+    
+    overflow-y: hidden;
+    overflow-x: hidden;
+}
+
+#inputContainer hr {
+    display: none;
+    position: absolute;
+}
+
+#ProgramInput {
+    position: relative;
+    /* Whole column 1*/
+    width: 99%;
+    /* margin: 5px auto; */
+    overflow-x: auto;
+    height: calc(100vh - 50px);
+}
+
+button.runbutton, select#program_dropdown, div#prelude_dropdown button {
+    background-color: #1a1a1a;
+    cursor: pointer;
+    transition: border-color 0.25s;
+    border: 1px solid rgba(255, 255, 255, 0.349);
+    border-radius: 10px;
+    width: 100%;
+    padding: 10px;
+    height: 100%;
+    color: white;
+}
+
+div#Buttons {
+    display: grid;
+    /* padding-left: 10px;
+    padding-right: 10px; */
+    margin: 0;
+    height: 100%;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(1fr, 3);
+    grid-row-gap: 5px;
+}
+
+/* CodeMirror styling: https://codemirror.net/examples/styling/ */
+.code-mirror-wrapper {
+    border: 2px solid rgba(255, 255, 255, 0.349);
+    background-color: #272822;
+    border-radius: 10px;
+    flex-grow: 1;
+    flex-basis: 0%;
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 45px);
+}
+
+.CodeMirror {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    margin-left: 3px;
+    height: 100% !important;
+}
+
+.CodeMirror-linenumber {
+    color: #d0d0d094 !important;
+}
+
+div#prelude_dropdown {
+    padding: 0px;
+    overflow-y: auto;
+    background-color: #1a1a1a;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+
+div#prelude_dropdown button {
+    width: 100%;
+    padding: 0px;
+    height: 30px;
+}
+
+button:hover {
+    border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color;
+}
