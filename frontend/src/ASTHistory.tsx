@@ -58,7 +58,6 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
                         <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''}>
                             <td className='index'>{astLIs.length - index - 1}</td>
                             <td className='ast'>{li}</td>
-                            {/* {index < astLIs.length - 1 && <hr />} */}
                         </tr>
                     ))}
                 </tbody>
