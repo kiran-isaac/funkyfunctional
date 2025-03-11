@@ -3,6 +3,12 @@
     width: 100%;
 }
 
+html {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
 #ASTHistory {
     list-style: none;
     padding: 0;
@@ -10,12 +16,52 @@
 }
 
 #Error,
-#ASTHistory,
 #prelude {
     width: 96%;
     padding-left: 2%;
     margin: 0;
     overflow-x: auto;
+}
+
+#Error {
+    color: rgba(255, 40, 40, 0.834);
+    /* allow line breaks, no scrolling */
+    white-space: pre-wrap;
+    overflow-x: hidden;
+}
+
+#Title {
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-weight: lighter;
+    text-align: center;
+    height: 45px;
+    align-items: center;
+    width: 100%;
+}
+
+#TitleFlex * {
+    margin: 0px;
+    padding: 0px;
+    height: 45px;
+    vertical-align: middle;
+    text-decoration: underline;
+    margin-top: 6.5px;
+    display: inline-block;
+    margin: auto;
+}
+
+#TitleFlex p, #TitleFlex a {
+    margin-top: 10px;
+    line-height: 40px;
+    text-decoration: none;
+}
+
+#TitleFlex a {
+    color: #646cff;
+}
+
+#TitleFlex p {
+    padding: 0px 5px;
 }
 
 #ASTArea pre {
