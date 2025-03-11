@@ -1,5 +1,21 @@
 import * as wasm from 'sfl_wasm_lib'
 
+interface DiffDisplayProps {
+    from: string;
+    to: string;
+}
+
+const DiffDisplay = ({ from, to }: DiffDisplayProps) => {
+    return (
+        <div className='center_area'>
+            <div><pre>{from}</pre></div>
+            <div id='divider'>{"▷*"}</div>
+            {/* <div id='divider2'></div> */}
+            <div><pre>{to}</pre></div>
+        </div>
+    );
+}
+
 interface ASTHistoryProps {
     astHistory: wasm.RawASTInfo[];
 }
@@ -30,13 +46,13 @@ const ASTHistory = ({ astHistory }: ASTHistoryProps) => {
                 exprSpanList.push(<span className="changed">{str2}</span>);
                 const setIdent = str1 + '\0' + str2;
                 if (!hasOccured.has(setIdent)) {
-                    diffSpanList.push(<div><span className="old">{str1}</span><span>{" => "}</span><span className="new">{str2}</span></div>);
+                    diffSpanList.push(<div><DiffDisplay from={str1} to={str2}></DiffDisplay></div>);
                     hasOccured.add(setIdent);
                 }
             }
         }
 
-        astLIs.push(<li className='expr_history' key={i}><pre>{exprSpanList}</pre><pre>{diffSpanList}</pre></li>)
+        astLIs.push(<li className='expr_history' key={i}><div className="exprListing"><pre>{exprSpanList}</pre></div><pre>{diffSpanList}</pre></li>)
     }
 
     astLIs.push(<li className='expr_history' key={0}><pre>{wasm.main_to_string(astHistory[0])}</pre></li>);
@@ -47,7 +63,7 @@ const ASTHistory = ({ astHistory }: ASTHistoryProps) => {
                 <tbody>
                     {astLIs.map((li, index) => (
                         <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''}>
-                            <td className='index'>{astLIs.length - index - 1}</td>
+                            <td className='index'><p>{astLIs.length - index - 1}</p></td>
                             <td className='ast'>{li}</td>
                         </tr>
                     ))}
