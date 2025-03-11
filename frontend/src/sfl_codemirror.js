@@ -24,6 +24,10 @@ CodeMirror.defineMode("sfl", function (_config, modeConfig) {
 
         var ch = source.next();
 
+        if (specialRE.test(ch)) {
+            return null;
+        }
+
         if (ch == '/') {
             if (source.eat(/\//)) {
                 source.eatWhile(/\//);
@@ -173,14 +177,14 @@ CodeMirror.defineMode("sfl", function (_config, modeConfig) {
         }
 
         setType("keyword")(
-            "match", "data", "type", "_", "splungles");
+            "match", "data", "type", "_");
 
         setType("keyword")(
             ":", "::", "=", "->");
 
         setType("builtin")("+", "-", "*", "/", "%", "==", "<=", "<", ">=", ">")
 
-        setType("builtin")("List", "Maybe", "Either");
+        setType("builtin")("List", "Maybe", "Either", "Int", "Bool", "Char");
 
         setType("builtin")(
             "if", "map", "foldr", "filter", "repeat", "length", "take", "range", "infiniteFrom", "sum");
