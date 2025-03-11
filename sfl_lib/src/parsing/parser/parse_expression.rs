@@ -88,49 +88,6 @@ impl Parser {
         }
     }
 
-    fn parse_ite(
-        &mut self,
-        ast: &mut AST,
-        type_table: &HashMap<String, Type>,
-    ) -> Result<usize, ParserError> {
-        let if_id_node = ast.add_id(
-            Token {
-                tt: TokenType::If,
-                value: "if".to_string(),
-            },
-            self.lexer.line,
-            self.lexer.col - 2,
-        );
-
-        let condition = self.parse_expression(ast, type_table)?;
-
-        let app1 = ast.add_app(
-            if_id_node,
-            condition,
-            self.lexer.line,
-            self.lexer.col,
-            false,
-        );
-
-        let then_tk = self.consume()?;
-        if then_tk.tt != TokenType::Then {
-            return Err(self.parse_error(format!("Expected \"then\", got: {}", then_tk.value)));
-        }
-
-        let then_exp = self.parse_expression(ast, type_table)?;
-        let app2 = ast.add_app(app1, then_exp, self.lexer.line, self.lexer.col, false);
-
-        let else_tk = self.consume()?;
-        if else_tk.tt != TokenType::Else {
-            return Err(self.parse_error(format!("Expected \"else\", got: {}", then_tk.value)));
-        }
-
-        let else_exp = self.parse_expression(ast, type_table)?;
-        let app3 = ast.add_app(app2, else_exp, self.lexer.line, self.lexer.col, false);
-
-        Ok(app3)
-    }
-
     // Parse a primary expression
     fn parse_expr_primary(
         &mut self,
@@ -151,7 +108,6 @@ impl Parser {
             TokenType::IntLit | TokenType::FloatLit | TokenType::BoolLit | TokenType::CharLit => {
                 Ok(ast.add_lit(t, line, col))
             }
-            TokenType::If => Ok(self.parse_ite(ast, type_table)?),
             TokenType::Match => Ok(self.parse_match(ast, type_table)?),
             TokenType::Lambda => {
                 self.advance();
@@ -232,12 +188,6 @@ impl Parser {
                 TokenType::Lambda => {
                     self.advance();
                     self.parse_abstraction(ast, false, type_table)?.0;
-                }
-
-                TokenType::If => {
-                    self.advance();
-                    let ite = self.parse_ite(ast, type_table)?;
-                    left = ast.add_app(left, ite, line, col, false);
                 }
 
                 TokenType::Match => {

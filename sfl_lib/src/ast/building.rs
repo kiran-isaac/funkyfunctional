@@ -87,9 +87,8 @@ impl AST {
         line: usize,
         col: usize,
         t: Option<Type>,
-        is_silent: bool,
     ) -> usize {
-        self.add(ASTNode::new_assignment(id, exp, line, col, t, is_silent))
+        self.add(ASTNode::new_assignment(id, exp, line, col, t))
     }
 
     pub fn add_match(&mut self, cases: Vec<usize>, line: usize, col: usize) -> usize {

@@ -8,7 +8,6 @@ pub enum TokenType {
     Id,
     UppercaseId,
 
-    If,
     Then,
     Else,
 

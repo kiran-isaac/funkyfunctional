@@ -214,32 +214,6 @@ fn type_assignment_right_assoc() -> Result<(), ParserError> {
 }
 
 #[test]
-fn ite() -> Result<(), ParserError> {
-    let str = "main = if true then 1 else 2";
-    let mut parser = Parser::from_string(str.to_string());
-
-    let ast = parser.parse_module(true)?.ast;
-    let module = 0;
-
-    assert_eq!(
-        ast.to_string_sugar(
-            ast.get_assign_to(module, "main".to_string()).unwrap(),
-            false
-        ),
-        str
-    );
-
-    let str = "main = \\_ :: Int. add (if true then 1 else 2) (if true then 2 else 3)";
-    let mut parser = Parser::from_string(str.to_string());
-
-    let ast = parser.parse_module(false)?.ast;
-    let module = 0;
-    assert_eq!(ast.to_string_sugar(module, false), str);
-
-    Ok(())
-}
-
-#[test]
 fn pair() -> Result<(), ParserError> {
     unchanged_parse_output_str_test("pair x y = (x, y)", false)?;
     unchanged_parse_output_str_test("fst (x, y) = x", false)?;
@@ -360,7 +334,7 @@ fn list_decl() -> Result<(), ParserError> {
 fn list_maybe() -> Result<(), ParserError> {
     let program = r#"
     fac :: Int -> Int
-    fac n = if n <= 1 then 1 else n * (fac (n - 1))
+    fac n = if (n <= 1) (1) (n * (fac (n - 1)))
 
     fromMaybes :: Either a (Maybe a) -> List a
     fromMaybes a = a
