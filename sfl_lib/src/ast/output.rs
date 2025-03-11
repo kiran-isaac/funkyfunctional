@@ -77,36 +77,6 @@ impl AST {
                 format!("{}", n.get_value())
             }
             ASTNodeType::Application => {
-                let mut func = node;
-                let mut args = vec![];
-                for _ in 0..3 {
-                    match self.get(func).t {
-                        ASTNodeType::Application => {
-                            args.push(self.get_arg(func));
-                            func = self.get_func(func);
-                        }
-                        _ => {
-                            break;
-                        }
-                    }
-                }
-
-                if args.len() == 3 {
-                    match self.get(func).t {
-                        ASTNodeType::Identifier => {
-                            if self.get(func).get_value() == "if" {
-                                return format!(
-                                    "if {} then {} else {}",
-                                    self.to_string_sugar(args[2], show_assigned_types),
-                                    self.to_string_sugar(args[1], show_assigned_types),
-                                    self.to_string_sugar(args[0], show_assigned_types)
-                                );
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-
                 let func = self.get_func(node);
                 let arg = self.get_arg(node);
                 let func_str = self.to_string_sugar(func, show_assigned_types);
@@ -343,7 +313,7 @@ impl AST {
                         arg_diff.diff(")".to_string(), "".to_string());
                     }
                     (false, true) => {
-                        arg_diff.prepend(ASTDiffElem::Different("".to_string(), ")".to_string()));
+                        arg_diff.prepend(ASTDiffElem::Different("".to_string(), "(".to_string()));
                         arg_diff.diff("".to_string(), ")".to_string());
                     }
                     (false, false) => {}
@@ -516,24 +486,24 @@ mod test {
     fn diff_test1() -> Result<(), ParserError> {     
         diff_same_as_tostring(r#"
             f :: Int -> Int
-            f n = if (n % 2) == 0 then n / 2 else (3 * n) + 1
+            f n = if ((n % 2) == 0) (n / 2) ((3 * n) + 1)
 
             // Get collatz sequence
             collatz :: Int -> List Int
-            collatz n = (\x. if n <= 1 then Nil else Cons x (collatz x)) $ f n
+            collatz n = (\x. if (n <= 1) (Nil) (Cons x (collatz x))) $ f n
 
             main :: List Int
             main = collatz 12
         "#, r#"
             f :: Int -> Int
-            f n = if (n % 2) == 0 then n / 2 else (3 * n) + 1
+            f n = if ((n % 2) == 0) (n / 2) ((3 * n) + 1)
 
             // Get collatz sequence
             collatz :: Int -> List Int
-            collatz n = (\x. if n <= 1 then Nil else Cons x (collatz x)) $ f n
+            collatz n = (\x. if (n <= 1) (Nil) (Cons x (collatz x))) $ f n
 
             main :: List Int
-            main = \x. if 12 <= 1 then Nil else Cons x (collatz x) $ f 12
+            main = (\x. if (12 <= 1) Nil (Cons x (collatz x))) $ f 12
         "#)
     }
 
@@ -541,16 +511,16 @@ mod test {
     fn diff_test_fac() -> Result<(), ParserError> {     
         diff_same_as_tostring(r#"
             fac :: Int -> Int
-            fac n = if n <= 1 then 1 else n * (fac (n - 1))
+            fac n = if (n <= 1) 1 (n * (fac (n - 1)))
 
             main :: Int
             main = fac 5
         "#, r#"
             fac :: Int -> Int
-            fac n = if n <= 1 then 1 else n * (fac (n - 1))
+            fac n = if (n <= 1) 1 (n * (fac (n - 1)))
 
             main :: Int
-            main = if (5 <= 1) then 1 else 5 * (fac (5 - 1))    
+            main = if (5 <= 1) 1 (5 * (fac (5 - 1)))
         "#)
     }
 }
