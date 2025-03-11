@@ -3,7 +3,7 @@ mod node;
 mod output;
 mod transform;
 
-use crate::{find_redexes::RCPair, Primitive, Token, Type};
+use crate::{find_redexes::RCPair, Token, Type};
 pub use node::*;
 use std::collections::HashSet;
 use std::iter::zip;

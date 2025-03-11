@@ -1,5 +1,5 @@
 use super::*;
-use crate::parser::TypeMap;
+use crate::parsing::TypeMap;
 use crate::{ASTNodeType, Type, AST};
 
 // "Γ ⊢ e ⇐ A ⊣ ∆: Under input context Γ, e checks against input type A, with output context ∆"

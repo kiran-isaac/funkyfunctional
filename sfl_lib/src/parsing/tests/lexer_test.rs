@@ -1,4 +1,4 @@
-use crate::parser::*;
+use crate::parsing::*;
 
 fn test_lex(str: String) -> Result<Vec<Token>, LexerError> {
     let mut lexer = Lexer::new(str, None);

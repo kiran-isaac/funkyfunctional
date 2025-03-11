@@ -12,36 +12,6 @@ impl AST {
                 format!("{}", n.get_value())
             }
             ASTNodeType::Application => {
-                let mut func = node;
-                let mut args = vec![];
-                for _ in 0..3 {
-                    match self.get(func).t {
-                        ASTNodeType::Application => {
-                            args.push(self.get_arg(func));
-                            func = self.get_func(func);
-                        }
-                        _ => {
-                            break;
-                        }
-                    }
-                }
-
-                if args.len() == 3 {
-                    match self.get(func).t {
-                        ASTNodeType::Identifier => {
-                            if self.get(func).get_value() == "if" {
-                                return format!(
-                                    "if {} then {} else {}",
-                                    self.to_string_sugar(args[2], show_assigned_types),
-                                    self.to_string_sugar(args[1], show_assigned_types),
-                                    self.to_string_sugar(args[0], show_assigned_types)
-                                );
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-
                 let func = self.get_func(node);
                 let arg = self.get_arg(node);
                 let func_str = self.to_string_sugar(func, show_assigned_types);

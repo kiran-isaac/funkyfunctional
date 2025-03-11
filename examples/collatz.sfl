@@ -1,9 +1,9 @@
 f :: Int -> Int
-f n = if (n % 2) == 0 then n / 2 else (3 * n) + 1
+f n = if ((n % 2) == 0) (n / 2) ((3 * n) + 1)
 
 // Get collatz sequence
 collatz :: Int -> List Int
-collatz n = (\x. if n <= 1 then Nil else Cons x (collatz x)) $ f n
+collatz n = (\x. if (n <= 1) (Nil) (Cons x (collatz x))) $ f n
 
 main :: List Int
 main = collatz 12

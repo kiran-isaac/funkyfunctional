@@ -56,12 +56,12 @@ fn type_check_eq() -> Result<(), TypeError> {
 
 #[test]
 fn type_check_ite() -> Result<(), TypeError> {
-    tc_test_should_pass("main :: Float\nmain = if false then 2.0 else 3.0")?;
-    tc_test_should_pass("main :: Int\nmain = if false then 2 else 3")?;
-    tc_test_should_pass("main :: Bool\nmain = if true then true else false")?;
+    tc_test_should_pass("main :: Float\nmain = if false 2.0 3.0")?;
+    tc_test_should_pass("main :: Int\nmain = if false 2 3")?;
+    tc_test_should_pass("main :: Bool\nmain = if true true false")?;
 
-    tc_test_should_fail("main :: Int\nmain = if false then 2.0 else 3");
-    tc_test_should_fail("main :: Float\nmain = if false then 2.0 else true");
+    tc_test_should_fail("main :: Int\nmain = if false 2.0 3");
+    tc_test_should_fail("main :: Float\nmain = if false 2.0 true");
     Ok(())
 }
 
@@ -150,6 +150,7 @@ fn mod_main_inference_test(program: &str, type_str: &str) {
     assert_eq!(main_expr_type.to_string(), type_str);
 }
 
+#[allow(unused)]
 fn mod_main_inference_test_no_prelude(program: &str, type_str: &str) {
     let pr = Parser::from_string(program.to_string())
         .parse_module(true)
@@ -190,13 +191,13 @@ fn expr_inference_should_fail(program: &str) {
 fn stuff() -> Result<(), TypeError> {
     tc_test_should_pass("main:: (a -> b) -> a -> b\nmain f x = f x")?;
 
-    tc_test_should_pass("main :: a -> b -> b\nmain = \\b . if true then (\\x . x) else (\\x . x)")?;
+    tc_test_should_pass("main :: a -> b -> b\nmain = \\b . if true (\\x . x) (\\x . x)")?;
 
     expr_inference_should_fail("\\x . x x");
 
-    tc_test_should_pass("main::Int -> Int\nmain = if true then (\\x :: Int. x) else (\\x . x)")?;
+    tc_test_should_pass("main::Int -> Int\nmain = if true (\\x :: Int. x) (\\x . x)")?;
     tc_test_should_pass(
-        "main :: Bool -> Int -> Int\nmain = \\b . if b then (\\x . x) else (\\x . 10)",
+        "main :: Bool -> Int -> Int\nmain = \\b . if b (\\x . x) (\\x . 10)",
     )
 }
 
@@ -234,10 +235,10 @@ fn either_test() -> Result<(), TypeError> {
 #[test]
 fn list_text() -> Result<(), TypeError> {
     tc_test_should_pass(
-        "data List2 a = Cons2 a (List2 a) | Nil2\ndata IntListEither a = List2 (List2 Int) | Right a\nmain::Int -> IntListEither a\nmain = \\x.List2 (Cons2 x Nil2)",
+        "data List2 a = Cons2 a (List2 a) | Nil2\ndata IntListEither a = List2 (List2 Int) | Right2 a\nmain::Int -> IntListEither a\nmain = \\x.List2 (Cons2 x Nil2)",
     )?;
     tc_test_should_pass(
-        "data List2 a = Cons2 a (List2 a) | Nil2\ndata IntListEither a = Left (List2 Int) | Right a\nmain::Int -> IntListEither a\nmain = \\x.Left (Cons2 x (Cons2 10 Nil2))",
+        "data List2 a = Cons2 a (List2 a) | Nil2\ndata IntListEither a = Left2 (List2 Int) | Right2 a\nmain::Int -> IntListEither a\nmain = \\x.Left2 (Cons2 x (Cons2 10 Nil2))",
     )?;
 
     tc_test_should_pass("data List2 a = Cons2 a (List2 a) | Nil2\ndata IntListEither a = Left2 (List2 Int) | Right2 a\nmain :: Int -> (IntListEither a)\nmain = \\x.Left2 (Cons2 x (Cons2 10 Nil2))")?;

@@ -1,4 +1,4 @@
-use crate::parser::{Token, TokenType};
+use crate::parsing::{Token, TokenType};
 use crate::{Primitive, Type};
 use std::fmt::Debug;
 
@@ -25,7 +25,6 @@ pub struct ASTNode {
     pub wait_for_args: bool,
     pub fancy_assign_abst_syntax: bool,
     pub dollar_app: bool,
-    pub is_silent: bool,
 }
 
 impl Debug for ASTNode {
@@ -77,7 +76,6 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent: false,
         }
     }
 
@@ -92,7 +90,6 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent: false,
         }
     }
 
@@ -107,7 +104,6 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent: false,
         }
     }
 
@@ -122,7 +118,6 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: dollar,
-            is_silent: false,
         }
     }
 
@@ -137,7 +132,6 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent: false,
         }
     }
 
@@ -147,7 +141,6 @@ impl ASTNode {
         line: usize,
         col: usize,
         t: Option<Type>,
-        is_silent: bool,
     ) -> Self {
         ASTNode {
             t: ASTNodeType::Assignment,
@@ -159,7 +152,6 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent,
         }
     }
 
@@ -174,7 +166,6 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent: false,
         }
     }
 
@@ -189,7 +180,6 @@ impl ASTNode {
             wait_for_args: false,
             fancy_assign_abst_syntax: false,
             dollar_app: false,
-            is_silent: false,
         }
     }
 

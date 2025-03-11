@@ -1,4 +1,4 @@
-use parser::{Token, TokenType};
+use parsing::{Token, TokenType};
 
 use super::assert_prim_type;
 use crate::*;

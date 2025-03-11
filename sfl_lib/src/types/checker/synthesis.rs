@@ -1,6 +1,6 @@
 use super::checking::check_type;
 use super::*;
-use crate::parser::TypeMap;
+use crate::parsing::TypeMap;
 use crate::*;
 
 // "Γ ⊢ e ⇒ A ⊣ ∆: Under input context Γ, e synthesizes output type A, with output context ∆"

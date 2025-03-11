@@ -218,7 +218,6 @@ impl AST {
                     n.line,
                     n.col,
                     n.type_assignment.clone(),
-                    n.is_silent,
                 )
             }
             ASTNodeType::Abstraction => {
