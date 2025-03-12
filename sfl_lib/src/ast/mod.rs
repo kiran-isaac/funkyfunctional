@@ -5,6 +5,7 @@ mod transform;
 
 use crate::{find_redexes::RCPair, Token, Type};
 pub use node::*;
+pub use output::{ASTDiff, ASTDiffElem};
 use std::collections::HashSet;
 use std::iter::zip;
 use std::{collections::HashMap, fmt::Debug, vec};
@@ -93,6 +94,7 @@ impl AST {
         names
     }
 
+    /// Get the main assignment (not just the expr)
     pub fn get_main(&self, module: usize) -> Option<usize> {
         self.get_assign_to(module, "main".to_string())
     }
@@ -148,45 +150,29 @@ impl AST {
         }
     }
 
-    pub fn expr_eq(&self, n1: usize, n2: usize) -> bool {
-        match (&self.get(n1).t, &self.get(n2).t) {
+    pub fn expr_eq(&self, expr1: usize, expr2: usize) -> bool {
+        AST::eq(&self, &self, expr1, expr2)
+    }
+
+    pub fn eq(ast1: &AST, ast2: &AST, expr1: usize, expr2: usize) -> bool {
+        let n1 = ast1.get(expr1);
+        let n2 = ast2.get(expr2);
+
+        match (n1.t, n2.t) {
             (ASTNodeType::Identifier, ASTNodeType::Identifier)
-            | (ASTNodeType::Literal, ASTNodeType::Literal) => {
-                self.get(n1).get_value() == self.get(n2).get_value()
-            }
-            (ASTNodeType::Application, ASTNodeType::Application) => {
-                let f1 = self.get_func(n1);
-                let f2 = self.get_func(n2);
-                let x1 = self.get_arg(n1);
-                let x2 = self.get_arg(n2);
+            | (ASTNodeType::Literal, ASTNodeType::Literal) => n1.get_value() == n2.get_value(),
+            (a, b) => {
+                if a != b {
+                    return false;
+                }
 
-                self.expr_eq(f1, f2) && self.expr_eq(x1, x2)
-            }
-            (ASTNodeType::Abstraction, ASTNodeType::Abstraction) => {
-                let v1 = self.get_abstr_var(n1);
-                let v2 = self.get_abstr_var(n2);
-                let x1 = self.get_abstr_expr(n1);
-                let x2 = self.get_abstr_expr(n2);
-
-                self.expr_eq(v1, v2) && self.expr_eq(x1, x2)
-            }
-            (ASTNodeType::Pair, ASTNodeType::Pair) => {
-                let x1 = self.get_first(n1);
-                let y1 = self.get_second(n1);
-                let x2 = self.get_first(n2);
-                let y2 = self.get_second(n2);
-
-                self.expr_eq(x1, x2) && self.expr_eq(y1, y2)
-            }
-            (ASTNodeType::Match, ASTNodeType::Match) => {
-                for (c1, c2) in zip(self.get(n1).children.clone(), self.get(n2).children.clone()) {
-                    if !self.expr_eq(c1, c2) {
+                for (c1, c2) in zip(&n1.children, &n2.children) {
+                    if !AST::eq(ast1, ast2, *c1, *c2) {
                         return false;
                     }
                 }
                 true
             }
-            _ => false,
         }
     }
 }

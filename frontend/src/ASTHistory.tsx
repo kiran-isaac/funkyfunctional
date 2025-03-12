@@ -1,54 +1,61 @@
 import * as wasm from 'sfl_wasm_lib'
 
-interface ASTHistoryProps {
-    astHistory: wasm.RawASTInfo[];
-    rcFromHistory: string[];
-    rcToHistory: string[];
+interface DiffDisplayProps {
+    from: string;
+    to: string;
 }
 
-const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps) => {
-    const astStrings = [];
-    for (let i = 0; i < astHistory.length; i++) {
-        astStrings.push(wasm.main_to_string(astHistory[i]) + "\n");
-    }
+const DiffDisplay = ({ from, to }: DiffDisplayProps) => {
+    return (
+        <div className='center_area'>
+            <div><pre>{from}</pre></div>
+            <div id='divider'>{"▷*"}</div>
+            {/* <div id='divider2'></div> */}
+            <div><pre>{to}</pre></div>
+        </div>
+    );
+}
 
-    if (astStrings.length === 0) {
+interface ASTHistoryProps {
+    astHistory: wasm.RawASTInfo[];
+}
+
+const ASTHistory = ({ astHistory }: ASTHistoryProps) => {
+    if (astHistory.length == 0) {
         return <></>;
     }
-    
     const astLIs = [];
-    for (let i = astStrings.length - 1; i >= 0; i--) {
-        const list: JSX.Element[] = [];
-        const prev_to_this = rcToHistory[i - 1];
 
-        const current = astStrings[i];
+    for (let i = astHistory.length - 1; i >= 1; i--) {
+        const prev = astHistory[i - 1];
+        const current = astHistory[i];
 
-        // Get all occurences of rc_from in current, and make them bold
-        if (i == astStrings.length - 1) {
-            const parts = current.split(prev_to_this);
-            for (let j = 0; j < parts.length; j++) {
-                list.push(<span key={`${i}-${j}`}>{parts[j]}</span>);
-                if (j < parts.length - 1) {
-                    list.push(<span className="new" key={`${i}-${j}-new`}>{prev_to_this}</span>);
+        const diff = wasm.diff(prev, current);
+
+        const exprSpanList = [];
+        const diffSpanList = [];
+        const hasOccured : Set<string> = new Set();
+
+        for (let j = 0; j < wasm.get_diff_len(diff); j += 1) {
+            if (wasm.diff_is_similar(diff, j)) {
+                exprSpanList.push(<span>{wasm.diff_get_similar(diff, j)}</span>);
+            } else {
+                const pair = wasm.diff_get_diff(diff, j);
+                const str1 = wasm.stringpair_one(pair);
+                const str2 = wasm.stringpair_two(pair);
+                exprSpanList.push(<span className="changed">{str2}</span>);
+                const setIdent = str1 + '\0' + str2;
+                if (!hasOccured.has(setIdent)) {
+                    diffSpanList.push(<div><DiffDisplay from={str1} to={str2}></DiffDisplay></div>);
+                    hasOccured.add(setIdent);
                 }
             }
-        } else if (i == astStrings.length - 2) {
-            const next_from_this = rcFromHistory[i];
-            const parts = current.split(next_from_this);
-
-            for (let j = 0; j < parts.length; j++) {
-                list.push(<span key={`${i}-${j}`}>{parts[j]}</span>);
-                if (j < parts.length - 1) {
-                    list.push(<span className="old" key={`${i}-${j}-old`}>{next_from_this}</span>);
-                }
-            }
-        } else {
-            list.push(<span key={i}>{current}</span>);
         }
 
-        astLIs.push(<li className='expr_history' key={i}><pre>{list}</pre></li>);
+        astLIs.push(<li className='expr_history' key={i}><div className="exprListing"><pre>{exprSpanList}</pre></div><pre>{diffSpanList}</pre></li>)
     }
-    // astLIs = astLIs.reverse();   
+
+    astLIs.push(<li className='expr_history' key={0}><pre>{wasm.main_to_string(astHistory[0])}</pre></li>);
 
     return (
         <div id="ASTHistoryWrapper">
@@ -56,7 +63,7 @@ const ASTHistory = ({ astHistory, rcFromHistory, rcToHistory }: ASTHistoryProps)
                 <tbody>
                     {astLIs.map((li, index) => (
                         <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''}>
-                            <td className='index'>{astLIs.length - index - 1}</td>
+                            <td className='index'><p>{astLIs.length - index - 1}</p></td>
                             <td className='ast'>{li}</td>
                         </tr>
                     ))}
