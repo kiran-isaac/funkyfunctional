@@ -3,7 +3,7 @@ mod utils;
 #[cfg(test)]
 mod wasm_lib_tests;
 
-use sfl_lib::{find_all_redex_contraction_pairs, find_single_redex_contraction_pair, typecheck, KnownTypeLabelTable, Parser, RCPair, AST, PRELUDE};
+use sfl_lib::{find_all_redex_contraction_pairs, find_single_redex_contraction_pair, typecheck, ASTDiff, ASTDiffElem, KnownTypeLabelTable, Parser, RCPair, AST, PRELUDE};
 
 use wasm_bindgen::prelude::*;
 use std::collections::BTreeMap;
@@ -248,4 +248,74 @@ pub fn my_init() {
 #[wasm_bindgen]
 pub fn get_prelude() -> String {
     PRELUDE.to_string()
+}
+
+#[wasm_bindgen]
+pub struct RawDiff {
+    diff: *mut ASTDiff
+}
+
+#[wasm_bindgen]
+pub unsafe fn diff(ast1: &RawASTInfo, ast2: &RawASTInfo) -> RawDiff {
+    let ast1 = &*ast1.ast;
+    let ast2 = &*ast2.ast;
+
+    let ast1_main = ast1.get_assign_exp(ast1.get_main(ast1.root).unwrap());
+    let ast2_main = ast2.get_assign_exp(ast2.get_main(ast2.root).unwrap());
+
+    RawDiff { diff: Box::into_raw(Box::new(AST::diff(ast1, ast2, ast1_main, ast2_main))) }
+}
+
+#[wasm_bindgen]
+pub unsafe fn get_diff_len(diff: &RawDiff) -> usize {
+    let diff = &*diff.diff;
+    diff.len()
+}
+
+#[wasm_bindgen]
+pub unsafe fn diff_is_similar(diff: &RawDiff, index: usize) -> bool {
+    let diff = &*diff.diff;
+
+    log!("DIFF: {:?}", diff.get(index).unwrap());
+
+    match diff.get(index).unwrap() {
+        ASTDiffElem::Similar(_) => true,
+        ASTDiffElem::Different(_, _) => false
+    }
+}
+
+#[wasm_bindgen]
+pub unsafe fn diff_get_similar(diff: &RawDiff, index: usize) -> String {
+    let diff = &*diff.diff;
+
+    match diff.get(index).unwrap() {
+        ASTDiffElem::Similar(s) => s.clone(),
+        ASTDiffElem::Different(_, _) => panic!("Expected similar, got different")
+    }
+}
+
+#[wasm_bindgen]
+pub struct StringPair {
+    str1: String,
+    str2: String
+}
+
+#[wasm_bindgen]
+pub unsafe fn diff_get_diff(diff: &RawDiff, index: usize) -> StringPair {
+    let diff = &*diff.diff;
+
+    match diff.get(index).unwrap() {
+        ASTDiffElem::Similar(s) => panic!("Expected diff, got similar {}", s),
+        ASTDiffElem::Different(str1, str2) => StringPair {str1: str1.clone(), str2: str2.clone()}
+    }
+}
+
+#[wasm_bindgen]
+pub fn stringpair_one(stringpair: &StringPair) -> String {
+    stringpair.str1.clone()
+}
+
+#[wasm_bindgen]
+pub fn stringpair_two(stringpair: &StringPair) -> String {
+    stringpair.str2.clone()
 }

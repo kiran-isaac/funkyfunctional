@@ -212,13 +212,7 @@ impl AST {
             ASTNodeType::Assignment => {
                 let id = self.append(other, n.children[0]);
                 let exp = self.append(other, other.get_assign_exp(node));
-                self.add_assignment(
-                    id,
-                    exp,
-                    n.line,
-                    n.col,
-                    n.type_assignment.clone(),
-                )
+                self.add_assignment(id, exp, n.line, n.col, n.type_assignment.clone())
             }
             ASTNodeType::Abstraction => {
                 let var = self.append(other, n.children[0]);

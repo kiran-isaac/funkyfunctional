@@ -213,5 +213,4 @@ impl Parser {
 
         Ok(ast.add_match(children, self.lexer.line, self.lexer.col))
     }
-
 }

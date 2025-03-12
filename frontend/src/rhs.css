@@ -9,16 +9,25 @@
     padding-top: 5px;
 }
 
+div#ASTHistoryWrapper {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
 table#ASTHistory {
     border-collapse: collapse; /* Ensures that borders are not doubled */
     overflow-x: hidden;
-    width: 100%;
+    width: 95%;
     margin-left: 2.5%;
     margin-right: 2.5%;
 }
 
-div#ASTHistoryWrapper {
-    width: 50%;
+table#ASTHistory tbody {
+    display: block;
+    overflow-y: auto;
+    width: 100%;
 }
 
 table#ASTHistory th,
@@ -29,13 +38,41 @@ table#ASTHistory td {
 
 table#ASTHistory tr {
     border-top: 1px solid #ddd;
-    min-height: 50px;  
+    min-height: 50px;
+    display: block;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    grid-template-rows: auto;
 }
+
 
 li.expr_history {
     overflow-x: auto;
     width: 100%;
 }
+
+table#ASTHistory td.index {
+    width: 30px;
+    text-align: center;
+    display: inline;
+    padding: 0px;  
+    height: 100%;
+    width: 100%;
+    vertical-align: middle;
+    margin: auto 0;
+}
+
+table#ASTHistory td.index p {
+    height: 100%;
+    display: inline;
+    vertical-align: middle;
+}
+
+table#ASTHistory td.ast {
+    width: 100%;
+}
+
 
 table#ASTHistory tr.top {
     border-top: none;
@@ -49,4 +86,52 @@ table#ASTHistory .index {
 
 table#ASTHistory td.ast {
     padding-bottom: 20px;
+}
+
+div.center_area {
+    border: 1px solid transparent;
+    font-family: inherit;
+    border: 1px solid #555; 
+    display: grid;
+    grid-template-rows: 1fr;
+    grid-template-columns: 1fr 50px 1fr;
+    color: white;
+    width: calc(100% - 20px);
+    padding: 15px 0px;
+    margin: auto;
+}
+
+div.center_area > div {
+    width: calc(100% - 75px);
+    padding-left: 15px;
+    vertical-align: center;
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: auto;
+    min-height: 40px;
+}
+
+div.center_area > div > pre {
+    margin: auto;
+}
+
+div.center_area > div#divider {
+    font-size: 1.5em;
+    padding: 0px;
+    width: 100%;
+    text-align: center;
+}
+
+div.exprListing {
+    margin-top: 10px;    
+    width: 100%;
+    overflow-x: auto;
+}
+
+div.exprListing pre {
+    width: fit-content;
+    margin: auto;
 }

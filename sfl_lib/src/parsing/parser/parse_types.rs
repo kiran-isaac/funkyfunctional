@@ -153,7 +153,9 @@ impl Parser {
 
         for constructor in constructors.keys() {
             if self.bound.contains(constructor) {
-                return Err(self.parse_error(format!("Constructor {} declared more than once", &name)));
+                return Err(
+                    self.parse_error(format!("Constructor {} declared more than once", &name))
+                );
             }
 
             self.bind(constructor.clone());
@@ -162,7 +164,7 @@ impl Parser {
         Ok(constructors)
     }
 
-     /// Takes type table, returns the name of the data and also the type constructors
+    /// Takes type table, returns the name of the data and also the type constructors
     pub(super) fn parse_type_alias_decl(
         &mut self,
         type_table: &HashMap<String, Type>,
@@ -203,7 +205,6 @@ impl Parser {
         ))
     }
 
-    
     pub(super) fn parse_type_expression(
         &mut self,
         type_table: &HashMap<String, Type>,

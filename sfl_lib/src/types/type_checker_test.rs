@@ -196,9 +196,7 @@ fn stuff() -> Result<(), TypeError> {
     expr_inference_should_fail("\\x . x x");
 
     tc_test_should_pass("main::Int -> Int\nmain = if true (\\x :: Int. x) (\\x . x)")?;
-    tc_test_should_pass(
-        "main :: Bool -> Int -> Int\nmain = \\b . if b (\\x . x) (\\x . 10)",
-    )
+    tc_test_should_pass("main :: Bool -> Int -> Int\nmain = \\b . if b (\\x . x) (\\x . 10)")
 }
 
 #[test]

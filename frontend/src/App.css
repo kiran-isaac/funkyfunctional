@@ -156,6 +156,11 @@ button:focus-visible {
     color: white;
 }
 
+.expr_history .changed {
+    background-color: #2600ff7e;
+    color: white;
+}
+
 @media only screen and (max-width: 1000px) {
     button.rc > div#progress {
         font-size: 1em;
