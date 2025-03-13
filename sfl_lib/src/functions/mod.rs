@@ -32,9 +32,9 @@ pub struct Label {
 
 impl Label {
     pub fn call_inbuilt(&self, call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-        assert!(self.inbuilt_reduction_arity == args.len());
+        assert_eq!(self.inbuilt_reduction_arity, args.len());
         assert!(self.inbuilt.is_some());
-        (self.inbuilt.unwrap())(call, args)
+        self.inbuilt.unwrap()(call, args)
     }
 
     pub fn is_inbuilt(&self) -> bool {

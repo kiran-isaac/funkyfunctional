@@ -339,7 +339,7 @@ impl AST {
 
 
                 match (old_func_needs_brackets, new_func_needs_brackets) {
-                    (true, true) => func_diff.bracket(first_arg_is_diff),
+                    (true, true) => func_diff.bracket(first_arg_is_diff && last_func_is_diff),
                     (true, false) => {
                         func_diff.prepend(ASTDiffElem::Different("(".to_string(), "".to_string()));
                         func_diff.diff(")".to_string(), "".to_string());
@@ -352,7 +352,7 @@ impl AST {
                 }
 
                 match (old_arg_needs_brackets, new_arg_needs_brackets) {
-                    (true, true) => arg_diff.bracket(last_func_is_diff),
+                    (true, true) => arg_diff.bracket(first_arg_is_diff && last_func_is_diff),
                     (true, false) => {
                         arg_diff.prepend(ASTDiffElem::Different("(".to_string(), "".to_string()));
                         arg_diff.diff(")".to_string(), "".to_string());

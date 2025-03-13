@@ -65,6 +65,12 @@ function App() {
     }
   };
 
+  const resetTo = (n: number) => {
+    setAstHistory((prevAstHistory) => {
+      return prevAstHistory.slice(0, n);
+    });
+  }
+
   return (
     <>
       <div id="lhs">
@@ -99,7 +105,7 @@ function App() {
           <div id="Error">
             <p>{errorString}</p>
           </div>
-          <ASTHistory astHistory={astHistory} />
+          <ASTHistory astHistory={astHistory} resetTo={resetTo} />
         </div>
       </div>
     </>
