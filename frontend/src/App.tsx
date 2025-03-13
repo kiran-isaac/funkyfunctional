@@ -12,8 +12,9 @@ function App() {
   const [editorValue, setEditorValue] = useState("");
   const [errorString, setErrorString] = useState("");
   const [astHistory, setAstHistory] = useState<wasm.RawASTInfo[]>([]);
+  let multiple = false;
 
-  const generateRCs = (ast: wasm.RawASTInfo, multiple: boolean) => {
+  const generateRCs = (ast: wasm.RawASTInfo) => {
     try {
       const rcs = multiple ? wasm.get_all_redexes(ast) : wasm.get_one_redex(ast);
 
@@ -51,11 +52,12 @@ function App() {
     }
   }
 
-  const handleRun = (programInput: string, multiple: boolean) => {
+  const handleRun = (programInput: string, _multiple: boolean) => {
+    multiple = _multiple;
     try {
       const ast = wasm.parse(programInput);
       setAstHistory([ast]);
-      generateRCs(ast, multiple);
+      generateRCs(ast);
       
       setErrorString("")
     } catch (e) {
@@ -69,6 +71,7 @@ function App() {
     setAstHistory((prevAstHistory) => {
       return prevAstHistory.slice(0, n);
     });
+    generateRCs(astHistory[astHistory.length - 1]);
   }
 
   return (

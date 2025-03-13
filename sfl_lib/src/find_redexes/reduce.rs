@@ -2,7 +2,6 @@ use super::*;
 use crate::find_redexes::pattern_match::pattern_match;
 use crate::functions::KnownTypeLabelTable;
 use std::collections::HashMap;
-use crate::ASTNode;
 
 fn comma_ify(vec: Vec<String>) -> String {
     match vec.len() {
@@ -120,7 +119,8 @@ fn check_for_valid_call(
                         Some(RCPair {
                             from: expr,
                             to: call_result,
-                            msg_after: format!("Applied function {} to {}", name, &argv_comma_str)
+                            msg_after: format!("Applied function {} to {}", name, &argv_comma_str),
+                            msg_before: format!("Applied function {} to {}", name, &argv_comma_str)
                         })
                     }
                 } else {
@@ -228,7 +228,8 @@ pub fn find_single_redex_contraction_pair(
                             Some(RCPair {
                                 from: expr,
                                 to: subst_result,
-                                msg_after: format!("Substituted label {}", &value)
+                                msg_after: format!("Substituted label {}", &value),
+                                msg_before: format!("Substituted label {}", &value)
                             })
                         } else {
                             let assign = if let Some(assign) = am.get(&value) {
@@ -243,7 +244,8 @@ pub fn find_single_redex_contraction_pair(
                             Some(RCPair {
                                 from: expr,
                                 to: subst_result,
-                                msg_after: format!("Substituted label {}", &value)
+                                msg_after: format!("Substituted label {}", &value),
+                                msg_before: format!("Substitute label {}", &value)
                             })
                         };
                     }
@@ -279,7 +281,8 @@ pub fn find_single_redex_contraction_pair(
                     return Some(RCPair {
                         from: expr,
                         to: pat_expr_cloned.clone_node(pat_expr_cloned.root),
-                        msg_after: format!("Matched to pattern {}", case_str)
+                        msg_after: format!("Matched to pattern {}", case_str),
+                        msg_before: format!("Match to pattern {}", case_str)
                     });
                 }
             }

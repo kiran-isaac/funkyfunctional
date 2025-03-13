@@ -62,3 +62,30 @@ fn full_run_2() {
 
     assert_eq!(full_run_test(program), "2.5");
 }
+
+#[test]
+fn odd_bug() {
+    let program = r#"
+    square :: Int -> Int
+    square x = x * x
+    
+    // List of the square numbers from lower to upper
+    list_of_squares :: Int -> Int -> List Int
+    list_of_squares lower upper = map square $ range lower upper
+
+    main = match (Cons (square 1) (map square (range (1 + 1) 5))) {
+      | Nil -> 0
+      | Cons x xs -> (\x. \acc. x + acc) x (foldr (\x. \acc. x + acc) 0 xs)
+    }"#.to_string();
+    
+    let pr = Parser::from_string(program).parse_module(true).unwrap();
+    let mut ast = pr.ast;
+    let mut lt = pr.lt;
+    let tm = pr.tm;
+    
+    let module = ast.root;
+    typecheck(&mut ast, module, &mut lt, &tm).unwrap();
+    let mut main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
+
+    let rc = find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt);
+}
