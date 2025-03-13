@@ -1,4 +1,5 @@
 import * as wasm from 'sfl_wasm_lib'
+import './ASTHistory.css'
 
 interface DiffDisplayProps {
     from: string;
@@ -18,9 +19,10 @@ const DiffDisplay = ({ from, to }: DiffDisplayProps) => {
 
 interface ASTHistoryProps {
     astHistory: wasm.RawASTInfo[];
+    resetTo: (n: number) => void;
 }
 
-const ASTHistory = ({ astHistory }: ASTHistoryProps) => {
+const ASTHistory = ({ astHistory, resetTo }: ASTHistoryProps) => {
     if (astHistory.length == 0) {
         return <></>;
     }
@@ -62,7 +64,7 @@ const ASTHistory = ({ astHistory }: ASTHistoryProps) => {
             <table id="ASTHistory">
                 <tbody>
                     {astLIs.map((li, index) => (
-                        <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''}>
+                        <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''} onClick={() => resetTo(astLIs.length - index)}>
                             <td className='index'><p>{astLIs.length - index - 1}</p></td>
                             <td className='ast'>{li}</td>
                         </tr>
