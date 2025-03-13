@@ -26,10 +26,8 @@ features = [
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
 
-
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"
-wasm-pack = "0.13.1"
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.

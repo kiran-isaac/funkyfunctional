@@ -24,7 +24,7 @@ function ProgramDropdown({ setEditorValue }: { setEditorValue: (x: string) => vo
 
             setEgProgramsMap(eg_programs_map)
         };
-        loadPrograms();
+        loadPrograms()
     }, []);
 
     const name_options: JSX.Element[] = [];

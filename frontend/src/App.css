@@ -40,12 +40,10 @@ html {
 }
 
 #TitleFlex * {
-    margin: 0px;
-    padding: 0px;
+    padding: 0;
     height: 45px;
     vertical-align: middle;
     text-decoration: underline;
-    margin-top: 6.5px;
     display: inline-block;
     margin: auto;
 }
@@ -74,8 +72,7 @@ html {
 }
 
 #ASTArea h4 {
-    margin: 0;
-    margin-left: 2%;
+    margin: 0 0 0 2%;
     padding: 0;
     text-decoration: underline;
 }

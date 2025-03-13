@@ -4,7 +4,7 @@ fn test_lex(str: String) -> Result<Vec<Token>, LexerError> {
     let mut lexer = Lexer::new(str, None);
     let mut tokens = Vec::new();
     loop {
-        let token = lexer.get_token().unwrap();
+        let token = lexer.get_token()?;
         if token.tt == TokenType::Newline {
             continue;
         }
@@ -20,8 +20,8 @@ fn test_lex_should_err(str: String) -> Result<LexerError, Token> {
     let mut lexer = Lexer::new(str, None);
     let token = lexer.get_token();
     match token {
-        Ok(t) => return Err(t),
-        Err(e) => return Ok(e),
+        Ok(t) => Err(t),
+        Err(e) => Ok(e),
     }
 }
 
