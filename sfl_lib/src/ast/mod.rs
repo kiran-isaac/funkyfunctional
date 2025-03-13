@@ -3,6 +3,9 @@ mod node;
 mod output;
 mod transform;
 
+#[cfg(test)]
+mod diff_tests;
+
 use crate::{find_redexes::RCPair, Token, Type};
 pub use node::*;
 pub use output::{ASTDiff, ASTDiffElem};
