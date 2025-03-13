@@ -25,10 +25,10 @@ pub struct RawRC {
 impl RawRC {
     pub unsafe fn free(&self) {
         if !&self.from_str.is_null() {
-            drop(Box::from_raw(*&self.from_str as *mut String));
+            drop(Box::from_raw(*&self.from_str));
         }
         if !&self.to_str.is_null() {
-            drop(Box::from_raw(*&self.to_str as *mut String));
+            drop(Box::from_raw(*&self.to_str));
         }
         if !&self.redex.is_null() {
             drop(Box::from_raw(*&self.redex));

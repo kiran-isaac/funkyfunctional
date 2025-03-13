@@ -113,7 +113,7 @@ impl Type {
                 for var in vars {
                     new_var.push(var.substitute_type_variable(to_replace, replacement)?);
                 }
-                return Ok(Type::Union(s.clone(), new_var));
+                Ok(Type::Union(s.clone(), new_var))
             }
             _ => Ok(self.clone()),
         }

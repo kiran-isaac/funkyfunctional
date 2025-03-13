@@ -93,7 +93,7 @@ function App() {
         <div id="TextArea">
           <div id="ASTArea">
             <ul id="RCArea">
-              {rcs.map((rc) => <>{rc}</>)}
+              {rcs}
             </ul>
           </div>
           <div id="Error">
