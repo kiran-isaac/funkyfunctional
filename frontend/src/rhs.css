@@ -4,13 +4,16 @@
     overflow-y: auto;
     overflow-x: hidden;
     position: absolute;
-    right: 5px;
+    right: 0;
     top: 0;
     padding-top: 5px;
+    padding-bottom: 5px;
 }
 
 div#ASTHistoryWrapper {
-    width: 100%;
+    width: 95%;
+    margin-left: 2.5%;
+    margin-right: 2.5%;
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
@@ -19,9 +22,7 @@ div#ASTHistoryWrapper {
 table#ASTHistory {
     border-collapse: collapse; /* Ensures that borders are not doubled */
     overflow-x: hidden;
-    width: 95%;
-    margin-left: 2.5%;
-    margin-right: 2.5%;
+    width: 100%;
 }
 
 table#ASTHistory tbody {
@@ -39,24 +40,16 @@ table#ASTHistory td {
 table#ASTHistory tr {
     border-top: 1px solid #ddd;
     min-height: 50px;
-    display: block;
     width: 100%;
     display: grid;
     grid-template-columns: 30px 1fr;
     grid-template-rows: auto;
 }
 
-
-li.expr_history {
-    overflow-x: auto;
-    width: 100%;
-}
-
 table#ASTHistory td.index {
-    width: 30px;
     text-align: center;
     display: inline;
-    padding: 0px;  
+    padding: 0;
     height: 100%;
     width: 100%;
     vertical-align: middle;
@@ -70,12 +63,12 @@ table#ASTHistory td.index p {
 }
 
 table#ASTHistory td.ast {
-    width: 100%;
+    width: calc(100% - 20px);
 }
-
 
 table#ASTHistory tr.top {
     border-top: none;
+    width: 100%;
 }
 
 table#ASTHistory .index {
@@ -84,43 +77,39 @@ table#ASTHistory .index {
     min-width: 10px;
 }
 
-table#ASTHistory td.ast {
-    padding-bottom: 20px;
-}
-
 div.center_area {
-    border: 1px solid transparent;
     font-family: inherit;
     border: 1px solid #555; 
     display: grid;
     grid-template-rows: 1fr;
     grid-template-columns: 1fr 50px 1fr;
     color: white;
-    width: calc(100% - 20px);
-    padding: 15px 0px;
+    width: calc(100% - 40px);
+    padding: 15px 10px;
     margin: auto;
 }
 
 div.center_area > div {
     width: calc(100% - 75px);
     padding-left: 15px;
-    vertical-align: center;
     position: relative;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
+    vertical-align: center;
     overflow-x: auto;
     min-height: 40px;
 }
 
 div.center_area > div > pre {
     margin: auto;
+    max-width: 100%;
 }
 
 div.center_area > div#divider {
     font-size: 1.5em;
-    padding: 0px;
+    padding: 0;
     width: 100%;
     text-align: center;
 }
