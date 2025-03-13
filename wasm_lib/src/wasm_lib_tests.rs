@@ -18,15 +18,15 @@ fn eta_reduced_length() {
     main = length2 Nil // $ filter isEven $ range 1 (Just 5)"#;
 
     let mut ast_info = parse_no_prelude(program).unwrap();
-    let rcs = unsafe {get_one_redex(&ast_info)};
-    ast_info = unsafe {pick_rc_and_free(&mut ast_info, rcs, 0)};
-    println!("{}", unsafe { main_to_string(&ast_info)} );
+    let rcs = unsafe { get_one_redex(&ast_info) };
+    ast_info = unsafe { pick_rc_and_free(&mut ast_info, rcs, 0) };
+    println!("{}", unsafe { main_to_string(&ast_info) });
 
-    let rcs = unsafe {get_one_redex(&ast_info)};
-    ast_info = unsafe {pick_rc_and_free(&mut ast_info, rcs, 0)};
-    println!("{}", unsafe { main_to_string(&ast_info)} );
+    let rcs = unsafe { get_one_redex(&ast_info) };
+    ast_info = unsafe { pick_rc_and_free(&mut ast_info, rcs, 0) };
+    println!("{}", unsafe { main_to_string(&ast_info) });
 
-    let rcs = unsafe {get_one_redex(&ast_info)};
-    ast_info = unsafe {pick_rc_and_free(&mut ast_info, rcs, 0)};
-    println!("{}", unsafe { main_to_string(&ast_info)} );
+    let rcs = unsafe { get_one_redex(&ast_info) };
+    ast_info = unsafe { pick_rc_and_free(&mut ast_info, rcs, 0) };
+    println!("{}", unsafe { main_to_string(&ast_info) });
 }

@@ -24,7 +24,7 @@ const RC: React.FC<RCProp> = ({ i, multiple, onClick, from, to }) => {
             <div className="from">
                 <pre>{from}</pre>
             </div>
-            <div id="rarrow"><p>&rArr;</p></div>
+            <div id="rarrow"><p>{"▷*"}</p></div>
             <div className="to">
                 <pre className="to">{to}</pre>
             </div>

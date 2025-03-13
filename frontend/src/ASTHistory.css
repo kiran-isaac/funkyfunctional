@@ -30,7 +30,7 @@ table#ASTHistory tr {
     min-height: 50px;
     width: 100%;
     display: grid;
-    grid-template-columns: 30px 1fr;
+    grid-template-columns: 30px calc(100% - 30px);
     grid-template-rows: auto;
     cursor: pointer;
 }
@@ -52,8 +52,9 @@ table#ASTHistory td.index p {
 }
 
 table#ASTHistory td.ast {
-    width: calc(100% - 20px);
+    width: calc(47vw - 50px);
 }
+
 
 table#ASTHistory tr.top {
     border-top: none;

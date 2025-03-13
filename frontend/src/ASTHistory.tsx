@@ -11,7 +11,6 @@ const DiffDisplay = ({ from, to }: DiffDisplayProps) => {
         <div className='center_area'>
             <div><pre>{from}</pre></div>
             <div id='divider'>{"▷*"}</div>
-            {/* <div id='divider2'></div> */}
             <div><pre>{to}</pre></div>
         </div>
     );

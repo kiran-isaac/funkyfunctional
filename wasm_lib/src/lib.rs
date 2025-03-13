@@ -3,10 +3,13 @@ mod utils;
 #[cfg(test)]
 mod wasm_lib_tests;
 
-use sfl_lib::{find_all_redex_contraction_pairs, find_single_redex_contraction_pair, typecheck, ASTDiff, ASTDiffElem, KnownTypeLabelTable, Parser, RCPair, AST, PRELUDE};
+use sfl_lib::{
+    find_all_redex_contraction_pairs, find_single_redex_contraction_pair, typecheck, ASTDiff,
+    ASTDiffElem, KnownTypeLabelTable, Parser, RCPair, AST, PRELUDE,
+};
 
-use wasm_bindgen::prelude::*;
 use std::collections::BTreeMap;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct RawASTInfo {
@@ -19,6 +22,7 @@ pub struct RawASTInfo {
 pub struct RawRC {
     pub from_str: *mut String,
     pub to_str: *mut String,
+    pub msg: *mut String,
     pub(crate) redex: *mut RCPair,
 }
 
@@ -44,6 +48,10 @@ pub unsafe fn get_rc_to(rc: &RawRC) -> String {
     (&*rc.to_str).clone()
 }
 
+pub unsafe fn get_rc_msg(rc: &RawRC) -> String {
+    (&*rc.msg).clone()
+}
+
 #[wasm_bindgen]
 pub unsafe fn get_rcs_from(rcs: *mut Vec<RawRC>, rc: usize) -> String {
     let rcs = &*rcs;
@@ -54,6 +62,11 @@ pub unsafe fn get_rcs_from(rcs: *mut Vec<RawRC>, rc: usize) -> String {
 pub unsafe fn get_rcs_to(rcs: *mut Vec<RawRC>, rc: usize) -> String {
     let rcs = &*rcs;
     get_rc_to(&rcs[rc])
+}
+
+pub unsafe fn get_rcs_msg(rcs: *mut Vec<RawRC>, rc: usize) -> String {
+    let rcs = &*rcs;
+    get_rc_msg(&rcs[rc])
 }
 
 #[wasm_bindgen]
@@ -98,7 +111,7 @@ pub unsafe fn pick_rc_and_free(
     RawASTInfo {
         ast: Box::into_raw(Box::new(ast2)),
         lt: Box::into_raw(Box::new(lt.clone())),
-        main_expr
+        main_expr,
     }
 }
 
@@ -113,11 +126,13 @@ pub unsafe fn get_all_redexes(info: &RawASTInfo) -> *mut Vec<RawRC> {
     let mut rcs_output: Vec<RawRC> = vec![];
     let rcs = find_all_redex_contraction_pairs(&ast, Some(ast.root), main_expr, &lt);
     for rc in ast.filter_identical_rcs(&rcs) {
-        let from_str = Box::into_raw(Box::new(ast.to_string_sugar(rc.0, false).clone()));
-        let to_string = Box::into_raw(Box::new(rc.1.to_string_sugar(rc.1.root, false).clone()));
+        let from_str = Box::into_raw(Box::new(ast.to_string_sugar(rc.from, false).clone()));
+        let to_str = Box::into_raw(Box::new(rc.to.to_string_sugar(rc.to.root, false).clone()));
+        let msg = Box::into_raw(Box::new(rc.msg_after.to_string()));
         rcs_output.push(RawRC {
-            from_str: from_str,
-            to_str: to_string,
+            from_str,
+            to_str,
+            msg,
             redex: Box::into_raw(Box::new(rc)),
         });
     }
@@ -138,15 +153,16 @@ pub unsafe fn get_one_redex(info: &RawASTInfo) -> *mut Vec<RawRC> {
     };
 
     let main_expr = ast.get_assign_exp(main_assign);
-    
+
     Box::into_raw(Box::new(
         if let Some(rc) = find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt) {
-
-            let from_str = Box::into_raw(Box::new(ast.to_string_sugar(rc.0, false).clone()));
-            let to_string = Box::into_raw(Box::new(rc.1.to_string_sugar(rc.1.root, false).clone()));
+            let from_str = Box::into_raw(Box::new(ast.to_string_sugar(rc.from, false).clone()));
+            let to_str = Box::into_raw(Box::new(rc.to.to_string_sugar(rc.to.root, false).clone()));
+            let msg = Box::into_raw(Box::new(rc.msg_after.to_string()));
             vec![RawRC {
-                from_str: from_str,
-                to_str: to_string,
+                from_str,
+                to_str,
+                msg,
                 redex: Box::into_raw(Box::new(rc)),
             }]
         } else {
@@ -164,7 +180,7 @@ fn parse_internal(str: &str, prelude: bool) -> Result<RawASTInfo, String> {
     let tm = pr.tm;
     let module = ast.root;
     match typecheck(&mut ast, module, &mut lt, &tm) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(e) => return Err(format!("{:?}", e)),
     };
 
@@ -177,7 +193,7 @@ fn parse_internal(str: &str, prelude: bool) -> Result<RawASTInfo, String> {
     Ok(RawASTInfo {
         ast: Box::into_raw(Box::new(ast)),
         lt: Box::into_raw(Box::new(lt)),
-        main_expr
+        main_expr,
     })
 }
 
@@ -204,7 +220,7 @@ pub unsafe fn types_to_string(info: &RawASTInfo) -> String {
 
     let mut capitals_map = BTreeMap::new();
     let mut lowercase_map = BTreeMap::new();
-    
+
     for (name, type_) in lt.get_non_builtin_type_map() {
         let first_name_char = name.chars().next().unwrap();
         if first_name_char.is_uppercase() {
@@ -252,7 +268,7 @@ pub fn get_prelude() -> String {
 
 #[wasm_bindgen]
 pub struct RawDiff {
-    diff: *mut ASTDiff
+    diff: *mut ASTDiff,
 }
 
 #[wasm_bindgen]
@@ -263,7 +279,9 @@ pub unsafe fn diff(ast1: &RawASTInfo, ast2: &RawASTInfo) -> RawDiff {
     let ast1_main = ast1.get_assign_exp(ast1.get_main(ast1.root).unwrap());
     let ast2_main = ast2.get_assign_exp(ast2.get_main(ast2.root).unwrap());
 
-    RawDiff { diff: Box::into_raw(Box::new(AST::diff(ast1, ast2, ast1_main, ast2_main))) }
+    RawDiff {
+        diff: Box::into_raw(Box::new(AST::diff(ast1, ast2, ast1_main, ast2_main))),
+    }
 }
 
 #[wasm_bindgen]
@@ -280,7 +298,7 @@ pub unsafe fn diff_is_similar(diff: &RawDiff, index: usize) -> bool {
 
     match diff.get(index).unwrap() {
         ASTDiffElem::Similar(_) => true,
-        ASTDiffElem::Different(_, _) => false
+        ASTDiffElem::Different(_, _) => false,
     }
 }
 
@@ -290,14 +308,14 @@ pub unsafe fn diff_get_similar(diff: &RawDiff, index: usize) -> String {
 
     match diff.get(index).unwrap() {
         ASTDiffElem::Similar(s) => s.clone(),
-        ASTDiffElem::Different(_, _) => panic!("Expected similar, got different")
+        ASTDiffElem::Different(_, _) => panic!("Expected similar, got different"),
     }
 }
 
 #[wasm_bindgen]
 pub struct StringPair {
     str1: String,
-    str2: String
+    str2: String,
 }
 
 #[wasm_bindgen]
@@ -306,7 +324,10 @@ pub unsafe fn diff_get_diff(diff: &RawDiff, index: usize) -> StringPair {
 
     match diff.get(index).unwrap() {
         ASTDiffElem::Similar(s) => panic!("Expected diff, got similar {}", s),
-        ASTDiffElem::Different(str1, str2) => StringPair {str1: str1.clone(), str2: str2.clone()}
+        ASTDiffElem::Different(str1, str2) => StringPair {
+            str1: str1.clone(),
+            str2: str2.clone(),
+        },
     }
 }
 

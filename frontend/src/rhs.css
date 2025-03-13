@@ -38,7 +38,6 @@ ul#RCArea {
 button.rc {
     border-radius: 8px;
     border: 1px solid transparent;
-    font-family: inherit;
     background-color: #1a1a1a;
     cursor: pointer;
     transition: border-color 0.25s;
@@ -76,7 +75,7 @@ button.rc > div > * {
 }
 
 button.rc > div#rarrow > * {
-    font-size: 2em;
+    font-size: 1.5em;
 }
 
 button.rc > div#progress {

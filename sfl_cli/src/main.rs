@@ -65,8 +65,8 @@ fn main() {
     println!("{}", ast.to_string_sugar(main_expr, false));
 
     while let Some(rc) = rcs {
-        let s1 = ast.to_string_sugar(rc.0, false);
-        let s2 = rc.1.to_string_sugar(rc.1.root, false);
+        let s1 = ast.to_string_sugar(rc.from, false);
+        let s2 = rc.to.to_string_sugar(rc.to.root, false);
         println!("Next: {} => {}", s1, s2);
 
         io::stdout().flush().unwrap();

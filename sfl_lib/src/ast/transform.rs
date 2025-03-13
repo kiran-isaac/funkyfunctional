@@ -140,7 +140,7 @@ impl AST {
         let _rcs_strs = {
             let mut _rcs_strs = vec![];
             for rc in rc_map.values() {
-                _rcs_strs.push(self.to_string_sugar(rc.0, false));
+                _rcs_strs.push(self.to_string_sugar(rc.from, false));
             }
             _rcs_strs
         };
@@ -168,7 +168,7 @@ impl AST {
         // Convert to map for O(1) lookup of whether a node is an RC
         let mut rc_map: HashMap<usize, &RCPair> = HashMap::new();
         for rc in rcs {
-            rc_map.insert(rc.0, &rc);
+            rc_map.insert(rc.from, &rc);
         }
 
         if rcs.is_empty() {
@@ -295,8 +295,8 @@ impl AST {
     }
 
     pub fn do_rc_subst(&mut self, within: usize, rc: &RCPair) -> usize {
-        let other = &rc.1;
-        let old = rc.0;
+        let other = &rc.to;
+        let old = rc.from;
         let new = self.append(other, other.root);
 
         #[cfg(debug_assertions)]
@@ -310,7 +310,7 @@ impl AST {
         let mut stringset = HashSet::new();
         let mut new_rcs = vec![];
         for rc in rcs {
-            let str = self.to_string_sugar(rc.0, false);
+            let str = self.to_string_sugar(rc.from, false);
             if !stringset.contains(&str) {
                 new_rcs.push(rc.clone());
             }
@@ -339,16 +339,16 @@ impl AST {
         rcs: &Vec<&RCPair>,
     ) {
         #[cfg(debug_assertions)]
-        let _rc0_0_str = self.to_string_sugar(rc0.0, false);
+        let _rc0_0_str = self.to_string_sugar(rc0.from, false);
         #[cfg(debug_assertions)]
-        let _rc1_0_str = rc0.1.to_string_sugar(rc0.1.root, false);
+        let _rc1_0_str = rc0.to.to_string_sugar(rc0.to.root, false);
 
         for rc in rcs {
             #[cfg(debug_assertions)]
-            let _this_rc = self.to_string_sugar(rc.0, false);
+            let _this_rc = self.to_string_sugar(rc.from, false);
             #[cfg(debug_assertions)]
-            let _this_rc_1 = rc.1.to_string_sugar(rc.1.root, false);
-            if self.expr_eq(rc0.0, rc.0) {
+            let _this_rc_1 = rc.to.to_string_sugar(rc.to.root, false);
+            if self.expr_eq(rc0.from, rc.from) {
                 self.do_rc_subst(within, rc);
             }
         }
