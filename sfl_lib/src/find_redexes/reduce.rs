@@ -135,7 +135,36 @@ fn check_for_valid_call(
                 };
             }
             ASTNodeType::Abstraction => {
+                return if !(f_node.wait_for_args && literals_only) {
+                    let n_args = ast.get_n_abstr_vars(f, argv.len());
+                    assert_eq!(argv.len(), n_args.len());
 
+                    for i in 0..argv.len() {
+                        match (&argv[i].t, &ast.get(n_args[i]).t) {
+                            (ASTNodeType::Pair, ASTNodeType::Pair) => {}
+                            (_, ASTNodeType::Pair) => return None,
+                            _ => {}
+                        }
+                    }
+
+                    let argv_comma_str = comma_ify(argv_strs.iter().rev().cloned().collect());
+
+                    let call_result =
+                        ast.do_multiple_abst_substs(f, argv_ids);
+
+                    #[cfg(debug_assertions)]
+                    let _ready_call_result_str =
+                        call_result.to_string_sugar(call_result.root, false);
+
+                    Some(RCPair {
+                        from: expr,
+                        to: call_result,
+                        msg_after: format!("Apply abstraction to {}", &argv_comma_str),
+                        msg_before: format!("Apply abstraction to {}", &argv_comma_str),
+                    })
+                } else {
+                    None
+                }
             }
             ASTNodeType::Application => {
                 x = ast.get_arg(f);
