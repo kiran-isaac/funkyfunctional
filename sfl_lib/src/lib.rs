@@ -15,3 +15,9 @@ pub use types::{typecheck, typecheck_tl_expr, Primitive, Type, TypeError};
 
 #[cfg(test)]
 mod lib_test;
+
+#[cfg(target_arch = "wasm32")]
+mod wasm_utils;
+#[cfg(target_arch = "wasm32")]
+#[allow(unused)]
+use wasm_utils::*;

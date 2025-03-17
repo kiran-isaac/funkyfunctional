@@ -12,7 +12,6 @@ pub use output::{ASTDiff, ASTDiffElem};
 use std::collections::HashSet;
 use std::iter::zip;
 use std::{collections::HashMap, fmt::Debug, vec};
-use std::fmt::Pointer;
 
 #[derive(Clone)]
 pub struct AST {

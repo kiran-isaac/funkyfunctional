@@ -54,7 +54,7 @@ fn check_for_valid_call(
         match ast.get(x).t {
             ASTNodeType::Application | ASTNodeType::Abstraction => {
                 argv_strs.push(format!("({})", arg_str));
-            },
+            }
             _ => {
                 argv_strs.push(arg_str);
             }
@@ -80,17 +80,21 @@ fn check_for_valid_call(
                     let argv_comma_str = comma_ify(argv_strs.iter().rev().cloned().collect());
                     if label.is_inbuilt() {
                         if literals_only {
-                            Some(
-                                RCPair {
-                                    from: expr,
-                                    to: labels_of_arity
-                                        .get(&name)
-                                        .unwrap()
-                                        .call_inbuilt(f_node, argv),
-                                    msg_after: format!("Applied inbuilt {} to {}", name, &argv_comma_str),
-                                    msg_before: format!("Apply inbuilt {} to {}", name, &argv_comma_str),
-                                }
-                            )
+                            Some(RCPair {
+                                from: expr,
+                                to: labels_of_arity
+                                    .get(&name)
+                                    .unwrap()
+                                    .call_inbuilt(f_node, argv),
+                                msg_after: format!(
+                                    "Applied inbuilt {} to {}",
+                                    name, &argv_comma_str
+                                ),
+                                msg_before: format!(
+                                    "Apply inbuilt {} to {}",
+                                    name, &argv_comma_str
+                                ),
+                            })
                         } else {
                             None
                         }
@@ -116,8 +120,7 @@ fn check_for_valid_call(
                             }
                         }
 
-                        let call_result =
-                            ast.do_multiple_abst_substs(assign_exp, argv_ids);
+                        let call_result = ast.do_multiple_abst_substs(assign_exp, argv_ids);
 
                         #[cfg(debug_assertions)]
                         let _ready_call_result_str =
@@ -137,7 +140,10 @@ fn check_for_valid_call(
             ASTNodeType::Abstraction => {
                 return if !(f_node.wait_for_args && literals_only) {
                     let n_args = ast.get_n_abstr_vars(f, argv.len());
-                    assert_eq!(argv.len(), n_args.len());
+
+                    if argv.len() != n_args.len() {
+                        return None;
+                    }
 
                     for i in 0..argv.len() {
                         match (&argv[i].t, &ast.get(n_args[i]).t) {
@@ -149,8 +155,7 @@ fn check_for_valid_call(
 
                     let argv_comma_str = comma_ify(argv_strs.iter().rev().cloned().collect());
 
-                    let call_result =
-                        ast.do_multiple_abst_substs(f, argv_ids);
+                    let call_result = ast.do_multiple_abst_substs(f, argv_ids);
 
                     #[cfg(debug_assertions)]
                     let _ready_call_result_str =
@@ -265,7 +270,7 @@ pub fn find_single_redex_contraction_pair(
                                 from: expr,
                                 to: subst_result,
                                 msg_after: format!("Substituted label {}", &value),
-                                msg_before: format!("Substitute label {}", &value)
+                                msg_before: format!("Substitute label {}", &value),
                             })
                         } else {
                             let assign = if let Some(assign) = am.get(&value) {
@@ -281,7 +286,7 @@ pub fn find_single_redex_contraction_pair(
                                 from: expr,
                                 to: subst_result,
                                 msg_after: format!("Substituted label {}", &value),
-                                msg_before: format!("Substitute label {}", &value)
+                                msg_before: format!("Substitute label {}", &value),
                             })
                         };
                     }
@@ -318,7 +323,7 @@ pub fn find_single_redex_contraction_pair(
                         from: expr,
                         to: pat_expr_cloned.clone_node(pat_expr_cloned.root),
                         msg_after: format!("Matched to pattern {}", case_str),
-                        msg_before: format!("Match to pattern {}", case_str)
+                        msg_before: format!("Match to pattern {}", case_str),
                     });
                 }
             }

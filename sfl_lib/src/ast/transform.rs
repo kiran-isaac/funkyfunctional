@@ -62,7 +62,7 @@ impl AST {
             vec![]
         } else {
             let var = self.get_abstr_var(abstr);
-            let mut expr = self.get_n_abstr_vars(abstr, n - 1);
+            let mut expr = self.get_n_abstr_vars(self.get_abstr_expr(abstr), n - 1);
             expr.insert(0, var);
             expr
         }
@@ -70,15 +70,48 @@ impl AST {
 
     pub fn do_multiple_abst_substs(&self, abst: usize, substs: Vec<usize>) -> Self {
         assert!(substs.len() > 0);
+        if self.get(abst).t != ASTNodeType::Abstraction {
+            panic!(
+                "Expected abstraction, got {}",
+                self.to_string_sugar(abst, false)
+            );
+        }
 
-        let mut abst_ast = self.do_abst_subst(abst, *substs.last().unwrap());
+        let substs_strings = substs
+            .iter()
+            .map(|s| self.to_string_sugar(*s, false))
+            .collect::<Vec<_>>();
+
+        let mut abst_ast = self.do_abst_subst(abst, *substs.last().unwrap()).unwrap();
         let substs = &substs[..substs.len() - 1];
         for subst in substs.iter().rev() {
             let subst = abst_ast.append(self, *subst);
-            abst_ast = abst_ast.do_abst_subst(abst_ast.root, subst);
+            abst_ast = match abst_ast.do_abst_subst(abst_ast.root, subst) {
+                Ok(new) => new,
+                Err(_) => panic!(
+                    "Failed to subst {:?} into {}",
+                    substs_strings,
+                    self.to_string_sugar(abst, false)
+                ),
+            }
         }
 
         abst_ast
+    }
+
+    pub fn do_abst_subst(&self, abstr: usize, subst: usize) -> Result<Self, ()> {
+        if self.get(abstr).t != ASTNodeType::Abstraction {
+            return Err(());
+        }
+        let mut cloned_abst_expr = self.clone_node(abstr);
+        let new_abstr_var = cloned_abst_expr.get_abstr_var(cloned_abst_expr.root);
+        let subst_id = cloned_abst_expr.append(&self, subst);
+
+        cloned_abst_expr.replace_var_usages_in_top_level_abstraction(new_abstr_var, subst_id);
+        let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
+        cloned_abst_expr.root = cloned_abst_expr.get_abstr_expr(cloned_abst_expr.root);
+        let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
+        Ok(cloned_abst_expr)
     }
 
     pub fn replace_var_usages_in_top_level_abstraction(&mut self, var: usize, subst: usize) {
@@ -110,19 +143,6 @@ impl AST {
             }
             _ => panic!("WTF HOW DID THIS HAPPEN"),
         }
-    }
-
-    pub fn do_abst_subst(&self, abstr: usize, subst: usize) -> Self {
-        assert_eq!(self.get(abstr).t, ASTNodeType::Abstraction);
-        let mut cloned_abst_expr = self.clone_node(abstr);
-        let new_abstr_var = cloned_abst_expr.get_abstr_var(cloned_abst_expr.root);
-        let subst_id = cloned_abst_expr.append(&self, subst);
-
-        cloned_abst_expr.replace_var_usages_in_top_level_abstraction(new_abstr_var, subst_id);
-        let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
-        cloned_abst_expr.root = cloned_abst_expr.get_abstr_expr(cloned_abst_expr.root);
-        let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
-        cloned_abst_expr
     }
 
     fn get_laziest_rc_recurse(

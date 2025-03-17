@@ -35,7 +35,8 @@ fn get_diff(str1: &str, str2: &str) -> Result<ASTDiff, ParserError> {
 
 #[test]
 fn diff_test_5() -> Result<(), ParserError> {
-    let diff = get_diff(r#"
+    let diff = get_diff(
+        r#"
             square :: Int -> Int
             square x = x * x
 
@@ -45,7 +46,8 @@ fn diff_test_5() -> Result<(), ParserError> {
 
             main :: Int
             main = sum $ (list_of_squares 1 5)
-        "#,r#"
+        "#,
+        r#"
             square :: Int -> Int
             square x = x * x
 
@@ -55,7 +57,8 @@ fn diff_test_5() -> Result<(), ParserError> {
 
             main :: Int
             main = foldr (\x. \acc. x + acc) 0 $ (list_of_squares 1 5)
-        "#)?;
+        "#,
+    )?;
     dbg!(diff);
     Ok(())
 }

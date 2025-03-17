@@ -1,8 +1,5 @@
 use sfl_lib::{self as lib, typecheck};
-use std::{
-    env, fs,
-    io::{self, Write},
-};
+use std::{env, fs};
 
 static HORIZONTAL_SEPARATOR: &str =
     "______________________________________________________________";
@@ -57,7 +54,7 @@ fn main() {
         None => {
             eprintln!("Main not found");
             std::process::exit(1);
-        },
+        }
     });
 
     let mut rcs = lib::find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt);
@@ -82,7 +79,7 @@ fn main() {
             Some(v) => v,
             None => {
                 panic!("Main not found, should have been caught by parser");
-            },
+            }
         });
 
         i += 1;

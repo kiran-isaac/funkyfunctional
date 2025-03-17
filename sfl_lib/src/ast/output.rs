@@ -334,9 +334,18 @@ impl AST {
                 let new_arg_needs_brackets =
                     new_arg.t == ASTNodeType::Abstraction || new_arg.t == ASTNodeType::Application;
 
-                let first_arg_is_diff = if let Some(ASTDiffElem::Different(_, _)) = arg_diff.vec.first() {true} else {false};
-                let last_func_is_diff = if let Some(ASTDiffElem::Different(_, _)) = func_diff.vec.last() {true} else {false};
-
+                let first_arg_is_diff =
+                    if let Some(ASTDiffElem::Different(_, _)) = arg_diff.vec.first() {
+                        true
+                    } else {
+                        false
+                    };
+                let last_func_is_diff =
+                    if let Some(ASTDiffElem::Different(_, _)) = func_diff.vec.last() {
+                        true
+                    } else {
+                        false
+                    };
 
                 match (old_func_needs_brackets, new_func_needs_brackets) {
                     (true, true) => func_diff.bracket(first_arg_is_diff && last_func_is_diff),
