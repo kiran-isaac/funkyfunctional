@@ -62,7 +62,7 @@ impl AST {
             vec![]
         } else {
             let var = self.get_abstr_var(abstr);
-            let mut expr = self.get_n_abstr_vars(abstr, n - 1);
+            let mut expr = self.get_n_abstr_vars(self.get_abstr_expr(abstr), n - 1);
             expr.insert(0, var);
             expr
         }
@@ -70,15 +70,48 @@ impl AST {
 
     pub fn do_multiple_abst_substs(&self, abst: usize, substs: Vec<usize>) -> Self {
         assert!(substs.len() > 0);
+        if self.get(abst).t != ASTNodeType::Abstraction {
+            panic!(
+                "Expected abstraction, got {}",
+                self.to_string_sugar(abst, false)
+            );
+        }
 
-        let mut abst_ast = self.do_abst_subst(abst, *substs.last().unwrap());
+        let substs_strings = substs
+            .iter()
+            .map(|s| self.to_string_sugar(*s, false))
+            .collect::<Vec<_>>();
+
+        let mut abst_ast = self.do_abst_subst(abst, *substs.last().unwrap()).unwrap();
         let substs = &substs[..substs.len() - 1];
         for subst in substs.iter().rev() {
             let subst = abst_ast.append(self, *subst);
-            abst_ast = abst_ast.do_abst_subst(abst_ast.root, subst);
+            abst_ast = match abst_ast.do_abst_subst(abst_ast.root, subst) {
+                Ok(new) => new,
+                Err(_) => panic!(
+                    "Failed to subst {:?} into {}",
+                    substs_strings,
+                    self.to_string_sugar(abst, false)
+                ),
+            }
         }
 
         abst_ast
+    }
+
+    pub fn do_abst_subst(&self, abstr: usize, subst: usize) -> Result<Self, ()> {
+        if self.get(abstr).t != ASTNodeType::Abstraction {
+            return Err(());
+        }
+        let mut cloned_abst_expr = self.clone_node(abstr);
+        let new_abstr_var = cloned_abst_expr.get_abstr_var(cloned_abst_expr.root);
+        let subst_id = cloned_abst_expr.append(&self, subst);
+
+        cloned_abst_expr.replace_var_usages_in_top_level_abstraction(new_abstr_var, subst_id);
+        let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
+        cloned_abst_expr.root = cloned_abst_expr.get_abstr_expr(cloned_abst_expr.root);
+        let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
+        Ok(cloned_abst_expr)
     }
 
     pub fn replace_var_usages_in_top_level_abstraction(&mut self, var: usize, subst: usize) {
@@ -112,19 +145,6 @@ impl AST {
         }
     }
 
-    pub fn do_abst_subst(&self, abstr: usize, subst: usize) -> Self {
-        assert_eq!(self.get(abstr).t, ASTNodeType::Abstraction);
-        let mut cloned_abst_expr = self.clone_node(abstr);
-        let new_abstr_var = cloned_abst_expr.get_abstr_var(cloned_abst_expr.root);
-        let subst_id = cloned_abst_expr.append(&self, subst);
-
-        cloned_abst_expr.replace_var_usages_in_top_level_abstraction(new_abstr_var, subst_id);
-        let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
-        cloned_abst_expr.root = cloned_abst_expr.get_abstr_expr(cloned_abst_expr.root);
-        let _abst_str = cloned_abst_expr.to_string_sugar(cloned_abst_expr.root, false);
-        cloned_abst_expr
-    }
-
     fn get_laziest_rc_recurse(
         &self,
         expr: usize,
@@ -140,7 +160,7 @@ impl AST {
         let _rcs_strs = {
             let mut _rcs_strs = vec![];
             for rc in rc_map.values() {
-                _rcs_strs.push(self.to_string_sugar(rc.0, false));
+                _rcs_strs.push(self.to_string_sugar(rc.from, false));
             }
             _rcs_strs
         };
@@ -168,7 +188,7 @@ impl AST {
         // Convert to map for O(1) lookup of whether a node is an RC
         let mut rc_map: HashMap<usize, &RCPair> = HashMap::new();
         for rc in rcs {
-            rc_map.insert(rc.0, &rc);
+            rc_map.insert(rc.from, &rc);
         }
 
         if rcs.is_empty() {
@@ -295,8 +315,8 @@ impl AST {
     }
 
     pub fn do_rc_subst(&mut self, within: usize, rc: &RCPair) -> usize {
-        let other = &rc.1;
-        let old = rc.0;
+        let other = &rc.to;
+        let old = rc.from;
         let new = self.append(other, other.root);
 
         #[cfg(debug_assertions)]
@@ -310,7 +330,7 @@ impl AST {
         let mut stringset = HashSet::new();
         let mut new_rcs = vec![];
         for rc in rcs {
-            let str = self.to_string_sugar(rc.0, false);
+            let str = self.to_string_sugar(rc.from, false);
             if !stringset.contains(&str) {
                 new_rcs.push(rc.clone());
             }
@@ -339,16 +359,16 @@ impl AST {
         rcs: &Vec<&RCPair>,
     ) {
         #[cfg(debug_assertions)]
-        let _rc0_0_str = self.to_string_sugar(rc0.0, false);
+        let _rc0_0_str = self.to_string_sugar(rc0.from, false);
         #[cfg(debug_assertions)]
-        let _rc1_0_str = rc0.1.to_string_sugar(rc0.1.root, false);
+        let _rc1_0_str = rc0.to.to_string_sugar(rc0.to.root, false);
 
         for rc in rcs {
             #[cfg(debug_assertions)]
-            let _this_rc = self.to_string_sugar(rc.0, false);
+            let _this_rc = self.to_string_sugar(rc.from, false);
             #[cfg(debug_assertions)]
-            let _this_rc_1 = rc.1.to_string_sugar(rc.1.root, false);
-            if self.expr_eq(rc0.0, rc.0) {
+            let _this_rc_1 = rc.to.to_string_sugar(rc.to.root, false);
+            if self.expr_eq(rc0.from, rc.from) {
                 self.do_rc_subst(within, rc);
             }
         }

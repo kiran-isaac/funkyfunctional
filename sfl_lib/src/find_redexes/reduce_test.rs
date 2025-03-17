@@ -92,7 +92,7 @@ fn redexes_match() {
     typecheck(&mut ast, module, &mut lt, &tm).unwrap();
 
     let rc = find_single_redex_contraction_pair(&ast, Some(module), exp, &lt).unwrap();
-    assert_eq!("false", rc.1.to_string_sugar(rc.1.root, false));
+    assert_eq!("false", rc.to.to_string_sugar(rc.to.root, false));
 }
 
 #[test]

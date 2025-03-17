@@ -1,4 +1,5 @@
 import * as wasm from 'sfl_wasm_lib'
+import './ASTHistory.css'
 
 interface DiffDisplayProps {
     from: string;
@@ -10,7 +11,6 @@ const DiffDisplay = ({ from, to }: DiffDisplayProps) => {
         <div className='center_area'>
             <div><pre>{from}</pre></div>
             <div id='divider'>{"▷*"}</div>
-            {/* <div id='divider2'></div> */}
             <div><pre>{to}</pre></div>
         </div>
     );
@@ -18,9 +18,12 @@ const DiffDisplay = ({ from, to }: DiffDisplayProps) => {
 
 interface ASTHistoryProps {
     astHistory: wasm.RawASTInfo[];
+    resetTo: (n: number) => void;
+    rcFromHistory: string[];
+    rcToHistory: string[];
 }
 
-const ASTHistory = ({ astHistory }: ASTHistoryProps) => {
+const ASTHistory = ({ astHistory, resetTo, rcFromHistory, rcToHistory }: ASTHistoryProps) => {
     if (astHistory.length == 0) {
         return <></>;
     }
@@ -46,7 +49,7 @@ const ASTHistory = ({ astHistory }: ASTHistoryProps) => {
                 exprSpanList.push(<span className="changed">{str2}</span>);
                 const setIdent = str1 + '\0' + str2;
                 if (!hasOccured.has(setIdent)) {
-                    diffSpanList.push(<div><DiffDisplay from={str1} to={str2}></DiffDisplay></div>);
+                    diffSpanList.push(<div><DiffDisplay from={rcFromHistory[i-1]} to={rcToHistory[i-1]}></DiffDisplay></div>);
                     hasOccured.add(setIdent);
                 }
             }
@@ -62,7 +65,7 @@ const ASTHistory = ({ astHistory }: ASTHistoryProps) => {
             <table id="ASTHistory">
                 <tbody>
                     {astLIs.map((li, index) => (
-                        <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''}>
+                        <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''} onClick={() => resetTo(astLIs.length - index)}>
                             <td className='index'><p>{astLIs.length - index - 1}</p></td>
                             <td className='ast'>{li}</td>
                         </tr>

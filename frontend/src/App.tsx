@@ -12,8 +12,11 @@ function App() {
   const [editorValue, setEditorValue] = useState("");
   const [errorString, setErrorString] = useState("");
   const [astHistory, setAstHistory] = useState<wasm.RawASTInfo[]>([]);
+  const [selectedRcFromStringHistory, setSelectedRcFromStringHistory] = useState<string[]>([]);
+  const [selectedRcToStringHistory, setSelectedRcToStringHistory] = useState<string[]>([]);
+  let multiple = false;
 
-  const generateRCs = (ast: wasm.RawASTInfo, multiple: boolean) => {
+  const generateRCs = (ast: wasm.RawASTInfo) => {
     try {
       const rcs = multiple ? wasm.get_all_redexes(ast) : wasm.get_one_redex(ast);
 
@@ -25,21 +28,27 @@ function App() {
       const rc_callback = (rc_index: number) => {
         const from_string = wasm.get_rcs_from(rcs, rc_index);
         const to_string = wasm.get_rcs_to(rcs, rc_index);
-        console.log(from_string, to_string);
 
         // add the current ast to the history
         setAstHistory((prevAstHistory) => {
           return [...prevAstHistory, ast];
         });
+        setSelectedRcFromStringHistory((prev) => {
+          return [...prev, from_string];
+        });
+        setSelectedRcToStringHistory((prev) => {
+          return [...prev, to_string];
+        });
         ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
-        generateRCs(ast, multiple);
+        generateRCs(ast);
       };
 
       const rc_elems = [];
       for (let i = 0; i < wasm.get_rcs_len(rcs); i++) {
         const from_string = wasm.get_rcs_from(rcs, i);
         const to_string = wasm.get_rcs_to(rcs, i);
-        rc_elems.push(<RC multiple={multiple} key={i + 1} i={i} onClick={rc_callback} from={from_string} to={to_string} />);
+        const message = wasm.get_rcs_msg1(rcs, i);
+        rc_elems.push(<RC multiple={multiple} key={i + 1} i={i} onClick={rc_callback} from={from_string} to={to_string} msg={message}/>);
       }
 
       setRcs(rc_elems);
@@ -48,22 +57,36 @@ function App() {
       setErrorString(e as string)
       setRcs([])
       setAstHistory([])
+      setSelectedRcFromStringHistory([])
+      setSelectedRcToStringHistory([])
     }
   }
 
-  const handleRun = (programInput: string, multiple: boolean) => {
+  const handleRun = (programInput: string, _multiple: boolean) => {
+    multiple = _multiple;
     try {
       const ast = wasm.parse(programInput);
       setAstHistory([ast]);
-      generateRCs(ast, multiple);
-      
+      generateRCs(ast);
+      setSelectedRcFromStringHistory([])
+      setSelectedRcToStringHistory([])
       setErrorString("")
     } catch (e) {
       setErrorString(e as string)
       setRcs([])
       setAstHistory([])
+      setSelectedRcFromStringHistory([])
+      setSelectedRcToStringHistory([])
     }
   };
+
+  const resetTo = (n: number) => {
+    setAstHistory((prevAstHistory) => {
+      const new_slice = prevAstHistory.slice(0, n);
+      generateRCs(new_slice[new_slice.length - 1]);
+      return new_slice
+    });
+  }
 
   return (
     <>
@@ -99,7 +122,7 @@ function App() {
           <div id="Error">
             <p>{errorString}</p>
           </div>
-          <ASTHistory astHistory={astHistory} />
+          <ASTHistory astHistory={astHistory} resetTo={resetTo} rcToHistory={selectedRcToStringHistory} rcFromHistory={selectedRcFromStringHistory} />
         </div>
       </div>
     </>

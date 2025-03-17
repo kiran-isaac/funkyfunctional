@@ -1,137 +1,100 @@
-#rhs {
-    width: calc(50% - 10px);
-    height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
-    position: absolute;
-    right: 5px;
-    top: 0;
-    padding-top: 5px;
-}
-
-div#ASTHistoryWrapper {
-    width: 100%;
-    height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-table#ASTHistory {
-    border-collapse: collapse; /* Ensures that borders are not doubled */
-    overflow-x: hidden;
-    width: 95%;
-    margin-left: 2.5%;
-    margin-right: 2.5%;
-}
-
-table#ASTHistory tbody {
-    display: block;
-    overflow-y: auto;
-    width: 100%;
-}
-
-table#ASTHistory th,
-table#ASTHistory td {
-    padding: 8px; 
-    vertical-align: middle;
-}
-
-table#ASTHistory tr {
-    border-top: 1px solid #ddd;
-    min-height: 50px;
-    display: block;
-    width: 100%;
-    display: grid;
-    grid-template-columns: 30px 1fr;
-    grid-template-rows: auto;
-}
-
-
-li.expr_history {
+#ASTArea pre {
+    width: 96%;
+    padding-left: 2%;
+    margin: 0;
     overflow-x: auto;
+    padding-bottom: 10px;
+    padding-top: 10px;
+}
+
+#ASTArea h4 {
+    margin: 0 0 0 2%;
+    padding: 0;
+    text-decoration: underline;
+}
+
+ul#RCArea {
     width: 100%;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    list-style-type: none;
 }
 
-table#ASTHistory td.index {
-    width: 30px;
-    text-align: center;
-    display: inline;
-    padding: 0px;  
-    height: 100%;
-    width: 100%;
-    vertical-align: middle;
-    margin: auto 0;
-}
-
-table#ASTHistory td.index p {
-    height: 100%;
-    display: inline;
-    vertical-align: middle;
-}
-
-table#ASTHistory td.ast {
-    width: 100%;
-}
-
-
-table#ASTHistory tr.top {
-    border-top: none;
-}
-
-table#ASTHistory .index {
-    border-right: 1px solid #ddd;
-    width: 5%;
-    min-width: 10px;
-}
-
-table#ASTHistory td.ast {
-    padding-bottom: 20px;
-}
-
-div.center_area {
+button.rc {
+    border-radius: 8px;
     border: 1px solid transparent;
-    font-family: inherit;
-    border: 1px solid #555; 
+    background-color: #1a1a1a;
+    cursor: pointer;
+    transition: border-color 0.25s;
+    white-space: normal;
+    overflow-wrap: break-word;
+    width: 100%;
+    margin: 5px 0;
+    padding: 10px 0;
     display: grid;
-    grid-template-rows: 1fr;
-    grid-template-columns: 1fr 50px 1fr;
+    min-height: 60px;
     color: white;
-    width: calc(100% - 20px);
-    padding: 15px 0px;
-    margin: auto;
 }
 
-div.center_area > div {
-    width: calc(100% - 75px);
-    padding-left: 15px;
+button.rc.multiple {
+    grid-template-columns: 1fr 2em 1fr;
+}
+
+button.rc > div  {
+    width: calc(100% - 20px);
+    text-align: center;
+    padding: 0;
+    margin: 0;
     vertical-align: center;
     position: relative;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow-x: auto;
-    min-height: 40px;
 }
 
-div.center_area > div > pre {
-    margin: auto;
+button.rc > div > * {
+    margin: 0;
+    white-space: normal;
+    padding: 0;
 }
 
-div.center_area > div#divider {
+button.rc > div#rarrow > * {
     font-size: 1.5em;
-    padding: 0px;
-    width: 100%;
-    text-align: center;
 }
 
-div.exprListing {
-    margin-top: 10px;    
-    width: 100%;
-    overflow-x: auto;
-}
-
-div.exprListing pre {
-    width: fit-content;
+button.rc > div#progress {
     margin: auto;
+    font-size: 1.5em;
+}
+
+button:hover {
+    border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color;
+}
+
+.expr_history .new {
+    background-color: #2600ff7e;
+    color: white;
+}
+
+.expr_history .old {
+    background-color: #ff00004f;
+    color: white;
+}
+
+.expr_history .changed {
+    background-color: #2600ff7e;
+    color: white;
+}
+
+@media only screen and (max-width: 1000px) {
+    button.rc > div#progress {
+        font-size: 1em;
+    }
 }

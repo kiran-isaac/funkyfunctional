@@ -40,12 +40,10 @@ html {
 }
 
 #TitleFlex * {
-    margin: 0px;
-    padding: 0px;
+    padding: 0;
     height: 45px;
     vertical-align: middle;
     text-decoration: underline;
-    margin-top: 6.5px;
     display: inline-block;
     margin: auto;
 }
@@ -61,108 +59,47 @@ html {
 }
 
 #TitleFlex p {
-    padding: 0px 5px;
+    padding: 0 5px;
 }
 
-#ASTArea pre {
-    width: 96%;
-    padding-left: 2%;
-    margin: 0;
-    overflow-x: auto;
-    padding-bottom: 10px;
-    padding-top: 10px;
-}
-
-#ASTArea h4 {
-    margin: 0;
-    margin-left: 2%;
-    padding: 0;
-    text-decoration: underline;
-}
-
-ul#RCArea {
-    width: 100%;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    list-style-type: none;
-}
-
-button.rc {
-    border-radius: 8px;
-    border: 1px solid transparent;
-    font-family: inherit;
-    background-color: #1a1a1a;
-    cursor: pointer;
-    transition: border-color 0.25s;
-    white-space: normal;
-    overflow-wrap: break-word;
-    width: 100%;
-    margin: 5px 0;
-    padding: 10px 0;
-    display: grid;
-    min-height: 60px;
-    color: white;
-}
-
-button.rc.multiple {
-    grid-template-columns: 1fr 2em 1fr;
-}
-
-button.rc > div  {
-    width: calc(100% - 20px);
-    text-align: center;
-    padding: 0;
-    margin: 0;
-    vertical-align: center;
-    position: relative;
+#rhs {
+    width: calc(50% - 10px);
     height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: absolute;
+    right: 0;
+    top: 0;
+    padding-top: 5px;
+    padding-bottom: 5px;
 }
 
-button.rc > div > * {
-    margin: 0;
-    white-space: normal;
-    padding: 0;
+#lhs {
+    border-right: 1px solid rgba(255, 255, 255, 0.349);
+    position: absolute;
+    width: calc(50% - 10px);
+    height: 100%;
+    padding-left: 5px;
+    padding-right: 5px;
 }
 
-button.rc > div#rarrow > * {
-    font-size: 2em;
-}
-
-button.rc > div#progress {
-    margin: auto;
-    font-size: 1.5em;
-}
-
-button:hover {
-    border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-    outline: 4px auto -webkit-focus-ring-color;
-}
-
-.expr_history .new {
-    background-color: #2600ff7e;
-    color: white;
-}
-
-.expr_history .old {
-    background-color: #ff00004f;
-    color: white;
-}
-
-.expr_history .changed {
-    background-color: #2600ff7e;
-    color: white;
-}
 
 @media only screen and (max-width: 1000px) {
-    button.rc > div#progress {
-        font-size: 1em;
+    #lhs {
+        position: relative;
+        display: block;
+        width: 100%;
+    }
+
+    #rhs {
+        position: relative !important;
+        display: block;
+        width: 100% !important;
+    }
+
+    html {
+        width: 100vw;
+        height: auto;
+        overflow-y: auto;
     }
 }

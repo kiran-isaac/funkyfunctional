@@ -3,6 +3,22 @@ use crate::find_redexes::pattern_match::pattern_match;
 use crate::functions::KnownTypeLabelTable;
 use std::collections::HashMap;
 
+fn comma_ify(vec: Vec<String>) -> String {
+    match vec.len() {
+        0 => String::new(),
+        1 => vec[0].clone(),
+        _ => {
+            let mut str = vec[0].clone();
+            let last = vec[vec.len() - 1].clone();
+            for string in &vec[1..vec.len() - 1] {
+                str += ", ";
+                str += string;
+            }
+            str + " and " + &last
+        }
+    }
+}
+
 /// This will check for applications to functions:
 /// - lables with func types
 /// - lambda abstractions
@@ -14,18 +30,17 @@ use std::collections::HashMap;
 /// This function checks that the rhs is a literal, and the lhs is
 /// either a function or an App of a function in the set of funcs
 /// with the right num of args
-fn check_for_ready_call(
+fn check_for_valid_call(
     ast: &AST,
     expr: usize,
     lt: &KnownTypeLabelTable,
     am: HashMap<String, usize>,
-) -> Option<AST> {
+) -> Option<RCPair> {
     let mut f = ast.get_func(expr);
     let mut x = ast.get_arg(expr);
     let mut argv = vec![];
     let mut argv_ids = vec![];
 
-    #[cfg(debug_assertions)]
     let mut argv_strs = vec![];
 
     // True if only literals encountered. If true, then we can call inbuilt functions
@@ -35,8 +50,15 @@ fn check_for_ready_call(
         argv.push(ast.get(x));
         argv_ids.push(x);
 
-        #[cfg(debug_assertions)]
-        argv_strs.push(ast.to_string_sugar(x, false));
+        let arg_str = ast.to_string_sugar(x, false);
+        match ast.get(x).t {
+            ASTNodeType::Application | ASTNodeType::Abstraction => {
+                argv_strs.push(format!("({})", arg_str));
+            }
+            _ => {
+                argv_strs.push(arg_str);
+            }
+        }
 
         match ast.get(x).t {
             ASTNodeType::Literal => {}
@@ -46,8 +68,8 @@ fn check_for_ready_call(
 
         match f_node.t {
             ASTNodeType::Identifier => {
-                let labels_of_arity = if let Some(lables) = lt.get_n_ary_labels(argv.len()) {
-                    lables
+                let labels_of_arity = if let Some(labels) = lt.get_n_ary_labels(argv.len()) {
+                    labels
                 } else {
                     return None;
                 };
@@ -55,51 +77,61 @@ fn check_for_ready_call(
 
                 return if labels_of_arity.contains_key(&name) {
                     let label = labels_of_arity.get(&name).unwrap();
+                    let argv_comma_str = comma_ify(argv_strs.iter().rev().cloned().collect());
                     if label.is_inbuilt() {
                         if literals_only {
-                            Some(
-                                labels_of_arity
+                            Some(RCPair {
+                                from: expr,
+                                to: labels_of_arity
                                     .get(&name)
                                     .unwrap()
                                     .call_inbuilt(f_node, argv),
-                            )
+                                msg_after: format!(
+                                    "Applied inbuilt {} to {}",
+                                    name, &argv_comma_str
+                                ),
+                                msg_before: format!(
+                                    "Apply inbuilt {} to {}",
+                                    name, &argv_comma_str
+                                ),
+                            })
                         } else {
                             None
                         }
                     } else {
-                        if !(f_node.wait_for_args && literals_only) {
-                            let assign = match am.get(&name) {
-                                Some(a) => *a,
-                                None => return None,
-                            };
+                        let assign = match am.get(&name) {
+                            Some(a) => *a,
+                            None => return None,
+                        };
 
-                            let assign_exp = ast.get_assign_exp(assign);
-                            let n_args = ast.get_n_abstr_vars(assign_exp, argv.len());
+                        let assign_exp = ast.get_assign_exp(assign);
+                        let n_args = ast.get_n_abstr_vars(assign_exp, argv.len());
 
-                            if ast.get_n_abstr_vars(assign_exp, argv.len()).len() != argv.len() {
-                                return None;
-                            }
-
-                            // Stop it being a ready call when a pair is expected but we dont have it
-                            for i in 0..argv.len() {
-                                match (&argv[i].t, &ast.get(n_args[i]).t) {
-                                    (ASTNodeType::Pair, ASTNodeType::Pair) => {}
-                                    (_, ASTNodeType::Pair) => return None,
-                                    _ => {}
-                                }
-                            }
-
-                            let ready_call_result =
-                                ast.do_multiple_abst_substs(assign_exp, argv_ids);
-
-                            #[cfg(debug_assertions)]
-                            let _ready_call_result_str =
-                                ready_call_result.to_string_sugar(ready_call_result.root, false);
-
-                            Some(ready_call_result)
-                        } else {
-                            None
+                        if ast.get_n_abstr_vars(assign_exp, argv.len()).len() != argv.len() {
+                            return None;
                         }
+
+                        // Stop it being a ready call when a pair is expected but we dont have it
+                        for i in 0..argv.len() {
+                            match (&argv[i].t, &ast.get(n_args[i]).t) {
+                                (ASTNodeType::Pair, ASTNodeType::Pair) => {}
+                                (_, ASTNodeType::Pair) => return None,
+                                _ => {}
+                            }
+                        }
+
+                        let call_result = ast.do_multiple_abst_substs(assign_exp, argv_ids);
+
+                        #[cfg(debug_assertions)]
+                        let _ready_call_result_str =
+                            call_result.to_string_sugar(call_result.root, false);
+
+                        Some(RCPair {
+                            from: expr,
+                            to: call_result,
+                            msg_after: format!("Applied function {} to {}", name, &argv_comma_str),
+                            msg_before: format!("Apply function {} to {}", name, &argv_comma_str),
+                        })
                     }
                 } else {
                     None
@@ -108,7 +140,10 @@ fn check_for_ready_call(
             ASTNodeType::Abstraction => {
                 return if !(f_node.wait_for_args && literals_only) {
                     let n_args = ast.get_n_abstr_vars(f, argv.len());
-                    assert_eq!(argv.len(), n_args.len());
+
+                    if argv.len() != n_args.len() {
+                        return None;
+                    }
 
                     for i in 0..argv.len() {
                         match (&argv[i].t, &ast.get(n_args[i]).t) {
@@ -118,7 +153,20 @@ fn check_for_ready_call(
                         }
                     }
 
-                    Some(ast.do_multiple_abst_substs(f, argv_ids))
+                    let argv_comma_str = comma_ify(argv_strs.iter().rev().cloned().collect());
+
+                    let call_result = ast.do_multiple_abst_substs(f, argv_ids);
+
+                    #[cfg(debug_assertions)]
+                    let _ready_call_result_str =
+                        call_result.to_string_sugar(call_result.root, false);
+
+                    Some(RCPair {
+                        from: expr,
+                        to: call_result,
+                        msg_after: format!("Apply abstraction to {}", &argv_comma_str),
+                        msg_before: format!("Apply abstraction to {}", &argv_comma_str),
+                    })
                 } else {
                     None
                 }
@@ -137,8 +185,8 @@ pub fn find_all_redex_contraction_pairs(
     module: Option<usize>,
     expr: usize,
     lt: &KnownTypeLabelTable,
-) -> Vec<(usize, AST)> {
-    let mut pairs: Vec<(usize, AST)> = vec![];
+) -> Vec<RCPair> {
+    let mut pairs: Vec<RCPair> = vec![];
 
     #[cfg(debug_assertions)]
     let _exp_str = ast.to_string_sugar(expr, false);
@@ -156,8 +204,8 @@ pub fn find_all_redex_contraction_pairs(
             let f = ast.get_func(expr);
             let x = ast.get_arg(expr);
 
-            if let Some(inbuilt_reduction) = check_for_ready_call(ast, expr, &lt, am) {
-                pairs.push((expr, inbuilt_reduction));
+            if let Some(inbuilt_reduction) = check_for_valid_call(ast, expr, &lt, am) {
+                pairs.push(inbuilt_reduction);
             }
 
             pairs.extend(find_all_redex_contraction_pairs(ast, module, f, &lt));
@@ -217,8 +265,13 @@ pub fn find_single_redex_contraction_pair(
                         let label = labels.get(&value).unwrap();
 
                         return if label.is_inbuilt() && i == 0 {
-                            let inbuilt = label.call_inbuilt(&ast.get(expr), vec![]);
-                            Some((expr, inbuilt))
+                            let subst_result = label.call_inbuilt(&ast.get(expr), vec![]);
+                            Some(RCPair {
+                                from: expr,
+                                to: subst_result,
+                                msg_after: format!("Substituted label {}", &value),
+                                msg_before: format!("Substitute label {}", &value),
+                            })
                         } else {
                             let assign = if let Some(assign) = am.get(&value) {
                                 *assign
@@ -227,9 +280,14 @@ pub fn find_single_redex_contraction_pair(
                             };
 
                             let assign_exp = ast.get_assign_exp(assign);
-                            let ready_call_result = ast.clone_node(assign_exp);
+                            let subst_result = ast.clone_node(assign_exp);
 
-                            Some((expr, ready_call_result))
+                            Some(RCPair {
+                                from: expr,
+                                to: subst_result,
+                                msg_after: format!("Substituted label {}", &value),
+                                msg_before: format!("Substitute label {}", &value),
+                            })
                         };
                     }
                 }
@@ -237,8 +295,8 @@ pub fn find_single_redex_contraction_pair(
             None
         }
         ASTNodeType::Application => {
-            if let Some(ready_call_reduction) = check_for_ready_call(ast, expr, &lt, am) {
-                Some((expr, ready_call_reduction))
+            if let Some(ready_call_reduction) = check_for_valid_call(ast, expr, &lt, am) {
+                Some(ready_call_reduction)
             } else if let Some(f_rc) =
                 find_single_redex_contraction_pair(ast, module, ast.get_func(expr), lt)
             {
@@ -251,6 +309,7 @@ pub fn find_single_redex_contraction_pair(
             let unpack_expr = ast.get_match_unpack_pattern(expr);
             for (pattern, pattern_expr) in ast.get_match_cases(expr) {
                 if let Some(bindings) = pattern_match(ast, unpack_expr, pattern) {
+                    let case_str = ast.to_string_sugar(pattern, false);
                     let mut pat_expr_cloned = ast.clone_node(pattern_expr);
                     for (var, replacement) in bindings {
                         let replacement_appended = pat_expr_cloned.append(ast, replacement);
@@ -260,7 +319,12 @@ pub fn find_single_redex_contraction_pair(
                             pat_expr_cloned.replace_references_to_node(usage, replacement_appended);
                         }
                     }
-                    return Some((expr, pat_expr_cloned.clone_node(pat_expr_cloned.root)));
+                    return Some(RCPair {
+                        from: expr,
+                        to: pat_expr_cloned.clone_node(pat_expr_cloned.root),
+                        msg_after: format!("Matched to pattern {}", case_str),
+                        msg_before: format!("Match to pattern {}", case_str),
+                    });
                 }
             }
             find_single_redex_contraction_pair(ast, module, unpack_expr, lt)

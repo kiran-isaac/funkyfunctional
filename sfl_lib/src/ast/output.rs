@@ -334,12 +334,21 @@ impl AST {
                 let new_arg_needs_brackets =
                     new_arg.t == ASTNodeType::Abstraction || new_arg.t == ASTNodeType::Application;
 
-                let first_arg_is_diff = if let Some(ASTDiffElem::Different(_, _)) = arg_diff.vec.first() {true} else {false};
-                let last_func_is_diff = if let Some(ASTDiffElem::Different(_, _)) = func_diff.vec.last() {true} else {false};
-
+                let first_arg_is_diff =
+                    if let Some(ASTDiffElem::Different(_, _)) = arg_diff.vec.first() {
+                        true
+                    } else {
+                        false
+                    };
+                let last_func_is_diff =
+                    if let Some(ASTDiffElem::Different(_, _)) = func_diff.vec.last() {
+                        true
+                    } else {
+                        false
+                    };
 
                 match (old_func_needs_brackets, new_func_needs_brackets) {
-                    (true, true) => func_diff.bracket(first_arg_is_diff),
+                    (true, true) => func_diff.bracket(first_arg_is_diff && last_func_is_diff),
                     (true, false) => {
                         func_diff.prepend(ASTDiffElem::Different("(".to_string(), "".to_string()));
                         func_diff.diff(")".to_string(), "".to_string());
@@ -352,7 +361,7 @@ impl AST {
                 }
 
                 match (old_arg_needs_brackets, new_arg_needs_brackets) {
-                    (true, true) => arg_diff.bracket(last_func_is_diff),
+                    (true, true) => arg_diff.bracket(first_arg_is_diff && last_func_is_diff),
                     (true, false) => {
                         arg_diff.prepend(ASTDiffElem::Different("(".to_string(), "".to_string()));
                         arg_diff.diff(")".to_string(), "".to_string());

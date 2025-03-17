@@ -1,0 +1,122 @@
+div#ASTHistoryWrapper {
+    width: 95%;
+
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin: 10px 2.5% 20px;
+}
+
+table#ASTHistory {
+    border-collapse: collapse; /* Ensures that borders are not doubled */
+    overflow-x: hidden;
+    width: 100%;
+    display: table;
+    table-layout: fixed;
+}
+
+table#ASTHistory tbody {
+    display: block;
+    overflow-y: auto;
+    overflow-x: hidden;
+    width: 100%;
+}
+
+table#ASTHistory th,
+table#ASTHistory td {
+    padding: 8px;
+    vertical-align: middle;
+}
+
+table#ASTHistory tr {
+    border-top: 1px solid #ddd;
+    min-height: 50px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 30px calc(100% - 30px);
+    grid-template-rows: auto;
+    cursor: pointer;
+}
+
+table#ASTHistory td.index {
+    text-align: center;
+    display: inline;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    vertical-align: middle;
+    margin: auto 0;
+}
+
+table#ASTHistory td.index p {
+    height: 100%;
+    display: inline;
+    vertical-align: middle;
+}
+
+table#ASTHistory td.ast {
+    width: 98%
+}
+
+
+table#ASTHistory tr.top {
+    border-top: none;
+    width: 100%;
+}
+
+table#ASTHistory .index {
+    border-right: 1px solid #ddd;
+    width: 5%;
+    min-width: 10px;
+}
+
+li.expr_history {
+    width: 100%;
+}
+
+div.center_area {
+    font-family: inherit;
+    border: 1px solid #555;
+    display: grid;
+    grid-template-rows: 1fr;
+    grid-template-columns: 1fr 50px 1fr;
+    color: white;
+    width: calc(100% - 40px);
+    padding: 15px 10px;
+    margin: auto;
+}
+
+div.center_area > div {
+    padding-left: 15px;
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: center;
+    overflow-x: auto;
+    min-height: 40px;
+}
+
+div.center_area > div > pre {
+    margin: auto;
+    max-width: 100%;
+}
+
+div.center_area > div#divider {
+    font-size: 1.5em;
+    padding: 0;
+    width: 100%;
+    text-align: center;
+}
+
+div.exprListing {
+    margin-top: 10px;
+    width: 100%;
+    overflow-x: auto;
+}
+
+div.exprListing pre {
+    width: fit-content;
+    margin: auto;
+}

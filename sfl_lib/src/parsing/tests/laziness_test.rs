@@ -11,6 +11,6 @@ fn test_laziness() {
 
     let rcs = find_all_redex_contraction_pairs(&ast, None, ast.root, &lt);
     let rc = ast.get_laziest_rc(ast.root, &rcs).unwrap();
-    let s2 = rc.1.to_string_sugar(rc.1.root, false);
+    let s2 = rc.to.to_string_sugar(rc.to.root, false);
     assert_eq!(s2, "(\\x. 1) true");
 }

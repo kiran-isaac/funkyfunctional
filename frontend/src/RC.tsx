@@ -4,16 +4,17 @@ interface RCProp {
     onClick: (rc_index: number) => void;
     from: string;
     to: string;
+    msg: string;
 }
 
-const RC: React.FC<RCProp> = ({ i, multiple, onClick, from, to }) => {
+const RC: React.FC<RCProp> = ({ i, multiple, onClick, from, to, msg }) => {
     if (!multiple) {
         return <><button
             className="rc single"
             onClick={() => onClick(i)}
         >
             <div></div>
-            <div id="progress">Progress Lazily</div>
+            <div id="progress">{msg}</div>
             <div></div>
         </button><br /></>;
     } else {
@@ -24,7 +25,7 @@ const RC: React.FC<RCProp> = ({ i, multiple, onClick, from, to }) => {
             <div className="from">
                 <pre>{from}</pre>
             </div>
-            <div id="rarrow"><p>&rArr;</p></div>
+            <div id="rarrow"><p>{"▷*"}</p></div>
             <div className="to">
                 <pre className="to">{to}</pre>
             </div>

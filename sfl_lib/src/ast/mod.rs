@@ -3,6 +3,9 @@ mod node;
 mod output;
 mod transform;
 
+#[cfg(test)]
+mod diff_tests;
+
 use crate::{find_redexes::RCPair, Token, Type};
 pub use node::*;
 pub use output::{ASTDiff, ASTDiffElem};
@@ -25,7 +28,7 @@ impl AST {
     }
 
     pub fn rc_to_str(&self, rc: &RCPair) -> String {
-        self.to_string_sugar(rc.0, false) + " -> " + &rc.1.to_string_sugar(rc.1.root, false)
+        self.to_string_sugar(rc.from, false) + " -> " + &rc.to.to_string_sugar(rc.to.root, false)
     }
 
     pub fn print_vec_string(&self) -> String {
