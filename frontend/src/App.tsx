@@ -46,7 +46,8 @@ function App() {
       for (let i = 0; i < wasm.get_rcs_len(rcs); i++) {
         const from_string = wasm.get_rcs_from(rcs, i);
         const to_string = wasm.get_rcs_to(rcs, i);
-        rc_elems.push(<RC multiple={multiple} key={i + 1} i={i} onClick={rc_callback} from={from_string} to={to_string} />);
+        const message = wasm.get_rcs_msg1(rcs, i);
+        rc_elems.push(<RC multiple={multiple} key={i + 1} i={i} onClick={rc_callback} from={from_string} to={to_string} msg={message}/>);
       }
 
       setRcs(rc_elems);

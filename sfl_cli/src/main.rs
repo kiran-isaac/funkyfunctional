@@ -63,19 +63,20 @@ fn main() {
     let mut rcs = lib::find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt);
 
     println!("{}", ast.to_string_sugar(main_expr, false));
+    let mut i = 0;
 
     while let Some(rc) = rcs {
         let s1 = ast.to_string_sugar(rc.from, false);
         let s2 = rc.to.to_string_sugar(rc.to.root, false);
-        println!("Next: {} => {}", s1, s2);
+        println!("{i}: Next: {} => {}", s1, s2);
 
-        io::stdout().flush().unwrap();
-
-        let mut input = String::new();
-        io::stdin()
-            .read_line(&mut input)
-            .expect("Failed to read line");
-        input = input.trim().to_string();
+        // io::stdout().flush().unwrap();
+        //
+        // let mut input = String::new();
+        // io::stdin()
+        //     .read_line(&mut input)
+        //     .expect("Failed to read line");
+        // input = input.trim().to_string();
 
         main_expr = ast.get_assign_exp(match ast.get_main(ast.root) {
             Some(v) => v,
@@ -84,7 +85,13 @@ fn main() {
             },
         });
 
+        i += 1;
+
         ast.do_rc_subst(main_expr, &rc);
+
+        if i == 12 {
+            print!("");
+        }
 
         rcs = lib::find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt);
         println!("\n{}", ast.to_string_sugar(main_expr, false));
