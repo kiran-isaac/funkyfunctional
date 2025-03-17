@@ -11,6 +11,8 @@ table#ASTHistory {
     border-collapse: collapse; /* Ensures that borders are not doubled */
     overflow-x: hidden;
     width: 100%;
+    display: table;
+    table-layout: fixed;
 }
 
 table#ASTHistory tbody {
@@ -30,7 +32,7 @@ table#ASTHistory tr {
     min-height: 50px;
     width: 100%;
     display: grid;
-    grid-template-columns: 30px 1fr;
+    grid-template-columns: 30px calc(100% - 30px);
     grid-template-rows: auto;
     cursor: pointer;
 }
@@ -66,6 +68,10 @@ table#ASTHistory .index {
     min-width: 10px;
 }
 
+li.expr_history {
+    width: 100%;
+}
+
 div.center_area {
     font-family: inherit;
     border: 1px solid #555;
@@ -79,7 +85,6 @@ div.center_area {
 }
 
 div.center_area > div {
-    width: calc(100% - 75px);
     padding-left: 15px;
     position: relative;
     height: 100%;
