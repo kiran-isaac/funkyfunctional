@@ -40,7 +40,7 @@ function App() {
           return [...prev, to_string];
         });
         ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
-        generateRCs(ast, multiple);
+        generateRCs(ast);
       };
 
       const rc_elems = [];
@@ -82,9 +82,10 @@ function App() {
 
   const resetTo = (n: number) => {
     setAstHistory((prevAstHistory) => {
-      return prevAstHistory.slice(0, n);
+      const new_slice = prevAstHistory.slice(0, n);
+      generateRCs(new_slice[new_slice.length - 1]);
+      return new_slice
     });
-    generateRCs(astHistory[astHistory.length - 1]);
   }
 
   return (
