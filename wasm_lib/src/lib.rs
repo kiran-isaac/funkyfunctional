@@ -3,7 +3,7 @@ mod utils;
 #[cfg(test)]
 mod wasm_lib_tests;
 
-use sfl_lib::{find_all_redex_contraction_pairs, find_single_redex_contraction_pair, typecheck, ASTDiff, ASTDiffElem, KnownTypeLabelTable, Parser, RCPair, AST, PRELUDE};
+use sfl_lib::*;
 
 use wasm_bindgen::prelude::*;
 use std::collections::BTreeMap;
