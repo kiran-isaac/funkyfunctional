@@ -3,13 +3,10 @@ mod utils;
 #[cfg(test)]
 mod wasm_lib_tests;
 
-use sfl_lib::{
-    find_all_redex_contraction_pairs, find_single_redex_contraction_pair, typecheck, ASTDiff,
-    ASTDiffElem, KnownTypeLabelTable, Parser, RCPair, AST, PRELUDE,
-};
+use sfl_lib::*;
 
-use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
+use std::collections::BTreeMap;
 
 #[wasm_bindgen]
 pub struct RawASTInfo {
@@ -293,8 +290,6 @@ pub unsafe fn get_diff_len(diff: &RawDiff) -> usize {
 #[wasm_bindgen]
 pub unsafe fn diff_is_similar(diff: &RawDiff, index: usize) -> bool {
     let diff = &*diff.diff;
-
-    log!("DIFF: {:?}", diff.get(index).unwrap());
 
     match diff.get(index).unwrap() {
         ASTDiffElem::Similar(_) => true,

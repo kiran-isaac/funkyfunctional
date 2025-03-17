@@ -2,7 +2,6 @@ mod ast;
 mod find_redexes;
 mod functions;
 mod parsing;
-mod prelude;
 mod types;
 
 pub use ast::*;
@@ -11,7 +10,7 @@ pub use find_redexes::{
 };
 pub use functions::KnownTypeLabelTable;
 pub use parsing::{Parser, Token};
-pub use prelude::PRELUDE;
+pub static PRELUDE: &str = include_str!("../../prelude.sfl");
 pub use types::{typecheck, typecheck_tl_expr, Primitive, Type, TypeError};
 
 #[cfg(test)]
