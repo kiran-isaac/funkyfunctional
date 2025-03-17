@@ -19,9 +19,11 @@ const DiffDisplay = ({ from, to }: DiffDisplayProps) => {
 interface ASTHistoryProps {
     astHistory: wasm.RawASTInfo[];
     resetTo: (n: number) => void;
+    rcFromHistory: string[];
+    rcToHistory: string[];
 }
 
-const ASTHistory = ({ astHistory, resetTo }: ASTHistoryProps) => {
+const ASTHistory = ({ astHistory, resetTo, rcFromHistory, rcToHistory }: ASTHistoryProps) => {
     if (astHistory.length == 0) {
         return <></>;
     }
@@ -47,7 +49,7 @@ const ASTHistory = ({ astHistory, resetTo }: ASTHistoryProps) => {
                 exprSpanList.push(<span className="changed">{str2}</span>);
                 const setIdent = str1 + '\0' + str2;
                 if (!hasOccured.has(setIdent)) {
-                    diffSpanList.push(<div><DiffDisplay from={str1} to={str2}></DiffDisplay></div>);
+                    diffSpanList.push(<div><DiffDisplay from={rcFromHistory[i-1]} to={rcToHistory[i-1]}></DiffDisplay></div>);
                     hasOccured.add(setIdent);
                 }
             }

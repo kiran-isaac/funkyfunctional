@@ -50,7 +50,15 @@ fn check_for_valid_call(
         argv.push(ast.get(x));
         argv_ids.push(x);
 
-        argv_strs.push(ast.to_string_sugar(x, false));
+        let arg_str = ast.to_string_sugar(x, false);
+        match ast.get(x).t {
+            ASTNodeType::Application | ASTNodeType::Abstraction => {
+                argv_strs.push(format!("({})", arg_str));
+            },
+            _ => {
+                argv_strs.push(arg_str);
+            }
+        }
 
         match ast.get(x).t {
             ASTNodeType::Literal => {}
@@ -69,7 +77,7 @@ fn check_for_valid_call(
 
                 return if labels_of_arity.contains_key(&name) {
                     let label = labels_of_arity.get(&name).unwrap();
-                    let argv_comma_str = comma_ify(argv_strs);
+                    let argv_comma_str = comma_ify(argv_strs.iter().rev().cloned().collect());
                     if label.is_inbuilt() {
                         if literals_only {
                             Some(
@@ -82,7 +90,6 @@ fn check_for_valid_call(
                                     msg_after: format!("Applied inbuilt {} to {}", name, &argv_comma_str),
                                     msg_before: format!("Apply inbuilt {} to {}", name, &argv_comma_str),
                                 }
-
                             )
                         } else {
                             None
@@ -120,7 +127,7 @@ fn check_for_valid_call(
                             from: expr,
                             to: call_result,
                             msg_after: format!("Applied function {} to {}", name, &argv_comma_str),
-                            msg_before: format!("Applied function {} to {}", name, &argv_comma_str)
+                            msg_before: format!("Apply function {} to {}", name, &argv_comma_str),
                         })
                     }
                 } else {
@@ -229,7 +236,7 @@ pub fn find_single_redex_contraction_pair(
                                 from: expr,
                                 to: subst_result,
                                 msg_after: format!("Substituted label {}", &value),
-                                msg_before: format!("Substituted label {}", &value)
+                                msg_before: format!("Substitute label {}", &value)
                             })
                         } else {
                             let assign = if let Some(assign) = am.get(&value) {

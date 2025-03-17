@@ -3,13 +3,10 @@ mod utils;
 #[cfg(test)]
 mod wasm_lib_tests;
 
-use sfl_lib::{
-    find_all_redex_contraction_pairs, find_single_redex_contraction_pair, typecheck, ASTDiff,
-    ASTDiffElem, KnownTypeLabelTable, Parser, RCPair, AST, PRELUDE,
-};
+use sfl_lib::*;
 
-use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
+use std::collections::BTreeMap;
 
 #[wasm_bindgen]
 pub struct RawASTInfo {
@@ -22,7 +19,8 @@ pub struct RawASTInfo {
 pub struct RawRC {
     pub from_str: *mut String,
     pub to_str: *mut String,
-    pub msg: *mut String,
+    pub msg1: *mut String,
+    pub msg2: *mut String,
     pub(crate) redex: *mut RCPair,
 }
 
@@ -48,8 +46,12 @@ pub unsafe fn get_rc_to(rc: &RawRC) -> String {
     (&*rc.to_str).clone()
 }
 
-pub unsafe fn get_rc_msg(rc: &RawRC) -> String {
-    (&*rc.msg).clone()
+pub unsafe fn get_rc_msg2(rc: &RawRC) -> String {
+    (&*rc.msg2).clone()
+}
+
+pub unsafe fn get_rc_msg1(rc: &RawRC) -> String {
+    (&*rc.msg1).clone()
 }
 
 #[wasm_bindgen]
@@ -64,9 +66,16 @@ pub unsafe fn get_rcs_to(rcs: *mut Vec<RawRC>, rc: usize) -> String {
     get_rc_to(&rcs[rc])
 }
 
-pub unsafe fn get_rcs_msg(rcs: *mut Vec<RawRC>, rc: usize) -> String {
+#[wasm_bindgen]
+pub unsafe fn get_rcs_msg2(rcs: *mut Vec<RawRC>, rc: usize) -> String {
     let rcs = &*rcs;
-    get_rc_msg(&rcs[rc])
+    get_rc_msg2(&rcs[rc])
+}
+
+#[wasm_bindgen]
+pub unsafe fn get_rcs_msg1(rcs: *mut Vec<RawRC>, rc: usize) -> String {
+    let rcs = &*rcs;
+    get_rc_msg1(&rcs[rc])
 }
 
 #[wasm_bindgen]
@@ -128,11 +137,13 @@ pub unsafe fn get_all_redexes(info: &RawASTInfo) -> *mut Vec<RawRC> {
     for rc in ast.filter_identical_rcs(&rcs) {
         let from_str = Box::into_raw(Box::new(ast.to_string_sugar(rc.from, false).clone()));
         let to_str = Box::into_raw(Box::new(rc.to.to_string_sugar(rc.to.root, false).clone()));
-        let msg = Box::into_raw(Box::new(rc.msg_after.to_string()));
+        let msg1 = Box::into_raw(Box::new(rc.msg_before.to_string()));
+        let msg2 = Box::into_raw(Box::new(rc.msg_after.to_string()));
         rcs_output.push(RawRC {
             from_str,
             to_str,
-            msg,
+            msg1,
+            msg2,
             redex: Box::into_raw(Box::new(rc)),
         });
     }
@@ -146,23 +157,30 @@ pub unsafe fn get_one_redex(info: &RawASTInfo) -> *mut Vec<RawRC> {
     let lt = &*info.lt;
     let module = ast.root;
 
+    log!("1");
+
     let main_assign = if let Some(main) = ast.get_assign_to(module, "main".to_string()) {
         main
     } else {
         return Box::into_raw(Box::new(vec![]));
     };
 
+    log!("2");
+
     let main_expr = ast.get_assign_exp(main_assign);
 
     Box::into_raw(Box::new(
         if let Some(rc) = find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt) {
+            log!("3");
             let from_str = Box::into_raw(Box::new(ast.to_string_sugar(rc.from, false).clone()));
             let to_str = Box::into_raw(Box::new(rc.to.to_string_sugar(rc.to.root, false).clone()));
-            let msg = Box::into_raw(Box::new(rc.msg_after.to_string()));
+            let msg1 = Box::into_raw(Box::new(rc.msg_before.to_string()));
+            let msg2 = Box::into_raw(Box::new(rc.msg_after.to_string()));
             vec![RawRC {
                 from_str,
                 to_str,
-                msg,
+                msg1,
+                msg2,
                 redex: Box::into_raw(Box::new(rc)),
             }]
         } else {
@@ -293,8 +311,6 @@ pub unsafe fn get_diff_len(diff: &RawDiff) -> usize {
 #[wasm_bindgen]
 pub unsafe fn diff_is_similar(diff: &RawDiff, index: usize) -> bool {
     let diff = &*diff.diff;
-
-    log!("DIFF: {:?}", diff.get(index).unwrap());
 
     match diff.get(index).unwrap() {
         ASTDiffElem::Similar(_) => true,

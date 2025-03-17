@@ -1,21 +1,12 @@
-#lhs {
-    border-right: 1px solid rgba(255, 255, 255, 0.349);
-    position: absolute;
-    width: calc(50% - 10px);
-    height: 100%;
-    padding-left: 5px;
-    padding-right: 5px;
-}
-
 #inputContainer {
     background-color: #242424;
     position: sticky;
-    margin: 0px;
+    margin: 0;
 
     display: grid;
     grid-template-columns: 80% 1fr;
     grid-template-rows: 1fr;
-    grid-column-gap: 0px;
+    grid-column-gap: 0;
     
     overflow-y: hidden;
     overflow-x: hidden;
@@ -64,7 +55,7 @@ div#Buttons {
     background-color: #272822;
     border-radius: 10px;
     flex-grow: 1;
-    flex-basis: 0%;
+    flex-basis: 0;
     display: flex;
     flex-direction: column;
     height: calc(100% - 45px);
@@ -82,7 +73,7 @@ div#Buttons {
 }
 
 div#prelude_dropdown {
-    padding: 0px;
+    padding: 0;
     overflow-y: auto;
     background-color: #1a1a1a;
     border-radius: 10px;
@@ -91,7 +82,7 @@ div#prelude_dropdown {
 
 div#prelude_dropdown button {
     width: 100%;
-    padding: 0px;
+    padding: 0;
     height: 30px;
 }
 
@@ -101,4 +92,11 @@ button:hover {
 button:focus,
 button:focus-visible {
     outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media only screen and (max-width: 1000px) {
+    #inputContainer {
+        display: block;
+        width: calc(100% - 20px);
+    }
 }

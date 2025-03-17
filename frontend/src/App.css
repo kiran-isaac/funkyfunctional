@@ -59,5 +59,47 @@ html {
 }
 
 #TitleFlex p {
-    padding: 0px 5px;
+    padding: 0 5px;
+}
+
+#rhs {
+    width: calc(50% - 10px);
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: absolute;
+    right: 0;
+    top: 0;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+#lhs {
+    border-right: 1px solid rgba(255, 255, 255, 0.349);
+    position: absolute;
+    width: calc(50% - 10px);
+    height: 100%;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+
+@media only screen and (max-width: 1000px) {
+    #lhs {
+        position: relative;
+        display: block;
+        width: 100%;
+    }
+
+    #rhs {
+        position: relative !important;
+        display: block;
+        width: 100% !important;
+    }
+
+    html {
+        width: 100vw;
+        height: auto;
+        overflow-y: auto;
+    }
 }
