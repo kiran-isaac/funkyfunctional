@@ -12,6 +12,8 @@ function App() {
   const [editorValue, setEditorValue] = useState("");
   const [errorString, setErrorString] = useState("");
   const [astHistory, setAstHistory] = useState<wasm.RawASTInfo[]>([]);
+  const [selectedRcFromStringHistory, setSelectedRcFromStringHistory] = useState<string[]>([]);
+  const [selectedRcToStringHistory, setSelectedRcToStringHistory] = useState<string[]>([]);
 
   const generateRCs = (ast: wasm.RawASTInfo, multiple: boolean) => {
     try {
@@ -25,11 +27,16 @@ function App() {
       const rc_callback = (rc_index: number) => {
         const from_string = wasm.get_rcs_from(rcs, rc_index);
         const to_string = wasm.get_rcs_to(rcs, rc_index);
-        console.log(from_string, to_string);
 
         // add the current ast to the history
         setAstHistory((prevAstHistory) => {
           return [...prevAstHistory, ast];
+        });
+        setSelectedRcFromStringHistory((prev) => {
+          return [...prev, from_string];
+        });
+        setSelectedRcToStringHistory((prev) => {
+          return [...prev, to_string];
         });
         ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
         generateRCs(ast, multiple);
@@ -48,6 +55,8 @@ function App() {
       setErrorString(e as string)
       setRcs([])
       setAstHistory([])
+      setSelectedRcFromStringHistory([])
+      setSelectedRcToStringHistory([])
     }
   }
 
@@ -56,12 +65,15 @@ function App() {
       const ast = wasm.parse(programInput);
       setAstHistory([ast]);
       generateRCs(ast, multiple);
-      
+      setSelectedRcFromStringHistory([])
+      setSelectedRcToStringHistory([])
       setErrorString("")
     } catch (e) {
       setErrorString(e as string)
       setRcs([])
       setAstHistory([])
+      setSelectedRcFromStringHistory([])
+      setSelectedRcToStringHistory([])
     }
   };
 
@@ -105,7 +117,7 @@ function App() {
           <div id="Error">
             <p>{errorString}</p>
           </div>
-          <ASTHistory astHistory={astHistory} resetTo={resetTo} />
+          <ASTHistory astHistory={astHistory} resetTo={resetTo} rcToHistory={selectedRcToStringHistory} rcFromHistory={selectedRcFromStringHistory} />
         </div>
       </div>
     </>

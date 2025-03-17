@@ -276,8 +276,6 @@ pub unsafe fn get_diff_len(diff: &RawDiff) -> usize {
 pub unsafe fn diff_is_similar(diff: &RawDiff, index: usize) -> bool {
     let diff = &*diff.diff;
 
-    log!("DIFF: {:?}", diff.get(index).unwrap());
-
     match diff.get(index).unwrap() {
         ASTDiffElem::Similar(_) => true,
         ASTDiffElem::Different(_, _) => false
