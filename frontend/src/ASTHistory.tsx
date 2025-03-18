@@ -65,9 +65,9 @@ const ASTHistory = ({ astHistory, resetTo, rcFromHistory, rcToHistory }: ASTHist
             <table id="ASTHistory">
                 <tbody>
                     {astLIs.map((li, index) => (
-                        <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''} onClick={() => resetTo(astLIs.length - index)}>
+                        <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''}>
                             <td className='index'><p>{astLIs.length - index - 1}</p></td>
-                            <td className='ast'>{li}</td>
+                            <td className='ast' onClick={() => resetTo(astLIs.length - index)}>{li}</td>
                         </tr>
                     ))}
                 </tbody>
