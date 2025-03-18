@@ -35,7 +35,6 @@ table#ASTHistory tr {
     display: grid;
     grid-template-columns: 30px calc(100% - 30px);
     grid-template-rows: auto;
-    cursor: pointer;
 }
 
 table#ASTHistory td.index {
@@ -55,9 +54,13 @@ table#ASTHistory td.index p {
 }
 
 table#ASTHistory td.ast {
-    width: 98%
+    width: 98%;
+    cursor: pointer;
 }
 
+tr.top td.ast {
+    cursor: default !important;
+}
 
 table#ASTHistory tr.top {
     border-top: none;
