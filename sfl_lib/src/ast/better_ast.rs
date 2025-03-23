@@ -1,24 +1,22 @@
 // This is what the AST definition should of looked like
 // The overhaul is not worth it. 
 
-struct AST {
-    vec: Vec<ASTNode>,
-    root: &'a ASTNode,
+struct AST<'a> {
+    vec: Vec<ASTNode<'a>>,
+    root: &'a ASTNode<'a>,
 }
 
 enum ASTNodeType<'a> {
     Identifier{name: String},
     Literal{value: String, _type: PrimitiveType},
-    Pair{first: &'a ASTNode, second: &'a ASTNode},
-    Application{f: &'a ASTNode, x: &'a ASTNode},
-    Assignment{to: String, expr: &'a ASTNode},
-    Abstraction{var: String, expr: &'a ASTNode},
-    Module{assigns: Vec<&'a ASTNode>},
-    Match{expr: &'a ASTNode, cases: Vec<&'a ASTNode>}
+    Pair{first: &'a ASTNode<'a>, second: &'a ASTNode<'a>},
+    Assignment{to: String, expr: &'a ASTNode<'a>},
+    Abstraction{var: String, expr: &'a ASTNode<'a>},
+    Module{assigns: Vec<&'a ASTNode<'a>>},
+    Match{expr: &'a ASTNode<'a>, cases: Vec<&'a ASTNode<'a>>}
 } 
 
-// Line and Col specified here.
-struct ASTNodeSyntaxInfo { }
+struct ASTNodeSyntaxInfo { ... }
 
 struct ASTNode<'a> {
     t: ASTNodeType<'a>,
