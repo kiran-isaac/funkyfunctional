@@ -6,6 +6,8 @@ import './rhs.css'
 import RC from './RC';
 import ASTHistory from './ASTHistory';
 import Buttons from './Buttons'
+import { SettingsProvider } from './SettingsProvider'
+import SettingsMenu from './SettingsMenu'
 
 function App() {
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
@@ -14,6 +16,7 @@ function App() {
   const [astHistory, setAstHistory] = useState<wasm.RawASTInfo[]>([]);
   const [selectedRcFromStringHistory, setSelectedRcFromStringHistory] = useState<string[]>([]);
   const [selectedRcToStringHistory, setSelectedRcToStringHistory] = useState<string[]>([]);
+  const [settingsIsVisible, setSettingsIsVisible] = useState(false);
   let multiple = false;
 
   const generateRCs = (ast: wasm.RawASTInfo) => {
@@ -90,6 +93,10 @@ function App() {
 
   return (
     <>
+      {/* <SettingsProvider>
+        <SettingsMenu />
+      </SettingsProvider> */}
+
       <div id="lhs">
         <div id="Title">
           <div id="TitleFlex">
@@ -107,6 +114,8 @@ function App() {
             handleRun={handleRun}
             setEditorValue={setEditorValue}
             editorValue={editorValue}
+            setSettingsIsVisible={setSettingsIsVisible}
+            settingsIsVisible={settingsIsVisible}
           />
         </div>
       </div>

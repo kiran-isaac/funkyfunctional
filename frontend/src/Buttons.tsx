@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { SettingsProvider } from "./SettingsProvider";
+import SettingsMenu from "./SettingsMenu";
 
 const eg_programs = import.meta.glob("./../../examples/*", {
     query: '?raw',
@@ -51,11 +53,14 @@ interface ButtonsProps {
     handleRun: (programInput: string, multiple: boolean) => void;
     setEditorValue: (x: string) => void;
     editorValue: string;
+    settingsIsVisible: boolean;
+    setSettingsIsVisible: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function Buttons({ handleRun, setEditorValue, editorValue }: ButtonsProps) {
+export default function Buttons({ handleRun, setEditorValue, editorValue, settingsIsVisible, setSettingsIsVisible }: ButtonsProps) {
     return <div id="Buttons">
         <ProgramDropdown setEditorValue={setEditorValue} />
+        <button onClick={() => setSettingsIsVisible(!settingsIsVisible)}>Settings</button>
         <button className="runbutton" id="RunButtonSingle" onClick={() => handleRun(editorValue, false)}>Lazy</button>
         <button className="runbutton" id="RunButtonMultiple" onClick={() => handleRun(editorValue, true)}>Free Choice</button>
     </div>
