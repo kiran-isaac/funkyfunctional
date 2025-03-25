@@ -268,6 +268,8 @@ impl Parser {
                             let ass_name = ast.get_assignee(assignment);
                             if let Some(ass_type) = &ass_node.type_assignment {
                                 lt.add(ass_name.clone(), ass_type.clone())
+                            } else {
+                                lt.add_no_type(ass_name.clone());
                             }
                             if ass_name == "main" {
                                 main_found = true;

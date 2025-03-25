@@ -36,7 +36,7 @@ pub struct Context {
 
 impl std::fmt::Debug for Context {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let inbuilt_map = KnownTypeLabelTable::new().get_type_map();
+        let inbuilt_map = KnownTypeLabelTable::new().func_map;
         write!(f, "[")?;
         for item in &self.vec {
             match item {
@@ -58,7 +58,7 @@ impl Context {
 
         for (k, v) in labels.get_type_map() {
             if !yet_to_bind.contains(&k) {
-                vec.push(ContextItem::TypeAssignment(k.clone(), Ok(v.clone())));
+                vec.push(ContextItem::TypeAssignment(k.clone(), Ok(v.clone().unwrap())));
             }
         }
 

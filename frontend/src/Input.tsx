@@ -1,6 +1,6 @@
 import "./lhs.css";
 import { Controlled as CodeMirrorControllerd } from 'react-codemirror2';
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import "codemirror/lib/codemirror.css";
 import "./editor_themes/dark.css";
 import "./editor_themes/light.css";

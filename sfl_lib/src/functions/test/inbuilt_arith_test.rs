@@ -7,10 +7,10 @@ use crate::AST;
 fn test_basic_int_arith() {
     let mut ast = AST::new();
     let labels = KnownTypeLabelTable::new();
-    let add = labels.get(2, "add".to_string()).unwrap();
-    let sub = labels.get(2, "sub".to_string()).unwrap();
-    let mul = labels.get(2, "mul".to_string()).unwrap();
-    let div = labels.get(2, "div".to_string()).unwrap();
+    let add = labels.get(&"add".to_string()).unwrap();
+    let sub = labels.get(&"sub".to_string()).unwrap();
+    let mul = labels.get(&"mul".to_string()).unwrap();
+    let div = labels.get(&"div".to_string()).unwrap();
 
     for _ in 0..1000 {
         // Generate random numbers, (16 bit to avoid overflow)
@@ -94,10 +94,10 @@ fn test_basic_int_arith() {
 fn test_basic_float_arith() {
     let mut ast = AST::new();
     let labels = KnownTypeLabelTable::new();
-    let add = labels.get(2, "addf".to_string()).unwrap();
-    let sub = labels.get(2, "subf".to_string()).unwrap();
-    let mul = labels.get(2, "mulf".to_string()).unwrap();
-    let div = labels.get(2, "divf".to_string()).unwrap();
+    let add = labels.get(&"addf".to_string()).unwrap();
+    let sub = labels.get(&"subf".to_string()).unwrap();
+    let mul = labels.get(&"mulf".to_string()).unwrap();
+    let div = labels.get(&"divf".to_string()).unwrap();
 
     for _ in 0..1000 {
         // Generate random numbers, (16 bit to avoid overflow)
