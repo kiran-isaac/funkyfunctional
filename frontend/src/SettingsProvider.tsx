@@ -16,16 +16,22 @@ export const SettingsContext = createContext<SettingsContextType | undefined>(un
 
 // Create a provider component
 export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [isLightTheme, setIsLightTheme] = useState(true);
+    const useLightMode = localStorage.getItem("darkMode") == "false" || !window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    const [isLightTheme, setIsLightTheme] = useState(!useLightMode);
     const [typecheckerEnabled, setTypecheckerEnabled] = useState(true);
-    const [preludeEnable, setPreludeEnable] = useState(!window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const [preludeEnable, setPreludeEnable] = useState(true);
 
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (event) => {
+        localStorage.setItem("darkMode", event.matches ? "true" : "false");
         setIsLightTheme(event.matches);
     })
 
     const toggleTheme = () => {
-        setIsLightTheme((prev) => !prev);
+        setIsLightTheme((prev) => {
+            localStorage.setItem("darkMode", !prev ? "true" : "false");
+            return !prev
+        });
     };
 
     return (

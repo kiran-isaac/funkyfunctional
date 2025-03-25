@@ -35,3 +35,10 @@ div#settings > div > h2 {
     margin: 0;
     text-decoration: underline;
 }
+
+@media only screen and (max-width: 1000px) {
+    div#settings.visible {
+        width: calc(80% - 20px);
+        margin-left: 10%;
+    }
+}
