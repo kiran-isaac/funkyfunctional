@@ -6,7 +6,7 @@ import './rhs.css'
 import RC from './RC';
 import ASTHistory from './ASTHistory';
 import Buttons from './Buttons'
-import { SettingsProvider, useSettings } from './SettingsProvider'
+import { useSettings } from './SettingsProvider'
 import SettingsMenu from './SettingsMenu'
 
 function App() {
@@ -94,7 +94,7 @@ function App() {
 
   return (
     <div id="themeContainer" className={isLightTheme ? "dark" : 'light'}>
-      <SettingsMenu settingsIsVisible={settingsIsVisible} />
+      <SettingsMenu settingsIsVisible={settingsIsVisible} dismissSettings={() => setSettingsIsVisible(false)} />
       <div id="lhs">
         <div id="Title">
           <div id="TitleFlex">

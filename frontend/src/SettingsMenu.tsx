@@ -1,12 +1,29 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect, useRef } from "react";
 import { SettingsContext } from "./SettingsProvider";
+import "./settings.css";
 
 interface SettingsProps {
     settingsIsVisible: boolean;
+    dismissSettings: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({settingsIsVisible})=> {
+const Settings: React.FC<SettingsProps> = ({settingsIsVisible, dismissSettings})=> {
     const settings = useContext(SettingsContext);
+    const settingsRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+                dismissSettings();
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [dismissSettings]);
+
 
     if (!settingsIsVisible) {
         return <></>;
@@ -16,11 +33,17 @@ const Settings: React.FC<SettingsProps> = ({settingsIsVisible})=> {
         throw new Error("Settings must be used within a SettingsProvider");
     }
 
-    const { toggleTheme } = settings;
+    const { toggleTheme } = settings;    
 
     return (
-        <div>
-            <button onClick={toggleTheme}>Toggle Theme</button>
+        <div id="settings" className={settingsIsVisible ? "visible" : "hidden"} ref={settingsRef}>
+            <button id="dismiss" onClick={() => {
+                dismissSettings();
+            }}>X</button>
+            <div>
+                <h2>UI Settings</h2>
+                <button onClick={toggleTheme}>Toggle Theme</button>
+            </div>
         </div>
     );
 };
