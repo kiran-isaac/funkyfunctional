@@ -43,6 +43,8 @@ const Settings: React.FC<SettingsProps> = ({settingsIsVisible, dismissSettings})
             <div>
                 <h2>UI Settings</h2>
                 <button onClick={toggleTheme}>Toggle Theme</button>
+                <br/>
+                <h2></h2>
             </div>
         </div>
     );

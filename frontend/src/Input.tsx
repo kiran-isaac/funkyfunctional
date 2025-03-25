@@ -57,7 +57,7 @@ interface InputProps {
 }
 
 function Input({ editorValue, setEditorValue }: InputProps) {
-    let {isLightTheme} = useSettings();
+    const {isLightTheme} = useSettings();
     return (
         <>
             <div id="ProgramInput">

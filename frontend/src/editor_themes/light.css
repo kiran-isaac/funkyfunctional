@@ -1,4 +1,4 @@
-.cm-s-sfl_light span.cm-comment { color: #a86; }
+.cm-s-sfl_light span.cm-comment { color: rgb(74, 148, 33); }
 .cm-s-sfl_light span.cm-keyword { line-height: 1em; font-weight: bold; color: blue; }
 .cm-s-sfl_light span.cm-string { color: #a22; }
 .cm-s-sfl_light span.cm-builtin { line-height: 1em; font-weight: bold; color: #077; }
@@ -8,5 +8,7 @@
 .cm-s-sfl_light span.cm-meta { color: #555; }
 .cm-s-sfl_light span.cm-link { color: #3a3; }
 
-.cm-s-sfl_light .CodeMirror-activeline-background { background: #e8f2ff; }
+.cm-s-sfl_light .CodeMirror-activeline-background { background: #1377fa; }
 .cm-s-sfl_light .CodeMirror-matchingbracket { outline:1px solid grey; color:black !important; }
+.cm-s-sfl_light .CodeMirror-gutters { background: white;}
+.cm-s-sfl_light .CodeMirror-linenumber { color: #000000aa;}
