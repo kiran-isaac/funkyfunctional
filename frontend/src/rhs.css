@@ -24,18 +24,24 @@ ul#RCArea {
 
 button.rc {
     border-radius: 8px;
-    border: 1px solid transparent;
+    border: 1px solid rgba(255, 255, 255, 0.349);
     background-color: #1a1a1a;
     cursor: pointer;
     transition: border-color 0.25s;
     white-space: normal;
+    color: inherit;
     overflow-wrap: break-word;
-    width: 100%;
+    width: calc(100% - 10px);
     margin: 5px 0;
     padding: 10px 0;
     display: grid;
     min-height: 60px;
-    color: white;
+}
+
+.light button.rc {
+    border: 1px solid rgba(0, 0, 0, 0.349);
+    background-color: #e7e7e7;
+
 }
 
 button.rc.multiple {
@@ -80,17 +86,18 @@ button:focus-visible {
 
 .expr_history .new {
     background-color: #2600ff7e;
-    color: white;
 }
 
 .expr_history .old {
     background-color: #ff00004f;
-    color: white;
 }
 
 .expr_history .changed {
     background-color: #2600ff7e;
-    color: white;
+}
+
+.light .expr_history .changed {
+    background-color: #ff767688;
 }
 
 @media only screen and (max-width: 1000px) {

@@ -189,6 +189,8 @@ CodeMirror.defineMode("sfl", function (_config, modeConfig) {
         setType("builtin")(
             "if", "map", "foldr", "filter", "repeat", "length", "take", "range", "infiniteFrom", "sum");
 
+        setType("number") ("true", "false");
+
         var override = modeConfig.overrideKeywords;
         if (override) for (var word in override) if (override.hasOwnProperty(word))
             wkw[word] = override[word];
