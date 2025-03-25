@@ -18,7 +18,11 @@ export const SettingsContext = createContext<SettingsContextType | undefined>(un
 export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [isLightTheme, setIsLightTheme] = useState(true);
     const [typecheckerEnabled, setTypecheckerEnabled] = useState(true);
-    const [preludeEnable, setPreludeEnable] = useState(true);
+    const [preludeEnable, setPreludeEnable] = useState(!window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (event) => {
+        setIsLightTheme(event.matches);
+    })
 
     const toggleTheme = () => {
         setIsLightTheme((prev) => !prev);
