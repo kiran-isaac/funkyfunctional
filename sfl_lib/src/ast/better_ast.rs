@@ -10,8 +10,8 @@ enum ASTNodeType<'a> {
     Identifier{name: String},
     Literal{value: String, _type: PrimitiveType},
     Pair{first: &'a ASTNode<'a>, second: &'a ASTNode<'a>},
-    Assignment{to: String, expr: &'a ASTNode<'a>},
-    Abstraction{var: String, expr: &'a ASTNode<'a>},
+    Assignment{to: String, expr: &'a ASTNode<'a>, type_assign: Type},
+    Abstraction{var: String, expr: &'a ASTNode<'a>, type_assign: Type},
     Module{assigns: Vec<&'a ASTNode<'a>>},
     Match{expr: &'a ASTNode<'a>, cases: Vec<&'a ASTNode<'a>>}
 } 
