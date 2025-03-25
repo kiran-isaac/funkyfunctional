@@ -9,7 +9,7 @@ mod wasm_only {
     use wasm_bindgen::prelude::*;
 
     #[wasm_bindgen]
-    struct ParseOptions {
+    pub struct ParseOptions {
         typed: bool,
         prelude: bool,
     }
