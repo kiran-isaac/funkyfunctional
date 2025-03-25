@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import { SettingsProvider } from "./SettingsProvider";
-import SettingsMenu from "./SettingsMenu";
 
 const eg_programs = import.meta.glob("./../../examples/*", {
     query: '?raw',
