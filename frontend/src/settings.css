@@ -1,0 +1,36 @@
+div#settings.hidden {
+    display: none;
+}
+
+div#settings.visible {
+    display: block;
+    position: absolute;
+    background-color: #303030;
+    width: calc(60% - 20px);
+    z-index: 9999;
+    border-radius: 10px;
+    border: 3px solid rgba(255, 255, 255, 0.349);
+    padding: 10px;
+    margin: 10px 20%;
+    word-break: break-word; /* Breaks words to fit within the container */
+    white-space: normal; /* Allows text to wrap normally */
+    min-height: calc(100% - 56px);
+}
+
+.light div#settings.visible {
+    background-color: #f0f0f0;
+    border: 3px solid rgba(0, 0, 0, 0.349);
+}
+
+div#settings > button#dismiss {
+    float: right;
+}
+
+div#settings > div {
+    position: relative;
+}
+
+div#settings > div > h2 {
+    margin: 0;
+    text-decoration: underline;
+}

@@ -1,11 +1,12 @@
 import "./lhs.css";
 import { Controlled as CodeMirrorControllerd } from 'react-codemirror2';
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import "codemirror/lib/codemirror.css";
 import "./editor_themes/dark.css";
 import "./editor_themes/light.css";
 import "./sfl_codemirror.js";
 import * as wasm from "sfl_wasm_lib";
+import { useSettings } from "./SettingsProvider.js";
 
 function PreludeDropdown() {
     const prelude = wasm.get_prelude();
@@ -56,6 +57,7 @@ interface InputProps {
 }
 
 function Input({ editorValue, setEditorValue }: InputProps) {
+    const {isLightTheme} = useSettings();
     return (
         <>
             <div id="ProgramInput">
@@ -66,7 +68,7 @@ function Input({ editorValue, setEditorValue }: InputProps) {
                         options={
                             {
                                 mode: "sfl",
-                                theme: 'sfl_dark',
+                                theme: isLightTheme ? "sfl_dark" : "sfl_light",
                                 lineNumbers: true,
                                 tabSize: 2,
                                 lineWrapping: true,
