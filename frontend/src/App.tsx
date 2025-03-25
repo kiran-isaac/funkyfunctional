@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import { useState } from 'react'
 import Input from './Input'
 import * as wasm from 'sfl_wasm_lib'
 import './App.css'
@@ -6,10 +6,11 @@ import './rhs.css'
 import RC from './RC';
 import ASTHistory from './ASTHistory';
 import Buttons from './Buttons'
-import { SettingsProvider } from './SettingsProvider'
+import { SettingsProvider, useSettings } from './SettingsProvider'
 import SettingsMenu from './SettingsMenu'
 
 function App() {
+  const { isLightTheme } = useSettings();
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
   const [editorValue, setEditorValue] = useState("");
   const [errorString, setErrorString] = useState("");
@@ -51,7 +52,7 @@ function App() {
         const from_string = wasm.get_rcs_from(rcs, i);
         const to_string = wasm.get_rcs_to(rcs, i);
         const message = wasm.get_rcs_msg1(rcs, i);
-        rc_elems.push(<RC multiple={multiple} key={i + 1} i={i} onClick={rc_callback} from={from_string} to={to_string} msg={message}/>);
+        rc_elems.push(<RC multiple={multiple} key={i + 1} i={i} onClick={rc_callback} from={from_string} to={to_string} msg={message} />);
       }
 
       setRcs(rc_elems);
@@ -92,11 +93,8 @@ function App() {
   }
 
   return (
-    <>
-      {/* <SettingsProvider>
-        <SettingsMenu />
-      </SettingsProvider> */}
-
+    <div id="themeContainer" className={isLightTheme ? "dark" : 'light'}>
+      <SettingsMenu settingsIsVisible={settingsIsVisible} />
       <div id="lhs">
         <div id="Title">
           <div id="TitleFlex">
@@ -110,7 +108,7 @@ function App() {
             editorValue={editorValue}
             setEditorValue={setEditorValue}
           />
-          <Buttons 
+          <Buttons
             handleRun={handleRun}
             setEditorValue={setEditorValue}
             editorValue={editorValue}
@@ -134,8 +132,8 @@ function App() {
           <ASTHistory astHistory={astHistory} resetTo={resetTo} rcToHistory={selectedRcToStringHistory} rcFromHistory={selectedRcFromStringHistory} />
         </div>
       </div>
-    </>
-  )
+    </div>
+  );
 }
 
 export default App

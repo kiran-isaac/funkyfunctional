@@ -1,10 +1,10 @@
 #inputContainer {
-    background-color: #242424;
+    /* background-color: #242424; */
     position: sticky;
     margin: 0;
 
     display: grid;
-    grid-template-columns: 80% 1fr;
+    grid-template-columns: 1fr 10ch;
     grid-template-rows: 1fr;
     grid-column-gap: 0;
     
@@ -26,6 +26,7 @@
     height: calc(100vh - 50px);
 }
 
+/* dark mode rules */
 #inputContainer button, select#program_dropdown, div#prelude_dropdown button {
     background-color: #1a1a1a;
     cursor: pointer;
@@ -34,8 +35,14 @@
     border-radius: 10px;
     width: 100%;
     padding: 10px;
+    color: inherit;
     height: 100%;
-    color: white;
+}
+
+/* light mode updates */
+.light #inputContainer button, .light select#program_dropdown, .light div#prelude_dropdown button {
+    border: 1px solid rgba(0, 0, 0, 0.349);
+    background-color: #e7e7e7;
 }
 
 div#Buttons {
@@ -59,6 +66,10 @@ div#Buttons {
     display: flex;
     flex-direction: column;
     height: calc(100% - 45px);
+}
+
+.light .code-mirror-wrapper {
+    background-color: white;
 }
 
 .CodeMirror {

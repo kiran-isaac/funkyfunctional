@@ -60,7 +60,7 @@ interface ButtonsProps {
 export default function Buttons({ handleRun, setEditorValue, editorValue, settingsIsVisible, setSettingsIsVisible }: ButtonsProps) {
     return <div id="Buttons">
         <ProgramDropdown setEditorValue={setEditorValue} />
-        <button onClick={() => setSettingsIsVisible(!settingsIsVisible)}>Settings</button>
+        <button onClick={() => {setSettingsIsVisible(!settingsIsVisible); console.log("BLungus")}}>Settings</button>
         <button className="runbutton" id="RunButtonSingle" onClick={() => handleRun(editorValue, false)}>Lazy</button>
         <button className="runbutton" id="RunButtonMultiple" onClick={() => handleRun(editorValue, true)}>Free Choice</button>
     </div>

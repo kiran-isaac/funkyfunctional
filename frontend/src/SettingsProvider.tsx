@@ -1,4 +1,4 @@
-import React, { createContext, ReactNode, useState } from "react";
+import React, { createContext, ReactNode, useContext, useState } from "react";
 
 interface SettingsContextType {
     isLightTheme: boolean;
@@ -19,7 +19,17 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     return (
         <SettingsContext.Provider value={{ isLightTheme, toggleTheme }}>
-            {children}
+                {children}
         </SettingsContext.Provider>
     );
+};
+
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useSettings = () => {
+    const context = useContext(SettingsContext);
+    if (!context) {
+        throw new Error('useSettings must be used within a SettingsProvider');
+    }
+    return context;
 };

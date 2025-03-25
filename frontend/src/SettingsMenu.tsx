@@ -1,14 +1,22 @@
 import React, { useContext } from "react";
 import { SettingsContext } from "./SettingsProvider";
 
-const Settings: React.FC = () => {
+interface SettingsProps {
+    settingsIsVisible: boolean;
+}
+
+const Settings: React.FC<SettingsProps> = ({settingsIsVisible})=> {
     const settings = useContext(SettingsContext);
+
+    if (!settingsIsVisible) {
+        return <></>;
+    }
 
     if (!settings) {
         throw new Error("Settings must be used within a SettingsProvider");
     }
 
-    const { isLightTheme, toggleTheme } = settings;
+    const { toggleTheme } = settings;
 
     return (
         <div>
