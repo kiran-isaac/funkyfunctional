@@ -58,7 +58,7 @@ impl Context {
 
         for (k, v) in labels.get_type_map() {
             if !yet_to_bind.contains(&k) {
-                vec.push(ContextItem::TypeAssignment(k.clone(), Ok(v.clone())));
+                vec.push(ContextItem::TypeAssignment(k.clone(), Ok(v.clone().unwrap())));
             }
         }
 

@@ -37,24 +37,18 @@ const ASTHistory = ({ astHistory, resetTo, rcFromHistory, rcToHistory }: ASTHist
 
         const exprSpanList = [];
         const diffSpanList = [];
-        const hasOccured : Set<string> = new Set();
 
         for (let j = 0; j < wasm.get_diff_len(diff); j += 1) {
             if (wasm.diff_is_similar(diff, j)) {
                 exprSpanList.push(<span>{wasm.diff_get_similar(diff, j)}</span>);
             } else {
                 const pair = wasm.diff_get_diff(diff, j);
-                const str1 = wasm.stringpair_one(pair);
                 const str2 = wasm.stringpair_two(pair);
                 exprSpanList.push(<span className="changed">{str2}</span>);
-                const setIdent = str1 + '\0' + str2;
-                if (!hasOccured.has(setIdent)) {
-                    diffSpanList.push(<div><DiffDisplay from={rcFromHistory[i-1]} to={rcToHistory[i-1]}></DiffDisplay></div>);
-                    hasOccured.add(setIdent);
-                }
             }
         }
 
+        diffSpanList.push(<div><DiffDisplay from={rcFromHistory[i-1]} to={rcToHistory[i-1]}></DiffDisplay></div>);
         astLIs.push(<li className='expr_history' key={i}><div className="exprListing"><pre>{exprSpanList}</pre></div><pre>{diffSpanList}</pre></li>)
     }
 

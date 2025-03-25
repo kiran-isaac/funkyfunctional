@@ -30,7 +30,6 @@ button.rc {
     transition: border-color 0.25s;
     white-space: normal;
     color: inherit;
-    overflow-wrap: break-word;
     width: calc(100% - 10px);
     margin: 5px 0;
     padding: 10px 0;

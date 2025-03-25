@@ -132,6 +132,7 @@ fn check_for_valid_call(
                         })
                     }
                 } else {
+                    let _x = lt.get_non_builtin_type_map();
                     None
                 };
             }

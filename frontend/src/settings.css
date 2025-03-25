@@ -7,7 +7,7 @@ div#settings.visible {
     position: absolute;
     background-color: #303030;
     width: calc(60% - 20px);
-    z-index: 9999;
+    z-index: 1;
     border-radius: 10px;
     border: 3px solid rgba(255, 255, 255, 0.349);
     padding: 10px;
@@ -28,6 +28,7 @@ div#settings > button#dismiss {
 
 div#settings > div {
     position: relative;
+    width: 90%;
 }
 
 div#settings > div > h2 {

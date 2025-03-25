@@ -9,6 +9,20 @@ mod wasm_only {
     use wasm_bindgen::prelude::*;
 
     #[wasm_bindgen]
+    struct ParseOptions {
+        typed: bool,
+        prelude: bool,
+    }
+
+    #[wasm_bindgen]
+    impl ParseOptions {
+        #[wasm_bindgen(constructor)]
+        pub fn new(typed: bool, prelude: bool) -> Self {
+            ParseOptions {typed, prelude}
+        }
+    }
+
+    #[wasm_bindgen]
     pub struct RawASTInfo {
         pub ast: *mut AST,
         pub lt: *mut KnownTypeLabelTable,
@@ -191,8 +205,10 @@ mod wasm_only {
             },
         ))
     }
-    fn parse_internal(str: &str, prelude: bool) -> Result<RawASTInfo, String> {
-        let pr = match Parser::from_string(str.to_string()).parse_module(prelude) {
+
+    #[wasm_bindgen]
+    pub fn parse(str: &str, parse_options: ParseOptions) -> Result<RawASTInfo, String> {
+        let pr = match Parser::from_string(str.to_string()).parse_module(parse_options.prelude) {
             Ok(ast) => ast,
             Err(e) => return Err(format!("{:?}", e)),
         };
@@ -200,10 +216,13 @@ mod wasm_only {
         let mut lt = pr.lt;
         let tm = pr.tm;
         let module = ast.root;
-        // match typecheck(&mut ast, module, &mut lt, &tm) {
-        //     Ok(_) => {}
-        //     Err(e) => return Err(format!("{:?}", e)),
-        // };
+
+        if parse_options.typed {
+            match typecheck(&mut ast, module, &mut lt, &tm) {
+                Ok(_) => {}
+                Err(e) => return Err(format!("{:?}", e)),
+            };
+        }
 
         let main_expr = ast.get_assign_exp(if let Some(main) = ast.get_main(ast.root) {
             main
@@ -216,16 +235,6 @@ mod wasm_only {
             lt: Box::into_raw(Box::new(lt)),
             main_expr,
         })
-    }
-
-    #[wasm_bindgen]
-    pub fn parse(str: &str) -> Result<RawASTInfo, String> {
-        parse_internal(str, true)
-    }
-
-    #[cfg(test)]
-    pub fn parse_no_prelude(str: &str) -> Result<RawASTInfo, String> {
-        parse_internal(str, false)
     }
 
     #[wasm_bindgen]
@@ -253,11 +262,15 @@ mod wasm_only {
 
         let mut s = String::new();
         for (name, type_) in capitals_map {
-            s.push_str(&format!("{} :: {}\n", name, type_));
+            if let Some(type_) = type_ {
+                s.push_str(&format!("{} :: {}\n", name, type_));
+            }
         }
         s.push('\n');
         for (name, type_) in lowercase_map {
-            s.push_str(&format!("{} :: {}\n", name, type_));
+            if let Some(type_) = type_ {
+                s.push_str(&format!("{} :: {}\n", name, type_));
+            }
         }
         s
     }

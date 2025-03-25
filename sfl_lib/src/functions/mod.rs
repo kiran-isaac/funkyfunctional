@@ -27,7 +27,7 @@ pub struct Label {
     pub inbuilt_reduction_arity: Option<usize>,
 
     inbuilt: Option<InbuiltFuncPointer>,
-    pub label_type: Type,
+    pub label_type: Option<Type>,
 }
 
 impl Label {
@@ -39,10 +39,6 @@ impl Label {
 
     pub fn is_inbuilt(&self) -> bool {
         self.inbuilt.is_some()
-    }
-
-    pub fn get_type(&self) -> &Type {
-        &self.label_type
     }
 }
 
@@ -62,12 +58,16 @@ impl KnownTypeLabelTable {
         s
     }
     
-    pub fn get_type_map(&self) -> HashMap<String, Type> {
+    pub fn get_type_map(&self) -> HashMap<String, Option<Type>> {
         self.func_map.iter().map(| (name, label) | (name.clone(), label.label_type.clone())).collect()
     }
 
-    pub fn get_type(&self, name: &str) -> Option<&Type> {
-        Some(&self.get(&name.to_string())?.label_type)
+    pub fn get_type(&self, name: &str) -> Option<Option<Type>> {
+        if let Some(label) = self.get(&name.to_string()) {
+            Some(label.label_type.clone())
+        } else {
+            None   
+        }
     }
 
     /// Arity here is the number of arguments the inbuilt function needs to reduce
@@ -86,7 +86,7 @@ impl KnownTypeLabelTable {
             Label {
                 inbuilt_reduction_arity: Some(arity),
                 inbuilt: Some(func),
-                label_type: func_type,
+                label_type: Some(func_type),
             },
         );
     }
@@ -97,7 +97,18 @@ impl KnownTypeLabelTable {
             Label {
                 inbuilt_reduction_arity: None,
                 inbuilt: None,
-                label_type: type_,
+                label_type: Some(type_),
+            },
+        );
+    }
+    
+    pub fn add_no_type(&mut self, name: String) {
+        self.func_map.insert(
+            name,
+            Label {
+                inbuilt_reduction_arity: None,
+                inbuilt: None,
+                label_type: None,
             },
         );
     }
@@ -330,7 +341,7 @@ impl KnownTypeLabelTable {
         bindings
     }
 
-    pub fn get_non_builtin_type_map(&self) -> HashMap<String, Type> {
+    pub fn get_non_builtin_type_map(&self) -> HashMap<String, Option<Type>> {
         let builtin_type_map = Self::new().func_map;
         let mut type_map = HashMap::new();
         for (name, inbuilt) in &self.func_map {

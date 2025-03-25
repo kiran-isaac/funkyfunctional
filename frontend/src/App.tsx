@@ -8,9 +8,10 @@ import ASTHistory from './ASTHistory';
 import Buttons from './Buttons'
 import { useSettings } from './SettingsProvider'
 import SettingsMenu from './SettingsMenu'
+import {ParseOptions} from "sfl_wasm_lib";
 
 function App() {
-  const { isLightTheme } = useSettings();
+  const { isLightTheme, typecheckerEnabled } = useSettings();
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
   const [editorValue, setEditorValue] = useState("");
   const [errorString, setErrorString] = useState("");
@@ -69,7 +70,7 @@ function App() {
   const handleRun = (programInput: string, _multiple: boolean) => {
     multiple = _multiple;
     try {
-      const ast = wasm.parse(programInput);
+      const ast = wasm.parse(programInput, new ParseOptions(typecheckerEnabled, true));
       setAstHistory([ast]);
       generateRCs(ast);
       setSelectedRcFromStringHistory([])

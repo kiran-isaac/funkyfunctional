@@ -69,7 +69,7 @@ fn untyped_y_combinator() {
     fac f n = if (n <= 1) (1) (n * (f (n - 1)))
     y f = (\x. f (x x)) (\x. f (x x))
 
-    main = y fac"#;
+    main = y fac 5"#;
 
     full_run_test(program, false);
 }
