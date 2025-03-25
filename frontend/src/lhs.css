@@ -40,9 +40,12 @@
 }
 
 /* light mode updates */
-.light #inputContainer button, .light select#program_dropdown, .light div#prelude_dropdown button {
-    border: 1px solid rgba(0, 0, 0, 0.349);
+.light #Buttons button, .light select#program_dropdown, .light div#prelude_dropdown button {
     background-color: #e7e7e7;
+}
+
+.light #Buttons button, .light select#program_dropdown {
+    border: 1px solid rgba(0, 0, 0, 0.349);
 }
 
 div#Buttons {
@@ -66,7 +69,7 @@ div#Buttons {
     display: flex;
     flex-direction: column;
     height: calc(100% - 49px);
-    transition: height 0.1s;
+    transition: height 0.1s !important;
 }
 
 .prelude-code-mirror-wrapper {
@@ -78,6 +81,10 @@ div#Buttons {
 
 .light .code-mirror-wrapper, .light .prelude-code-mirror-wrapper {
     background-color: white;
+}
+
+.light .code-mirror-wrapper {
+    border: 2px solid rgba(0, 0, 0, 0.349);
 }
 
 .code-mirror-wrapper .CodeMirror {
@@ -104,7 +111,7 @@ div#prelude_dropdown {
 }
 
 div#prelude_dropdown #prelude {
-    transition: height 0.1s;
+    transition: height 0.1s !important;
     padding: 0;
     width: 100%;
     height: 0;
@@ -112,6 +119,7 @@ div#prelude_dropdown #prelude {
 
 .light div#prelude_dropdown {
     background-color: white;
+    border: 2px solid rgba(0, 0, 0, 0.349);
 }
 
 div#prelude_dropdown button {
@@ -119,6 +127,7 @@ div#prelude_dropdown button {
     padding: 0;
     height: 30px;
     border: none;
+    border-radius: 0;
 }
 
 button:hover {

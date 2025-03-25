@@ -3,6 +3,11 @@
     width: 100%;
 }
 
+#root * {
+    transition-property: color, background-color, border;
+    transition-duration: 0.1s;
+}
+
 html {
     width: 100vw;
     height: 100vh;
