@@ -1,0 +1,24 @@
+data Suit = Hearts | Clubs | Spades | Diamonds
+
+data Rank = Num Int | Jack | Queen | King | Ace
+
+type Card = (Suit, Rank)
+
+getValue :: Card -> Int
+getValue card = match card {
+	| (_, Num n) 	-> n
+  | (_, Jack) 	-> 11
+  | (_, Queen) 	-> 12
+  | (_, King) 	-> 13
+	| (_, Ace) 		-> 14
+}
+
+isBlack :: Card -> Bool
+isBlack card = match card {
+	| (Hearts, _) 		-> false
+  | (Diamonds, _) -> false
+	| _ -> true
+}
+
+main :: Int
+main = getValue (Hearts, Num 10)
