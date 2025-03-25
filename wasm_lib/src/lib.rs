@@ -200,10 +200,10 @@ mod wasm_only {
         let mut lt = pr.lt;
         let tm = pr.tm;
         let module = ast.root;
-        match typecheck(&mut ast, module, &mut lt, &tm) {
-            Ok(_) => {}
-            Err(e) => return Err(format!("{:?}", e)),
-        };
+        // match typecheck(&mut ast, module, &mut lt, &tm) {
+        //     Ok(_) => {}
+        //     Err(e) => return Err(format!("{:?}", e)),
+        // };
 
         let main_expr = ast.get_assign_exp(if let Some(main) = ast.get_main(ast.root) {
             main

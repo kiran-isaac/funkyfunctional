@@ -24,7 +24,7 @@ type InbuiltFuncPointer = fn(&ASTNode, Vec<&ASTNode>) -> AST;
 #[derive(Clone, Debug)]
 pub struct Label {
     /// Arity needed to reduce the function.
-    pub inbuilt_reduction_arity: usize,
+    pub inbuilt_reduction_arity: Option<usize>,
 
     inbuilt: Option<InbuiltFuncPointer>,
     pub label_type: Type,
@@ -32,7 +32,7 @@ pub struct Label {
 
 impl Label {
     pub fn call_inbuilt(&self, call: &ASTNode, args: Vec<&ASTNode>) -> AST {
-        assert_eq!(self.inbuilt_reduction_arity, args.len());
+        assert_eq!(self.inbuilt_reduction_arity, Some(args.len()));
         assert!(self.inbuilt.is_some());
         self.inbuilt.unwrap()(call, args)
     }
@@ -50,30 +50,24 @@ impl Label {
 pub struct KnownTypeLabelTable {
     /// Sorted by arity. So inbuilts[0] will be all inbuilts with arity 0
     /// inbuilts[1] will be all inbuilts with arity 1, etc.
-    func_map: Vec<HashMap<String, Label>>,
+    pub func_map: HashMap<String, Label>,
 }
 
 impl KnownTypeLabelTable {
     pub fn new() -> Self {
         let mut s = Self {
-            func_map: vec![HashMap::new()],
+            func_map: HashMap::new(),
         };
         s.populate_inbuilts();
         s
     }
-
-    pub fn get_max_arity(&self) -> usize {
-        self.func_map.len()
+    
+    pub fn get_type_map(&self) -> HashMap<String, Type> {
+        self.func_map.iter().map(| (name, label) | (name.clone(), label.label_type.clone())).collect()
     }
 
     pub fn get_type(&self, name: &str) -> Option<&Type> {
-        for inbuilt_map in &self.func_map {
-            if inbuilt_map.contains_key(name) {
-                return Some(&inbuilt_map.get(name).unwrap().label_type);
-            }
-        }
-
-        None
+        Some(&self.get(&name.to_string())?.label_type)
     }
 
     /// Arity here is the number of arguments the inbuilt function needs to reduce
@@ -87,14 +81,10 @@ impl KnownTypeLabelTable {
         func: InbuiltFuncPointer,
         func_type: Type,
     ) {
-        if arity >= self.func_map.len() {
-            self.func_map.resize(arity + 1, HashMap::new());
-        }
-
-        self.func_map[arity].insert(
+        self.func_map.insert(
             name,
             Label {
-                inbuilt_reduction_arity: arity,
+                inbuilt_reduction_arity: Some(arity),
                 inbuilt: Some(func),
                 label_type: func_type,
             },
@@ -102,32 +92,16 @@ impl KnownTypeLabelTable {
     }
 
     pub fn add(&mut self, name: String, type_: Type) {
-        let arity = type_.get_arity();
-
-        if arity >= self.func_map.len() {
-            self.func_map.resize(arity + 1, HashMap::new());
-        }
-
-        self.func_map[arity].insert(
+        self.func_map.insert(
             name,
             Label {
-                inbuilt_reduction_arity: arity,
+                inbuilt_reduction_arity: None,
                 inbuilt: None,
                 label_type: type_,
             },
         );
     }
-
-    pub fn remove(&mut self, name: &String) -> bool {
-        for inbuilt_map in &mut self.func_map {
-            if inbuilt_map.contains_key(name) {
-                inbuilt_map.remove(name);
-                return true;
-            }
-        }
-        false
-    }
-
+    
     pub fn consume_from_module(&mut self, ast: &AST, module: usize) -> Result<(), TypeError> {
         for (name, assign) in ast.get_assigns_map(module) {
             let ass_n = &ast.get(assign);
@@ -148,16 +122,8 @@ impl KnownTypeLabelTable {
         Ok(())
     }
 
-    pub fn get_n_ary_labels(&self, arity: usize) -> Option<&HashMap<String, Label>> {
-        if arity < self.func_map.len() {
-            Some(&self.func_map[arity])
-        } else {
-            None
-        }
-    }
-
-    pub fn get(&self, arity: usize, name: String) -> Option<&Label> {
-        self.get_n_ary_labels(arity)?.get(&name)
+    pub fn get(&self, name: &String) -> Option<&Label> {
+        self.func_map.get(name)
     }
 
     fn populate_inbuilts(&mut self) {
@@ -357,36 +323,22 @@ impl KnownTypeLabelTable {
     /// Get all strings that are inbuilts so that they can be added to the bound checker
     pub fn get_starting_bindings_map() -> Vec<String> {
         let mut bindings = vec![];
-        for inbuilt_map in &KnownTypeLabelTable::new().func_map {
-            for inbuilt in inbuilt_map.keys() {
-                bindings.push(inbuilt.clone());
-            }
+        for inbuilt in &KnownTypeLabelTable::new().func_map {
+                bindings.push(inbuilt.0.clone());
         }
 
         bindings
     }
 
-    pub fn get_type_map(&self) -> HashMap<String, Type> {
-        let mut type_map = HashMap::new();
-        for inbuilt_map in &self.func_map {
-            for (name, inbuilt) in inbuilt_map {
-                type_map.insert(name.clone(), inbuilt.label_type.clone());
-            }
-        }
-
-        type_map
-    }
-
     pub fn get_non_builtin_type_map(&self) -> HashMap<String, Type> {
-        let builtin_type_map = Self::new().get_type_map();
+        let builtin_type_map = Self::new().func_map;
         let mut type_map = HashMap::new();
-        for inbuilt_map in &self.func_map {
-            for (name, inbuilt) in inbuilt_map {
-                if builtin_type_map.contains_key(name) {
-                    continue;
-                }
-                type_map.insert(name.clone(), inbuilt.label_type.clone());
+        for (name, inbuilt) in &self.func_map {
+            if builtin_type_map.contains_key(name) {
+                continue;
             }
+            type_map.insert(name.clone(), inbuilt.label_type.clone());
+        
         }
 
         type_map
