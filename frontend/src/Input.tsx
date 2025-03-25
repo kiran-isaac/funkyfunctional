@@ -2,7 +2,8 @@ import "./lhs.css";
 import { Controlled as CodeMirrorControllerd } from 'react-codemirror2';
 import { useEffect, useState } from "react";
 import "codemirror/lib/codemirror.css";
-import "codemirror/theme/monokai.css";
+import "./editor_themes/dark.css";
+import "./editor_themes/light.css";
 import "./sfl_codemirror.js";
 import * as wasm from "sfl_wasm_lib";
 
@@ -65,7 +66,7 @@ function Input({ editorValue, setEditorValue }: InputProps) {
                         options={
                             {
                                 mode: "sfl",
-                                theme: 'monokai',
+                                theme: 'sfl_dark',
                                 lineNumbers: true,
                                 tabSize: 2,
                                 lineWrapping: true,

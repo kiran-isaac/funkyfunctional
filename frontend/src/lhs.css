@@ -68,10 +68,6 @@ div#Buttons {
     height: 100% !important;
 }
 
-.CodeMirror-linenumber {
-    color: #d0d0d094 !important;
-}
-
 div#prelude_dropdown {
     padding: 0;
     overflow-y: auto;
