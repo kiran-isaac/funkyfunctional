@@ -33,7 +33,7 @@ const Settings: React.FC<SettingsProps> = ({settingsIsVisible, dismissSettings})
         throw new Error("Settings must be used within a SettingsProvider");
     }
 
-    const { toggleTheme, typecheckerEnabled, setTypecheckerEnabled } = settings;
+    const { toggleTheme, typecheckerEnabled, setTypecheckerEnabled, preludeEnable, setPreludeEnable } = settings;
 
     return (
         <div id="settings" className={settingsIsVisible ? "visible" : "hidden"} ref={settingsRef}>
@@ -45,6 +45,9 @@ const Settings: React.FC<SettingsProps> = ({settingsIsVisible, dismissSettings})
                 <h2>Language Settings</h2>
                 <button onClick={() => setTypecheckerEnabled(!typecheckerEnabled)}>
                     {typecheckerEnabled ? "Disable Type Checker" : "Enable Type Checker"}
+                </button>
+                <button onClick={() => setPreludeEnable(!preludeEnable)}>
+                    {preludeEnable ? "Disable Prelude" : "Enable Prelude"}
                 </button>
             </div>
         </div>

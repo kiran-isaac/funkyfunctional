@@ -11,7 +11,7 @@ import SettingsMenu from './SettingsMenu'
 import {ParseOptions} from "sfl_wasm_lib";
 
 function App() {
-  const { isLightTheme, typecheckerEnabled } = useSettings();
+  const { isLightTheme, typecheckerEnabled, preludeEnable } = useSettings();
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
   const [editorValue, setEditorValue] = useState("");
   const [errorString, setErrorString] = useState("");
@@ -70,7 +70,7 @@ function App() {
   const handleRun = (programInput: string, _multiple: boolean) => {
     multiple = _multiple;
     try {
-      const ast = wasm.parse(programInput, new ParseOptions(typecheckerEnabled, true));
+      const ast = wasm.parse(programInput, new ParseOptions(typecheckerEnabled, preludeEnable));
       setAstHistory([ast]);
       generateRCs(ast);
       setSelectedRcFromStringHistory([])

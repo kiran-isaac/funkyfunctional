@@ -106,4 +106,8 @@ html {
         height: auto;
         overflow-y: auto;
     }
+
+    #Title {
+        padding-bottom: 7px;
+    }
 }
