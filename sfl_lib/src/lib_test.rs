@@ -73,3 +73,19 @@ fn untyped_y_combinator() {
 
     full_run_test(program, false);
 }
+
+#[test]
+fn pairs_wtf() {
+    let program = r#"
+    type Coords = (Int, Int)
+
+    add_scalar :: Int -> Coords -> Coords
+    add_scalar s (x, y) = (2, 3)
+    
+    main :: Coords
+    main = add_scalar 10 (2, 3)
+    "#;
+    
+
+    full_run_test(program, true);
+}

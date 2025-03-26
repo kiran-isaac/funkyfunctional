@@ -108,9 +108,12 @@ fn check_for_valid_call(
                         if ast.get_n_abstr_vars(assign_exp, argv.len()).len() != argv.len() {
                             return None;
                         }
-
+                        
+                        let _n_abstr_vars_strs = n_args.iter().map(|a| ast.to_string_sugar(*a, false)).collect::<Vec<_>>();
+                        
                         // Stop it being a ready call when a pair is expected but we dont have it
                         for i in 0..argv.len() {
+                            let _cmp_pair = (&argv[i].t, &ast.get(n_args[i]).t);
                             match (&argv[i].t, &ast.get(n_args[i]).t) {
                                 (ASTNodeType::Pair, ASTNodeType::Pair) => {}
                                 (_, ASTNodeType::Pair) => return None,
@@ -118,6 +121,7 @@ fn check_for_valid_call(
                             }
                         }
 
+                        // let argv_ids = argv_ids.reverse();
                         let call_result = ast.do_multiple_abst_substs(assign_exp, argv_ids);
 
                         #[cfg(debug_assertions)]

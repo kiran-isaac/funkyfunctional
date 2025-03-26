@@ -325,6 +325,7 @@ impl Context {
         let _expected_str = format!("{}", &expected.to_string());
 
         match (expected, &pn.t) {
+            (Type::Alias(_, t), _) => self.recurse_add_to_context(t, ast, expr),
             (_, ASTNodeType::Identifier) => {
                 let mut var_name = ast.get(expr).get_value();
                 if self.get_type_assignment(var_name.as_str()).is_some() {
