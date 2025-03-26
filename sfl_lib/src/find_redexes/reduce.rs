@@ -109,6 +109,7 @@ fn check_for_valid_call(
                             return None;
                         }
                         
+                        #[cfg(debug_assertions)]
                         let _n_abstr_vars_strs = n_args.iter().map(|a| ast.to_string_sugar(*a, false)).collect::<Vec<_>>();
                         
                         // Stop it being a ready call when a pair is expected but we dont have it
