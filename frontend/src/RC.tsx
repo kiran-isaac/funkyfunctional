@@ -1,14 +1,14 @@
 interface RCProp {
     i: number;
-    multiple: boolean,
+    text: boolean,
     onClick: (rc_index: number) => void;
     from: string;
     to: string;
     msg: string;
 }
 
-const RC: React.FC<RCProp> = ({ i, multiple, onClick, from, to, msg }) => {
-    if (!multiple) {
+const RC: React.FC<RCProp> = ({ i, text, onClick, from, to, msg }) => {
+    if (!text) {
         return <><button
             className="rc single"
             onClick={() => onClick(i)}

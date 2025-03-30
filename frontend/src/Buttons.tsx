@@ -5,6 +5,8 @@ const eg_programs = import.meta.glob("./../../examples/*", {
     import: 'default',
 });
 
+const default_program = "square_sum";
+
 function ProgramDropdown({ setEditorValue }: { setEditorValue: (x: string) => void }) {
     const [egProgramsMap, setEgProgramsMap] = useState<Map<string, string>>(new Map());
 
@@ -22,14 +24,23 @@ function ProgramDropdown({ setEditorValue }: { setEditorValue: (x: string) => vo
                 eg_programs_map.set(eg_name, program as string)
             }
 
-            setEgProgramsMap(eg_programs_map)
+            if (!eg_programs_map.has(default_program)) {
+                console.error("Default program not found in eg_programs_map");
+            }
+
+            setEgProgramsMap(eg_programs_map);
+            setEditorValue(eg_programs_map.get(default_program) || "");
         };
         loadPrograms()
-    }, []);
+    }, [setEditorValue]);
 
     const name_options: JSX.Element[] = [];
     egProgramsMap.forEach((_, name) => {
-        name_options.push(<option key={name} value={name}>{name}</option>);
+        if (name == default_program) {
+            name_options.push(<option selected key={name} value={name}>{name}</option>);
+        } else {
+            name_options.push(<option key={name} value={name}>{name}</option>);
+        }
     });
     const onChange = () => {
         const e = document.getElementById("program_dropdown") as HTMLSelectElement;
