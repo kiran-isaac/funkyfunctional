@@ -53,14 +53,15 @@ const ASTHistory = ({ astHistory, resetTo, rcFromHistory, rcToHistory }: ASTHist
     }
 
     astLIs.push(<li className='expr_history' key={0}><pre>{wasm.main_to_string(astHistory[0])}</pre></li>);
+    astLIs.reverse();
 
     return (
         <div id="ASTHistoryWrapper">
             <table id="ASTHistory">
                 <tbody>
                     {astLIs.map((li, index) => (
-                        <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''} onClick={() => resetTo(astLIs.length - index)}>
-                            <td className='index'><p>{astLIs.length - index - 1}</p></td>
+                        <tr key={astLIs.length - index - 1} className={index == 0 ? 'top' : ''} onClick={() => resetTo(index + 1)}>
+                            <td className='index'><p>{index}</p></td>
                             <td className='ast'>{li}</td>
                         </tr>
                     ))}

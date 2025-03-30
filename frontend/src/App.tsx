@@ -122,6 +122,7 @@ function App() {
       <div id="rhs">
         <div id="Spacer"></div>
         <div id="TextArea">
+          <ASTHistory astHistory={astHistory} resetTo={resetTo} rcToHistory={selectedRcToStringHistory} rcFromHistory={selectedRcFromStringHistory} />
           <div id="ASTArea">
             <ul id="RCArea">
               {rcs}
@@ -130,7 +131,6 @@ function App() {
           <div id="Error">
             <p>{errorString}</p>
           </div>
-          <ASTHistory astHistory={astHistory} resetTo={resetTo} rcToHistory={selectedRcToStringHistory} rcFromHistory={selectedRcFromStringHistory} />
         </div>
       </div>
     </div>
