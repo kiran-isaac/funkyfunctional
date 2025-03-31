@@ -1,6 +1,6 @@
 import "./lhs.css";
 import { Controlled as CodeMirrorControlled } from 'react-codemirror2';
-import {useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 import "codemirror/lib/codemirror.css";
 import "./editor_themes/dark.css";
 import "./editor_themes/light.css";
@@ -9,7 +9,7 @@ import * as wasm from "sfl_wasm_lib";
 import { useSettings } from "./SettingsProvider.js";
 
 function PreludeDropdown() {
-    const { isLightTheme } =  useSettings();
+    const { isLightTheme } = useSettings();
 
     const [isVisible, setIsVisible] = useState(false);
     const [preludeValue, setPreludeValue] = useState(wasm.get_prelude());
@@ -41,7 +41,7 @@ function PreludeDropdown() {
         return () => {
             button.removeEventListener("click", handleClick);
         };
-    }, [isVisible]);
+    }, [preludeValue, isVisible]);
 
     return (
         <div id="prelude_dropdown">
@@ -62,7 +62,7 @@ function PreludeDropdown() {
                             viewportMargin: Infinity,
                         }
                     }
-                    onBeforeChange={() => {}}
+                    onBeforeChange={() => { }}
                 />
             </div>
         </div>
@@ -93,9 +93,8 @@ function Input({ editorValue, setEditorValue }: InputProps) {
                         }
                     }
                     onBeforeChange={(_0, _1, value) => {
-                        localStorage.setItem("program", value.toString());
-                        const e = document.getElementById("program_dropdown") as HTMLSelectElement;
-                        e.value = "__local__"
+                        const programDropdown = document.getElementById("program_dropdown");
+                        if (!programDropdown) { return; }
                         setEditorValue(value);
                     }}
                 />

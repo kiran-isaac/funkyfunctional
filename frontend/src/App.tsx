@@ -111,7 +111,10 @@ function App() {
           />
           <Buttons
             handleRun={handleRun}
-            setEditorValue={setEditorValue}
+            setEditorValue={(_editorValue) => {
+              setEditorValue(_editorValue);
+            }}
+            setErrorString={setErrorString}
             editorValue={editorValue}
             setSettingsIsVisible={setSettingsIsVisible}
             settingsIsVisible={settingsIsVisible}
