@@ -94,7 +94,7 @@ function App() {
   }
 
   return (
-    <div id="themeContainer" className={isLightTheme ? "dark" : 'light'}>
+    <div id="themeContainer" className={isLightTheme ? "light" : 'dark'}>
       <SettingsMenu settingsIsVisible={settingsIsVisible} dismissSettings={() => setSettingsIsVisible(false)} />
       <div id="lhs">
         <div id="Title">

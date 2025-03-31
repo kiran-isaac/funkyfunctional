@@ -86,7 +86,7 @@ function Input({ editorValue, setEditorValue }: InputProps) {
                     options={
                         {
                             mode: preludeEnable ? "sfl" : "sfl_no_prelude",
-                            theme: isLightTheme ? "sfl_dark" : "sfl_light",
+                            theme: isLightTheme ? "sfl_light" : "sfl_dark",
                             lineNumbers: true,
                             tabSize: 2,
                             lineWrapping: true,
