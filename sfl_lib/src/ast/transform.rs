@@ -21,7 +21,21 @@ impl AST {
             }
             ASTNodeType::Abstraction => {
                 // If equal then it will not be free in abst expression so dont bother
-                if &self.get(self.get_abstr_var(exp)).get_value() != var {
+                let abstr2_var = self.get_abstr_var(exp);
+                let abstr2_var_n = self.get(abstr2_var);
+                let subst_in_abstr = match abstr2_var_n.t {
+                    ASTNodeType::Pair => {
+                        let first_name = &self.get(self.get_first(abstr2_var)).get_value();
+                        let second_name = &self.get(self.get_second(abstr2_var)).get_value();
+                        first_name != var && second_name != var
+                    }
+                    ASTNodeType::Identifier => {
+                        let name = &self.get(self.get_abstr_var(exp)).get_value();
+                        name != var
+                    }
+                    _ => unreachable!("abst arg is not a pair or an identifier??"),
+                };
+                if subst_in_abstr {
                     self.get_all_free_instances_of_var_in_exp(self.get_abstr_expr(exp), var)
                 } else {
                     vec![]
@@ -63,7 +77,7 @@ impl AST {
         } else {
             let var = self.get_abstr_var(abstr);
             let mut expr = self.get_n_abstr_vars(self.get_abstr_expr(abstr), n - 1);
-            expr.insert(0, var);
+            expr.push(var);
             expr
         }
     }

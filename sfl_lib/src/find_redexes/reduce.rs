@@ -68,23 +68,21 @@ fn check_for_valid_call(
 
         match f_node.t {
             ASTNodeType::Identifier => {
-                let labels_of_arity = if let Some(labels) = lt.get_n_ary_labels(argv.len()) {
-                    labels
-                } else {
-                    return None;
-                };
                 let name = f_node.get_value();
 
-                return if labels_of_arity.contains_key(&name) {
-                    let label = labels_of_arity.get(&name).unwrap();
+                return if let Some(label) = lt.get(&name) {
+                    if let Some(reduction_arity) = label.inbuilt_reduction_arity {
+                        if reduction_arity != argv.len() {
+                            return None;
+                        }
+                    }
+                    
                     let argv_comma_str = comma_ify(argv_strs.iter().rev().cloned().collect());
                     if label.is_inbuilt() {
                         if literals_only {
                             Some(RCPair {
                                 from: expr,
-                                to: labels_of_arity
-                                    .get(&name)
-                                    .unwrap()
+                                to: label
                                     .call_inbuilt(f_node, argv),
                                 msg_after: format!(
                                     "Applied inbuilt {} to {}",
@@ -110,9 +108,13 @@ fn check_for_valid_call(
                         if ast.get_n_abstr_vars(assign_exp, argv.len()).len() != argv.len() {
                             return None;
                         }
-
+                        
+                        #[cfg(debug_assertions)]
+                        let _n_abstr_vars_strs = n_args.iter().map(|a| ast.to_string_sugar(*a, false)).collect::<Vec<_>>();
+                        
                         // Stop it being a ready call when a pair is expected but we dont have it
                         for i in 0..argv.len() {
+                            let _cmp_pair = (&argv[i].t, &ast.get(n_args[i]).t);
                             match (&argv[i].t, &ast.get(n_args[i]).t) {
                                 (ASTNodeType::Pair, ASTNodeType::Pair) => {}
                                 (_, ASTNodeType::Pair) => return None,
@@ -120,6 +122,7 @@ fn check_for_valid_call(
                             }
                         }
 
+                        // let argv_ids = argv_ids.reverse();
                         let call_result = ast.do_multiple_abst_substs(assign_exp, argv_ids);
 
                         #[cfg(debug_assertions)]
@@ -134,6 +137,7 @@ fn check_for_valid_call(
                         })
                     }
                 } else {
+                    let _x = lt.get_non_builtin_type_map();
                     None
                 };
             }
@@ -259,38 +263,38 @@ pub fn find_single_redex_contraction_pair(
             let value = ast.get(expr).get_value();
 
             // It should not be non zero_ary func as otherwise it would be caught by the app case
-            for i in 0..lt.get_max_arity() {
-                if let Some(labels) = lt.get_n_ary_labels(i) {
-                    if labels.contains_key(&value) {
-                        let label = labels.get(&value).unwrap();
-
-                        return if label.is_inbuilt() && i == 0 {
-                            let subst_result = label.call_inbuilt(&ast.get(expr), vec![]);
-                            Some(RCPair {
-                                from: expr,
-                                to: subst_result,
-                                msg_after: format!("Substituted label {}", &value),
-                                msg_before: format!("Substitute label {}", &value),
-                            })
-                        } else {
-                            let assign = if let Some(assign) = am.get(&value) {
-                                *assign
-                            } else {
-                                return None;
-                            };
-
-                            let assign_exp = ast.get_assign_exp(assign);
-                            let subst_result = ast.clone_node(assign_exp);
-
-                            Some(RCPair {
-                                from: expr,
-                                to: subst_result,
-                                msg_after: format!("Substituted label {}", &value),
-                                msg_before: format!("Substitute label {}", &value),
-                            })
-                        };
+            if let Some(label) = lt.get(&value) {
+                return if label.is_inbuilt() {
+                    // If the reduction arity isn't 0 then wth
+                    if let Some(reduction_arity) = label.inbuilt_reduction_arity {
+                        if reduction_arity != 0 {
+                            return None;
+                        }
                     }
-                }
+                    let subst_result = label.call_inbuilt(&ast.get(expr), vec![]);
+                    Some(RCPair {
+                        from: expr,
+                        to: subst_result,
+                        msg_after: format!("Substituted label {}", &value),
+                        msg_before: format!("Substitute label {}", &value),
+                    })
+                } else {
+                    let assign = if let Some(assign) = am.get(&value) {
+                        *assign
+                    } else {
+                        return None;
+                    };
+
+                    let assign_exp = ast.get_assign_exp(assign);
+                    let subst_result = ast.clone_node(assign_exp);
+
+                    Some(RCPair {
+                        from: expr,
+                        to: subst_result,
+                        msg_after: format!("Substituted label {}", &value),
+                        msg_before: format!("Substitute label {}", &value),
+                    })
+                };
             }
             None
         }

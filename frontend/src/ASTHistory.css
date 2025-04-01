@@ -37,6 +37,10 @@ table#ASTHistory tr {
     grid-template-rows: auto;
 }
 
+.light table#ASTHistory tr {
+    border-top: 1px solid #222;
+}
+
 table#ASTHistory td.index {
     text-align: center;
     display: inline;
@@ -73,6 +77,10 @@ table#ASTHistory .index {
     min-width: 10px;
 }
 
+.light table#ASTHistory .index {
+    border-right: 1px solid #222;
+}
+
 li.expr_history {
     width: 100%;
 }
@@ -83,7 +91,6 @@ div.center_area {
     display: grid;
     grid-template-rows: 1fr;
     grid-template-columns: 1fr 50px 1fr;
-    color: white;
     width: calc(100% - 40px);
     padding: 15px 10px;
     margin: auto;
