@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import { useState } from 'react'
 import Input from './Input'
 import * as wasm from 'sfl_wasm_lib'
 import './App.css'
@@ -6,19 +6,24 @@ import './rhs.css'
 import RC from './RC';
 import ASTHistory from './ASTHistory';
 import Buttons from './Buttons'
+import { useSettings } from './SettingsProvider'
+import SettingsMenu from './SettingsMenu'
+import {ParseOptions} from "sfl_wasm_lib";
 
 function App() {
+  const { isLightTheme, typecheckerEnabled, preludeEnable } = useSettings();
   const [rcs, setRcs] = useState<JSX.Element[]>([]);
   const [editorValue, setEditorValue] = useState("");
   const [errorString, setErrorString] = useState("");
   const [astHistory, setAstHistory] = useState<wasm.RawASTInfo[]>([]);
   const [selectedRcFromStringHistory, setSelectedRcFromStringHistory] = useState<string[]>([]);
   const [selectedRcToStringHistory, setSelectedRcToStringHistory] = useState<string[]>([]);
-  let multiple = false;
+  const [settingsIsVisible, setSettingsIsVisible] = useState(false);
+  const [multiple, setMultiple] = useState(false);
 
-  const generateRCs = (ast: wasm.RawASTInfo) => {
+  const generateRCs = (ast: wasm.RawASTInfo, _multiple: boolean) => {
     try {
-      const rcs = multiple ? wasm.get_all_redexes(ast) : wasm.get_one_redex(ast);
+      const rcs = _multiple ? wasm.get_all_redexes(ast) : wasm.get_one_redex(ast);
 
       if (wasm.get_rcs_len(rcs) === 0) {
         setRcs([]);
@@ -40,7 +45,7 @@ function App() {
           return [...prev, to_string];
         });
         ast = wasm.pick_rc_and_free(ast, rcs, rc_index);
-        generateRCs(ast);
+        generateRCs(ast, _multiple);
       };
 
       const rc_elems = [];
@@ -48,7 +53,7 @@ function App() {
         const from_string = wasm.get_rcs_from(rcs, i);
         const to_string = wasm.get_rcs_to(rcs, i);
         const message = wasm.get_rcs_msg1(rcs, i);
-        rc_elems.push(<RC multiple={multiple} key={i + 1} i={i} onClick={rc_callback} from={from_string} to={to_string} msg={message}/>);
+        rc_elems.push(<RC text={_multiple} key={i + 1} i={i} onClick={rc_callback} from={from_string} to={to_string} msg={message} />);
       }
 
       setRcs(rc_elems);
@@ -63,11 +68,11 @@ function App() {
   }
 
   const handleRun = (programInput: string, _multiple: boolean) => {
-    multiple = _multiple;
+    setMultiple(_multiple);
     try {
-      const ast = wasm.parse(programInput);
+      const ast = wasm.parse(programInput, new ParseOptions(typecheckerEnabled, preludeEnable));
       setAstHistory([ast]);
-      generateRCs(ast);
+      generateRCs(ast, _multiple);
       setSelectedRcFromStringHistory([])
       setSelectedRcToStringHistory([])
       setErrorString("")
@@ -83,13 +88,14 @@ function App() {
   const resetTo = (n: number) => {
     setAstHistory((prevAstHistory) => {
       const new_slice = prevAstHistory.slice(0, n);
-      generateRCs(new_slice[new_slice.length - 1]);
+      generateRCs(new_slice[new_slice.length - 1], multiple);
       return new_slice
     });
   }
 
   return (
-    <>
+    <div id="themeContainer" className={isLightTheme ? "light" : 'dark'}>
+      <SettingsMenu settingsIsVisible={settingsIsVisible} dismissSettings={() => setSettingsIsVisible(false)} />
       <div id="lhs">
         <div id="Title">
           <div id="TitleFlex">
@@ -103,10 +109,12 @@ function App() {
             editorValue={editorValue}
             setEditorValue={setEditorValue}
           />
-          <Buttons 
+          <Buttons
             handleRun={handleRun}
             setEditorValue={setEditorValue}
             editorValue={editorValue}
+            setSettingsIsVisible={setSettingsIsVisible}
+            settingsIsVisible={settingsIsVisible}
           />
         </div>
       </div>
@@ -125,8 +133,8 @@ function App() {
           <ASTHistory astHistory={astHistory} resetTo={resetTo} rcToHistory={selectedRcToStringHistory} rcFromHistory={selectedRcFromStringHistory} />
         </div>
       </div>
-    </>
-  )
+    </div>
+  );
 }
 
 export default App

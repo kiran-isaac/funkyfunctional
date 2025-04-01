@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 extern crate web_sys;
 
 pub fn set_panic_hook() {

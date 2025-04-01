@@ -3,6 +3,11 @@
     width: 100%;
 }
 
+#root * {
+    transition-property: color, background-color, border;
+    transition-duration: 0.1s;
+}
+
 html {
     width: 100vw;
     height: 100vh;
@@ -83,6 +88,10 @@ html {
     padding-right: 5px;
 }
 
+.light #lhs {
+    border-right: 1px solid rgba(0, 0, 0, 0.349);
+}
+
 
 @media only screen and (max-width: 1000px) {
     #lhs {
@@ -101,5 +110,9 @@ html {
         width: 100vw;
         height: auto;
         overflow-y: auto;
+    }
+
+    #Title {
+        padding-bottom: 7px;
     }
 }

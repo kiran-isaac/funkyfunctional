@@ -1,0 +1,5 @@
+// The y combinator is untypable. Disable the typechecker in settings to run this
+y f = (\x. f (x x)) (\x. f (x x))
+
+fac f n = if (n <= 1) (1) (n * (f (n - 1)))
+main = y fac 5
