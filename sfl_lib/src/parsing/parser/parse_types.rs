@@ -220,11 +220,20 @@ impl Parser {
                     self.advance();
                     let right = self.parse_type_expression(type_table, bound_type_vars)?;
 
+                    match left.parser_error_if_incomplete() {
+                        Ok(()) => {}
+                        Err(s) => return Err(self.parse_error(s)),
+                    }
+
                     left = Type::Function(Box::new(left), Box::new(right));
                 }
 
                 TokenType::Comma => {
                     self.advance();
+                    match left.parser_error_if_incomplete() {
+                        Ok(()) => {}
+                        Err(s) => return Err(self.parse_error(s)),
+                    }
                     left = Type::pr(
                         left,
                         self.parse_type_expression(type_table, bound_type_vars)?,
@@ -254,7 +263,12 @@ impl Parser {
                 | TokenType::Newline
                 | TokenType::EOF
                 | TokenType::Dot
-                | TokenType::LBrace => return Ok(left),
+                | TokenType::LBrace => {
+                    return match left.parser_error_if_incomplete() {
+                        Ok(()) => Ok(left),
+                        Err(s) => Err(self.parse_error(s)),
+                    }
+                }
 
                 _ => {
                     return Err(self

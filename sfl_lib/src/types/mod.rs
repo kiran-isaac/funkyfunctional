@@ -126,7 +126,7 @@ impl Type {
                 Ok(new_t)
             }
             _ => Err(format!(
-                "Type application error: {} is not a forall, so cannot substitute {}",
+                "Type construction error, {} is not a type constructor, so cannot apply to {}",
                 self, t
             )),
         }
@@ -142,6 +142,24 @@ impl Type {
             }
         }
         new_vec
+    }
+
+    pub fn parser_error_if_incomplete(&self) -> Result<(), String> {
+        let mut unfulfilled_vars = vec![];
+        let mut i = self;
+        while let Type::Forall(v, inner) = i {
+            unfulfilled_vars.push(v);
+            i = inner;
+            if let Type::Union(n, _) = i {
+                return Err(format!("Incomplete union type {n}: Type variables {:?} not fulfilled", unfulfilled_vars))
+            }
+        }
+        if !unfulfilled_vars.is_empty() {
+            // Should have been caught by the union thing
+            panic!("unfulfilled_vars")
+        } else {
+            Ok(())
+        }
     }
 
     pub fn count_foralls(&self) -> usize {
