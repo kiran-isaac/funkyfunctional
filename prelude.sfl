@@ -40,7 +40,7 @@ take n list = match list {
 }
 
 range :: Int -> Int -> List Int
-range lower upper = if (lower >= upper) (Nil) (Cons lower (range (lower + 1) upper))
+range lower upper = take (upper - lower) $ infiniteFrom lower
 
 infiniteFrom :: Int -> List Int
 infiniteFrom x = Cons x (infiniteFrom (x + 1))
