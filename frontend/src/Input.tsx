@@ -53,7 +53,7 @@ function PreludeDropdown() {
                     options={
                         {
                             mode: "sfl",
-                            theme: isLightTheme ? "sfl_dark" : "sfl_light",
+                            theme: isLightTheme ? "sfl_light" : "sfl_dark",
                             lineNumbers: true,
                             tabSize: 2,
                             lineWrapping: true,
