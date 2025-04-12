@@ -54,10 +54,6 @@ CodeMirror.defineMode("sfl", function (_config, modeConfig) {
             return "string error";
         }
 
-        if (ch == '"') {
-            return switchState(source, setState, stringLiteral);
-        }
-
         if (largeRE.test(ch)) {
             source.eatWhile(idRE);
             if (source.eat('.')) {
@@ -133,39 +129,6 @@ CodeMirror.defineMode("sfl", function (_config, modeConfig) {
             return type;
         };
     }
-
-    // function stringLiteral(source, setState) {
-    //     while (!source.eol()) {
-    //         var ch = source.next();
-    //         if (ch == '"') {
-    //             setState(normal);
-    //             return "string";
-    //         }
-    //         if (ch == '\\') {
-    //             if (source.eol() || source.eat(whiteCharRE)) {
-    //                 setState(stringGap);
-    //                 return "string";
-    //             }
-    //             if (source.eat('&')) {
-    //             }
-    //             else {
-    //                 source.next(); // should handle other escapes here
-    //             }
-    //         }
-    //     }
-    //     setState(normal);
-    //     return "string error";
-    // }
-
-    // function stringGap(source, setState) {
-    //     if (source.eat('\\')) {
-    //         return switchState(source, setState, stringLiteral);
-    //     }
-    //     source.next();
-    //     setState(normal);
-    //     return "error";
-    // }
-
 
     var wellKnownWords = (function () {
         var wkw = {};
@@ -271,10 +234,6 @@ CodeMirror.defineMode("sfl_no_prelude", function (_config, modeConfig) {
             return "string error";
         }
 
-        if (ch == '"') {
-            return switchState(source, setState, stringLiteral);
-        }
-
         if (largeRE.test(ch)) {
             source.eatWhile(idRE);
             if (source.eat('.')) {
@@ -350,39 +309,6 @@ CodeMirror.defineMode("sfl_no_prelude", function (_config, modeConfig) {
             return type;
         };
     }
-
-    // function stringLiteral(source, setState) {
-    //     while (!source.eol()) {
-    //         var ch = source.next();
-    //         if (ch == '"') {
-    //             setState(normal);
-    //             return "string";
-    //         }
-    //         if (ch == '\\') {
-    //             if (source.eol() || source.eat(whiteCharRE)) {
-    //                 setState(stringGap);
-    //                 return "string";
-    //             }
-    //             if (source.eat('&')) {
-    //             }
-    //             else {
-    //                 source.next(); // should handle other escapes here
-    //             }
-    //         }
-    //     }
-    //     setState(normal);
-    //     return "string error";
-    // }
-
-    // function stringGap(source, setState) {
-    //     if (source.eat('\\')) {
-    //         return switchState(source, setState, stringLiteral);
-    //     }
-    //     source.next();
-    //     setState(normal);
-    //     return "error";
-    // }
-
 
     var wellKnownWords = (function () {
         var wkw = {};
