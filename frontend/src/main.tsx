@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import './registerSW.ts'
 
 import init from 'sfl_wasm_lib';
 import * as wasm from 'sfl_wasm_lib';
