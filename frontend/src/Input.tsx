@@ -90,6 +90,16 @@ function Input({ editorValue, setEditorValue }: InputProps) {
                             lineNumbers: true,
                             tabSize: 2,
                             lineWrapping: true,
+                            smartIndent: false,
+                            electricChars: false,
+                            indentWithTabs: false,
+                            indentUnit: 2,
+
+                            extraKeys: {
+                                "Enter": function (cm) {
+                                    cm.replaceSelection("\n", "end"); // Insert a newline without auto-indenting
+                                }
+                            }
                         }
                     }
                     onBeforeChange={(_0, _1, value) => {
