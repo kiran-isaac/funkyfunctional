@@ -10,7 +10,7 @@ init().then(() => {
   wasm.my_init();
   createRoot(document.getElementById('root')!).render(
     <SettingsProvider>
-      <App />,
+      <App />
     </SettingsProvider >
   )
 });

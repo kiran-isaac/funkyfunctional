@@ -68,30 +68,33 @@ html {
 }
 
 #rhs {
-    width: calc(50% - 10px);
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
-    position: absolute;
-    right: 0;
-    top: 0;
+    width: 100%;
     padding-top: 5px;
     padding-bottom: 5px;
 }
 
-#lhs {
+div#separator1 {
     border-right: 1px solid rgba(255, 255, 255, 0.349);
-    position: absolute;
-    width: calc(50% - 10px);
+    cursor: col-resize;
+}
+
+div#separator2 {
+    cursor: col-resize;
+}
+
+#lhs {
+    /* border-right: 1px solid rgba(255, 255, 255, 0.349); */
     height: 100%;
+    width: calc(100% - 5px);
     padding-left: 5px;
-    padding-right: 5px;
 }
 
 .light #lhs {
     border-right: 1px solid rgba(0, 0, 0, 0.349);
 }
-
 
 @media only screen and (max-width: 1000px) {
     #lhs {

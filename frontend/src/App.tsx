@@ -20,6 +20,7 @@ function App() {
   const [selectedRcToStringHistory, setSelectedRcToStringHistory] = useState<string[]>([]);
   const [settingsIsVisible, setSettingsIsVisible] = useState(false);
   const [multiple, setMultiple] = useState(false);
+  const [lhsWidth, setLhsWidth] = useState(window.innerWidth / 2);
 
   const generateRCs = (ast: wasm.RawASTInfo, _multiple: boolean) => {
     try {
@@ -93,8 +94,26 @@ function App() {
     });
   }
 
+  const separatorDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const separatorDrag = (e: React.MouseEvent<HTMLDivElement>) => {
+    const newWidth = e.clientX; // Get the mouse position relative to the viewport
+    setLhsWidth(newWidth);
+    console.log(newWidth)
+    const container = document.getElementById('themeContainer');
+    container?.style.setProperty("grid-template-columns", `${newWidth} 7px 7px 1fr`);
+  };
+
+  const themeContainerStyle : React.CSSProperties = {
+    display: 'grid',
+    gridTemplateRows: '1fr',
+    gridTemplateColumns: `${lhsWidth}px 7px 7px 1fr`,
+  }
+
   return (
-    <div id="themeContainer" className={isLightTheme ? "dark" : 'light'}>
+    <div id="themeContainer" className={isLightTheme ? "dark" : 'light'} style={themeContainerStyle}>
       <SettingsMenu settingsIsVisible={settingsIsVisible} dismissSettings={() => setSettingsIsVisible(false)} />
       <div id="lhs">
         <div id="Title">
@@ -104,7 +123,7 @@ function App() {
             <a href='https://github.com/kiran-isaac' target='blank'>Kiran Sturt</a>
           </div>
         </div>
-        <div id="inputContainer">
+        <div id="inputContainer" draggable="true">
           <Input
             editorValue={editorValue}
             setEditorValue={setEditorValue}
@@ -118,6 +137,9 @@ function App() {
           />
         </div>
       </div>
+
+      <div id="separator1" onDragStart={separatorDragStart} onDrag={separatorDrag}></div>
+      <div id="separator2" onDragStart={separatorDragStart} onDrag={separatorDrag}></div>
 
       <div id="rhs">
         <div id="Spacer"></div>
