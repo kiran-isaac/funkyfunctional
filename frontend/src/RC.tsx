@@ -6,7 +6,7 @@ interface RCProp {
     laziest: boolean;
 }
 
-const RC: React.FC<RCProp> = ({ i, onClick, from, to, _ }) => {
+const RC: React.FC<RCProp> = ({ i, onClick, from, to }) => {
     return <><button 
         className="rc" 
         onClick={() => onClick(i)} 
