@@ -3,7 +3,7 @@ import { Controlled as CodeMirrorControllerd } from 'react-codemirror2';
 import { useEffect, useState } from "react";
 import "codemirror/lib/codemirror.css";
 import "codemirror/theme/monokai.css";
-import "./sfl_codemirror.js";
+// import "./sfl_codemirror.js";
 import * as wasm from "sfl_wasm_lib";
 
 function PreludeDropdown() {
@@ -64,14 +64,14 @@ function Input({ editorValue, setEditorValue }: InputProps) {
                         className="code-mirror-wrapper"
                         options={
                             {
-                                mode: "sfl",
+                                // mode: "sfl",
                                 theme: 'monokai',
                                 lineNumbers: true,
                                 tabSize: 2,
                                 lineWrapping: true,
                             }
                         }
-                        onBeforeChange={(_0, _1, value) => {
+                        onBeforeChange={(_0: unknown, _1: unknown, value : string) => {
                             localStorage.setItem("program", value.toString());
                             const e = document.getElementById("program_dropdown") as HTMLSelectElement;
                             e.value = "__local__"
