@@ -31,6 +31,8 @@ pub enum TokenType {
 
     LParen,
     RParen,
+    LSquare,
+    RSquare,
 
     Lambda,
 

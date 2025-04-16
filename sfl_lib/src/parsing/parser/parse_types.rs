@@ -13,7 +13,14 @@ impl Parser {
         loop {
             let t = self.peek(0)?;
             match t.tt {
-                TokenType::UppercaseId => {
+                TokenType::Bar => {
+                    self.advance();
+                }
+                TokenType::Newline | TokenType::EOF => {
+                    self.advance();
+                    break;
+                }
+                _ => {
                     let (constructor_name, constructor_params) =
                         self.parse_constructor(type_table, &bound_type_vars)?;
 
@@ -30,19 +37,6 @@ impl Parser {
 
                     constructors.insert(constructor_name, constructor_type);
                 }
-                TokenType::Bar => {
-                    self.advance();
-                }
-                TokenType::Newline | TokenType::EOF => {
-                    self.advance();
-                    break;
-                }
-                _ => {
-                    return Err(self.parse_error(format!(
-                        "Unexpected token during data declaration: {}",
-                        t.value
-                    )))
-                }
             }
         }
 
@@ -55,32 +49,45 @@ impl Parser {
         bound_type_vars: &HashSet<String>,
     ) -> Result<(String, Vec<Type>), ParserError> {
         let t = self.consume()?;
-        if t.tt != TokenType::UppercaseId {
-            return Err(self.parse_error(format!("Expected varient name, got {}", t.value)));
+        let mut constructor_name = String::new();
+
+        if t.tt = TokenType::UppercaseId {
+            // return Err(self.parse_error(format!("Expected varient name, got {}", t.value)));
+            constructor_name 
         }
-        let constructor_name = t.value;
+
+        
+
+        let mut is_cons = false;
 
         let mut constructor_params = vec![];
         loop {
-            let t = self.peek(0)?;
-            match t.tt {
+            let t2 = self.peek(0)?;
+            match t2.tt {
                 TokenType::Id => {
                     self.advance();
-                    if bound_type_vars.contains(&t.value) {
-                        constructor_params.push(Type::TypeVariable(t.value));
+
+                    // Special case for infix cons
+                    if &t2.value == ":" {
+                        constructor_params.insert(0, Type::TypeVariable(constructor_name));
+                        constructor_name = String::from(":");
+                    }
+
+                    if bound_type_vars.contains(&t2.value) {
+                        constructor_params.push(Type::TypeVariable(t2.value));
                     } else {
                         return Err(
-                            self.parse_error(format!("Unbound type parameter: {}", &t.value))
+                            self.parse_error(format!("Unbound type parameter: {}", &t2.value))
                         );
                     }
                 }
                 TokenType::UppercaseId => {
                     self.advance();
-                    if let Some(type_) = type_table.get(&t.value) {
+                    if let Some(type_) = type_table.get(&t2.value) {
                         constructor_params.push(type_.clone());
                     } else {
                         return Err(
-                            self.parse_error(format!("Unbound type parameter: {}", &t.value))
+                            self.parse_error(format!("Unbound type parameter: {}", &t2.value))
                         );
                     }
                 }
@@ -104,8 +111,13 @@ impl Parser {
         assert_eq!(self.consume()?.tt, TokenType::KWData);
 
         let t = self.consume()?;
+        let mut is_list = false;
         let name = match t.tt {
             TokenType::UppercaseId => t.value,
+            TokenType::LSquare => {
+                is_list = true;
+                "[]".to_string()
+            }
             TokenType::Id => {
                 return Err(self.parse_error(format!(
                     "Type IDs must begin with a capital letter. Got {}",
@@ -131,11 +143,21 @@ impl Parser {
             t = self.consume()?;
         }
 
-        if t.tt != TokenType::Assignment {
-            return Err(self.parse_error(format!(
-                "Expected \"=\" after data keyword, got {}",
-                t.value
-            )));
+        if is_list {
+            if t.tt != TokenType::RSquare {
+                return Err(self.parse_error(format!(
+                    "Expected \"=\" after data keyword, got {}",
+                    t.value
+                )));
+            }
+            t = self.consume()?;
+        } else {
+            if t.tt != TokenType::Assignment {
+                return Err(self.parse_error(format!(
+                    "Expected \"=\" after data keyword, got {}",
+                    t.value
+                )));
+            }
         }
 
         let union_type = Type::Union(

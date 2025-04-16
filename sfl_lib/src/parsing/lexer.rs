@@ -251,6 +251,20 @@ impl Lexer {
             'a'..='z' | '_' | '+' | '*' | '%' => self.parse_id(),
             'A'..='Z' => self.lex_type_id(),
             '0'..='9' => self.lex_num_lit(),
+            '[' => {
+                self.advance();
+                Ok(Token {
+                    tt: TokenType::LSquare,
+                    value: "[".to_string(),
+                })
+            }
+            ']' => {
+                self.advance();
+                Ok(Token {
+                    tt: TokenType::RSquare,
+                    value: "[".to_string(),
+                })
+            }
             '-' => match self.file[self.i + 1] {
                 '>' => {
                     self.advance();
@@ -262,7 +276,7 @@ impl Lexer {
                 }
                 '0'..='9' | '.' => self.lex_num_lit(),
                 _ => self.parse_id(),
-            },
+            }
             '.' => match self.file[self.i + 1] {
                 '0'..='9' => self.lex_num_lit(),
                 _ => {
@@ -326,7 +340,10 @@ impl Lexer {
                             value: "::".to_string(),
                         })
                     }
-                    _ => Err(self.error(format!("Unexpected char: {}", self.c()))),
+                    _ => Ok(Token {
+                        tt: TokenType::Id,
+                        value: ":".to_string(),
+                    }),
                 }
             }
             ',' => {

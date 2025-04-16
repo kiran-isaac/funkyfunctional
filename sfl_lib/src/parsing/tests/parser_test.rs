@@ -451,3 +451,11 @@ fn parse_match_fold() -> Result<(), ParserError> {
 
     Ok(())
 }
+
+#[test]
+fn list_adt() -> Result<(), ParserError> {
+    let str = "data [a] = a : [a] | []";
+        let mut parser = Parser::from_string(str.to_string());
+    let ast = parser.parse_module(false)?;
+    Ok(())
+}
