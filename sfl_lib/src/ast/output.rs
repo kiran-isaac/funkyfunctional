@@ -117,9 +117,17 @@ impl AST {
     pub fn to_string_sugar(&self, node: usize, show_assigned_types: bool) -> String {
         let n = self.get(node);
         match n.t {
-            ASTNodeType::Identifier => match &n.type_assignment {
-                Some(t) => format!("{} :: {}", n.get_value(), t.to_string()),
-                None => n.get_value(),
+            ASTNodeType::Identifier => {
+                let node_string = n.get_value();
+                let s =  match node_string.as_str() {
+                    "Cons" => ":",
+                    "Nil" => "[]",
+                    x => x
+                };
+                match &n.type_assignment {
+                    Some(t) => format!("{} :: {}", s, t.to_string()),
+                    None => s.to_string(),
+                }
             },
             ASTNodeType::Literal => {
                 format!("{}", n.get_value())
@@ -144,6 +152,9 @@ impl AST {
                 if let Some(tk) = &self.get(func).info {
                     if tk.is_infix_id() {
                         return format!("{} {}", arg_str, func_str);
+                    }
+                    if tk.value == "Cons" {
+                        return format!("{} :", arg_str);
                     }
                 }
 
@@ -374,11 +385,11 @@ impl AST {
                 }
 
                 let old_is_infix = match old_func.t {
-                    ASTNodeType::Identifier => old_func.info.clone().unwrap().is_infix_id(),
+                    ASTNodeType::Identifier => old_func.info.clone().unwrap().is_infix_id() || old_func.info.clone().unwrap().is_cons(),
                     _ => false,
                 };
                 let new_is_infix = match new_func.t {
-                    ASTNodeType::Identifier => new_func.info.clone().unwrap().is_infix_id(),
+                    ASTNodeType::Identifier => new_func.info.clone().unwrap().is_infix_id() || old_func.info.clone().unwrap().is_cons(),
                     _ => false,
                 };
 

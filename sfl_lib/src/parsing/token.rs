@@ -73,4 +73,11 @@ impl Token {
             _ => true,
         }
     }
+
+    pub fn is_cons(&self) -> bool {
+        if self.tt != TokenType::Id {
+            return false;
+        }
+        self.value.as_str() == "Cons"
+    }
 }
