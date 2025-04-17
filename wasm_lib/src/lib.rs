@@ -30,6 +30,19 @@ mod wasm_only {
     }
 
     #[wasm_bindgen]
+    impl RawASTInfo {
+        #[wasm_bindgen]
+        pub unsafe fn free(&self) {
+            if !self.ast.is_null() {
+                drop(Box::from_raw(self.ast));
+            }
+            if !self.lt.is_null() {
+                drop(Box::from_raw(self.lt));
+            }
+        }
+    }
+
+    #[wasm_bindgen]
     pub struct RawRC {
         pub from_str: *mut String,
         pub to_str: *mut String,

@@ -1,3 +1,4 @@
 {
-    "lldb-dap.executable-path": "/home/kiran/llvm-project/build-release/bin/lldb-dap"
+    "lldb-dap.executable-path": "/home/kiran/llvm-project/build-release/bin/lldb-dap",
+    "rust-analyzer.cargo.target": "wasm32-unknown-unknown",
 }
