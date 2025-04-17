@@ -39,7 +39,7 @@ fn type_error(msg: String, ast: &AST, expr: usize) -> TypeError {
     }
 }
 
-static MUST_ASSIGN: bool = false;
+static MUST_ASSIGN: bool = true;
 
 pub fn typecheck_tl_expr(expected: &Type, ast: &AST, expr: usize) -> Result<(), TypeError> {
     match check_type(
