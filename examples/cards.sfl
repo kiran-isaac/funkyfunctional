@@ -20,5 +20,11 @@ isBlack card = match card {
 	| _ -> true
 }
 
+myHand :: List Card
+myHand = Cons (Hearts, Num 10) (Cons (Diamonds, King) (Cons (Spades, Jack) Nil))
+
+getHandValue :: List Card -> Int
+getHandValue xs = sum $ map getValue xs
+
 main :: Int
-main = getValue (Hearts, Num 10)
+main = getHandValue myHand
