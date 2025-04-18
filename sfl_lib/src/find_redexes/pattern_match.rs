@@ -1,4 +1,4 @@
-use crate::{ASTNodeType, AST};
+use crate::{log, ASTNodeType, AST};
 use std::collections::HashMap;
 
 pub enum PatternMatchResult {
@@ -35,12 +35,16 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResu
     if pattern_n.t == ASTNodeType::Identifier {
         let pat_first_char = pattern_n.get_value().chars().nth(0).unwrap();
         match pat_first_char {
+            // Wildcard
             'a'..='z' => {
                 let mut map: HashMap<String, usize> = HashMap::new();
                 map.insert(pattern_n.get_value(), expr);
                 return Sucess(map);
             }
+            // Non binding wildcard
             '_' => return Sucess(HashMap::new()),
+
+            // Constructor
             'A'..='Z' => match expr_n.t {
                 ASTNodeType::Identifier => {
                     let expr_first_char = expr_n.get_value().chars().nth(0).unwrap();
@@ -57,9 +61,19 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResu
                         _ => return MoreEvalRequired,
                     }
                 }
-                ASTNodeType::Application => return MoreEvalRequired,
-                ASTNodeType::Literal => return Refute,
-                _ => unreachable!(),
+                ASTNodeType::Application => {
+                    let head_n = ast.get(ast.get_app_head(expr));
+                    // We can only refute if the head of our application is a constructor as that means
+                    // it will definitely not eval to this pattern  
+                    if head_n.is_constructor() {
+                        return Refute;
+                    } else {
+                        return MoreEvalRequired;
+                    }
+                },
+                ASTNodeType::Literal | ASTNodeType::Pair => return Refute,
+                ASTNodeType::Abstraction | ASTNodeType::Match  => return MoreEvalRequired,
+                _ => unreachable!("Not an expression")
             },
             _ => unreachable!(),
         }
