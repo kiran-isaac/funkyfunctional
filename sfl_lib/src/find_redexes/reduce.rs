@@ -1,3 +1,4 @@
+use super::pattern_match::PatternMatchResult;
 use super::*;
 use crate::find_redexes::pattern_match::pattern_match;
 use crate::functions::KnownTypeLabelTable;
@@ -312,23 +313,30 @@ pub fn find_single_redex_contraction_pair(
         ASTNodeType::Match => {
             let unpack_expr = ast.get_match_unpack_pattern(expr);
             for (pattern, pattern_expr) in ast.get_match_cases(expr) {
-                if let Some(bindings) = pattern_match(ast, unpack_expr, pattern) {
-                    let case_str = ast.to_string_sugar(pattern, false);
-                    let mut pat_expr_cloned = ast.clone_node(pattern_expr);
-                    for (var, replacement) in bindings {
-                        let replacement_appended = pat_expr_cloned.append(ast, replacement);
-                        let usages = pat_expr_cloned
-                            .get_all_free_instances_of_var_in_exp(pat_expr_cloned.root, &var);
-                        for usage in usages {
-                            pat_expr_cloned.replace_references_to_node(usage, replacement_appended);
+                let result = pattern_match(ast, unpack_expr, pattern);
+                match result {
+                    PatternMatchResult::Sucess(bindings) => {
+                        let case_str = ast.to_string_sugar(pattern, false);
+                        let mut pat_expr_cloned = ast.clone_node(pattern_expr);
+                        for (var, replacement) in bindings {
+                            let replacement_appended = pat_expr_cloned.append(ast, replacement);
+                            let usages = pat_expr_cloned
+                                .get_all_free_instances_of_var_in_exp(pat_expr_cloned.root, &var);
+                            for usage in usages {
+                                pat_expr_cloned.replace_references_to_node(usage, replacement_appended);
+                            }
                         }
+                        return Some(RCPair {
+                            from: expr,
+                            to: pat_expr_cloned.clone_node(pat_expr_cloned.root),
+                            msg_after: format!("Matched to pattern {}", case_str),
+                            msg_before: format!("Match to pattern {}", case_str),
+                        });
                     }
-                    return Some(RCPair {
-                        from: expr,
-                        to: pat_expr_cloned.clone_node(pat_expr_cloned.root),
-                        msg_after: format!("Matched to pattern {}", case_str),
-                        msg_before: format!("Match to pattern {}", case_str),
-                    });
+                    PatternMatchResult::MoreEvalRequired => {
+                        return find_single_redex_contraction_pair(ast, module, unpack_expr, lt);
+                    },
+                    PatternMatchResult::Refute => {}
                 }
             }
             find_single_redex_contraction_pair(ast, module, unpack_expr, lt)

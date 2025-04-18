@@ -89,3 +89,56 @@ fn pairs_wtf() {
 
     full_run_test(program, true);
 }
+#[test]
+fn pattern_match_sucks() {
+    let program = r#"
+    lenIsAtLeastTwo :: List a -> Bool
+    lenIsAtLeastTwo list = match list {
+        | Cons _ (Cons _ _) -> true
+        | _ -> false
+    }
+    
+    main :: Bool
+    main = match ((Cons 1) (take 1 (infiniteFrom 2))) {
+      | Cons _ (Cons _ _) -> true
+      | _ -> false
+    }
+    "#;
+    
+    let pr = Parser::from_string(program.to_string()).parse_module(true).unwrap();
+    let ast = pr.ast;
+    let lt = pr.lt;
+
+    let main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
+    let rc = find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt).unwrap();
+    println!("{:?}", rc.msg_before)
+}
+
+#[test]
+fn pattern_match_sucks2() {
+    let program = r#"
+    lenIsAtLeastTwo list = match list {
+        | Cons _ (Cons _ _) -> true
+        | _ -> false
+    }
+    
+    main = match (Cons 2 (infiniteFrom (2 + 1))) {
+      | Nil -> Nil
+      | Cons x xs -> if (1 > 0) (Cons x (take (1 - 1) xs)) Nil
+    }
+    
+    /*
+    match (Cons 1 (if (1 > 0) (Cons 2 (take (1 - 1) (infiniteFrom (2 + 1)))) Nil)) {
+      | Cons _ (Cons _ _) -> true
+      | _ -> false
+    }*/
+    "#;
+
+    let pr = Parser::from_string(program.to_string()).parse_module(true).unwrap();
+    let ast = pr.ast;
+    let lt = pr.lt;
+
+    let main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
+    let rc = find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt).unwrap();
+    println!("{:?}", rc.msg_before)
+}
