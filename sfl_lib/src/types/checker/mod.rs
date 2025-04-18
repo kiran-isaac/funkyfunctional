@@ -119,13 +119,18 @@ pub fn typecheck(
                     ));
                 }
 
-                c = c.append(ContextItem::TypeAssignment(
+                let c2 = c.append(ContextItem::TypeAssignment(
                     assign_var.clone(),
                     Err(type_error(format!("Cannot infer type of expression containing recursive call. Assign a type to label '{}'", &assign_var), ast, assign_expr)),
                 ));
-                let (t, _) = infer_type_with_context(c.clone(), &ast, assign_expr, type_map)?;
+                let (t, _) = infer_type_with_context(c2, &ast, assign_expr, type_map)?;
+                
                 let t = t.forall_ify();
-                ast.set_assignment_type(assign, t.clone());
+                c = c.append(ContextItem::TypeAssignment(
+                    assign_var.clone(),
+                    Ok(t.clone()),
+                ));
+                ast.set_assignment_type(assign, t);
             }
         };
     }

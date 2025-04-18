@@ -71,6 +71,9 @@ function App() {
     setMultiple(_multiple);
     try {
       const ast = wasm.parse(programInput, new ParseOptions(typecheckerEnabled, preludeEnable));
+      astHistory.forEach((ast) => {
+        ast.free();
+      });
       setAstHistory([ast]);
       generateRCs(ast, _multiple);
       setSelectedRcFromStringHistory([])

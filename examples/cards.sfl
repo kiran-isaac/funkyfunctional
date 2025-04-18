@@ -15,7 +15,7 @@ getValue card = match card {
 
 isBlack :: Card -> Bool
 isBlack card = match card {
-	| (Hearts, _) 		-> false
+	| (Hearts, _) 	-> false
   | (Diamonds, _) -> false
 	| _ -> true
 }
