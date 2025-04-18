@@ -184,15 +184,11 @@ mod wasm_only {
         let lt = &*info.lt;
         let module = ast.root;
 
-        log!("1");
-
         let main_assign = if let Some(main) = ast.get_assign_to(module, "main".to_string()) {
             main
         } else {
             return Box::into_raw(Box::new(vec![]));
         };
-
-        sfl_lib::log!("2");
 
         let main_expr = ast.get_assign_exp(main_assign);
 
@@ -200,7 +196,6 @@ mod wasm_only {
             if let Some(rc) =
                 find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt)
             {
-                log!("3");
                 let from_str = Box::into_raw(Box::new(ast.to_string_sugar(rc.from, false).clone()));
                 let to_str =
                     Box::into_raw(Box::new(rc.to.to_string_sugar(rc.to.root, false).clone()));

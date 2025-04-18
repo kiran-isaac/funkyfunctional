@@ -64,6 +64,13 @@ impl ASTNode {
             None => panic!("Cannot get value of node {:?}", self),
         }
     }
+    
+    pub fn is_constructor(&self) -> bool {
+        if self.t == ASTNodeType::Identifier {
+            return self.get_value().chars().nth(0).unwrap().is_uppercase();
+        }
+        false
+    }
 
     pub(super) fn new_lit(tk: Token, line: usize, col: usize) -> Self {
         ASTNode {

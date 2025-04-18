@@ -178,6 +178,15 @@ impl AST {
             }
         }
     }
+    
+    pub fn get_app_head(&self, expr: usize) -> usize {
+        match self.get(expr).t {
+            ASTNodeType::Application => {
+                self.get_app_head(self.get_func(expr))
+            },
+            _ => expr
+        }
+    }
 }
 
 impl Debug for AST {
