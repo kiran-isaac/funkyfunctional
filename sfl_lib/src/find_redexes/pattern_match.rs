@@ -1,4 +1,4 @@
-use crate::{log, ASTNodeType, AST};
+use crate::{ASTNodeType, AST};
 use std::collections::HashMap;
 
 pub enum PatternMatchResult {
