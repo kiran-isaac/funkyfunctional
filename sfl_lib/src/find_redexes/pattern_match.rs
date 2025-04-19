@@ -94,6 +94,7 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResu
         }
         (_, ASTNodeType::Application) => MoreEvalRequired,
         (ASTNodeType::Pair, ASTNodeType::Pair) => {
+            // TODO: fix this 
             let lhs = pattern_match(ast, ast.get_first(expr), ast.get_first(pattern));
             let rhs = pattern_match(ast, ast.get_second(expr), ast.get_second(pattern));
             match (lhs, rhs) {
@@ -105,17 +106,22 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResu
                 (Refute, _) | (_, Refute) => Refute,
             }
         }
-        (ASTNodeType::Literal, ASTNodeType::Literal) => {
-            if expr_n.get_lit_type() != pattern_n.get_lit_type() {
-                panic!("Not matching lit types, type checking must have failed")
-            }
-
-            if expr_n.get_value() == pattern_n.get_value() {
-                PatternMatchResult::Sucess(HashMap::new())
+        (ASTNodeType::Application, ASTNodeType::Pair) => {
+            // If the head is a constructor then refute
+            if ast.get(ast.get_app_head(expr)).is_constructor() {
+                Refute
             } else {
-                PatternMatchResult::Refute
+                MoreEvalRequired
             }
         }
-        _ => PatternMatchResult::Refute,
+        (ASTNodeType::Literal, ASTNodeType::Pair) => Refute,
+        (ASTNodeType::Literal, ASTNodeType::Literal) => {
+            if expr_n.get_value() == pattern_n.get_value() {
+                Sucess(HashMap::new())
+            } else {
+                Refute
+            }
+        }
+        _ => MoreEvalRequired,
     }
 }
