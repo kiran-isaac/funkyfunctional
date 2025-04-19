@@ -106,17 +106,26 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResu
                 (Refute, _) | (_, Refute) => Refute,
             }
         }
+        (ASTNodeType::Application, ASTNodeType::Pair) => {
+            // If the head is a constructor then refute
+            if ast.get(ast.get_app_head(expr)).is_constructor() {
+                Refute
+            } else {
+                MoreEvalRequired
+            }
+        }
+        (ASTNodeType::Literal, ASTNodeType::Pair) => Refute,
         (ASTNodeType::Literal, ASTNodeType::Literal) => {
             if expr_n.get_lit_type() != pattern_n.get_lit_type() {
                 panic!("Not matching lit types, type checking must have failed")
             }
 
             if expr_n.get_value() == pattern_n.get_value() {
-                PatternMatchResult::Sucess(HashMap::new())
+                Sucess(HashMap::new())
             } else {
-                PatternMatchResult::Refute
+                Refute
             }
         }
-        _ => PatternMatchResult::Refute,
+        _ => MoreEvalRequired,
     }
 }
