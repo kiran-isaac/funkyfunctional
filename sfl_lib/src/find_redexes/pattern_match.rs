@@ -94,6 +94,7 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResu
         }
         (_, ASTNodeType::Application) => MoreEvalRequired,
         (ASTNodeType::Pair, ASTNodeType::Pair) => {
+            // TODO: fix this 
             let lhs = pattern_match(ast, ast.get_first(expr), ast.get_first(pattern));
             let rhs = pattern_match(ast, ast.get_second(expr), ast.get_second(pattern));
             match (lhs, rhs) {
