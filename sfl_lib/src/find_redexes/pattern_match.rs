@@ -116,10 +116,6 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResu
         }
         (ASTNodeType::Literal, ASTNodeType::Pair) => Refute,
         (ASTNodeType::Literal, ASTNodeType::Literal) => {
-            if expr_n.get_lit_type() != pattern_n.get_lit_type() {
-                panic!("Not matching lit types, type checking must have failed")
-            }
-
             if expr_n.get_value() == pattern_n.get_value() {
                 Sucess(HashMap::new())
             } else {
