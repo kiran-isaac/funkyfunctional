@@ -312,7 +312,8 @@ pub fn find_single_redex_contraction_pair(
         }
         ASTNodeType::Match => {
             let unpack_expr = ast.get_match_unpack_pattern(expr);
-            for (pattern, pattern_expr) in ast.get_match_cases(expr) {
+            let mut refuted = vec![];
+            for (i, (pattern, pattern_expr)) in ast.get_match_cases(expr).into_iter().enumerate() {
                 let result = pattern_match(ast, unpack_expr, pattern);
                 match result {
                     PatternMatchResult::Sucess(bindings) => {
@@ -334,9 +335,29 @@ pub fn find_single_redex_contraction_pair(
                         });
                     }
                     PatternMatchResult::MoreEvalRequired => {
-                        return find_single_redex_contraction_pair(ast, module, unpack_expr, lt);
+                        // return if let Some(rc) = find_single_redex_contraction_pair(ast, module, unpack_expr, lt) {
+                        //     let mut match_cloned = ast.clone_node(expr);
+                        //     let match_expr = match_cloned.get_match_unpack_pattern(match_cloned.root);
+                        //     match_cloned.do_rc_subst(match_cloned.root, &RCPair {
+                        //         from: match_expr,
+                        //         to: rc.to,
+                        //         msg_after: String::new(),
+                        //         msg_before: String::new()
+                        //     });
+                        //     Some(RCPair {
+                        //         from: expr,
+                        //         to: match_cloned,
+                        //         msg_before: rc.msg_before + &format!(", and refute patterns {:?}. ", refuted),
+                        //         msg_after: rc.msg_after + &format!(", and refuted patterns {:?}. ", refuted),
+                        //     })
+                        // } else {
+                        //     None
+                        // }
+                        return find_single_redex_contraction_pair(ast, module, unpack_expr, lt)
                     },
-                    PatternMatchResult::Refute => {}
+                    PatternMatchResult::Refute => {
+                        refuted.push(i);
+                    }
                 }
             }
             find_single_redex_contraction_pair(ast, module, unpack_expr, lt)
