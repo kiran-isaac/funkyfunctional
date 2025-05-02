@@ -173,9 +173,7 @@ impl Parser {
                 | TokenType::EOF
                 | TokenType::Newline
                 | TokenType::DoubleColon
-                | TokenType::LBrace
-                | TokenType::Then
-                | TokenType::Else => {
+                | TokenType::LBrace => {
                     return Ok(left);
                 }
 

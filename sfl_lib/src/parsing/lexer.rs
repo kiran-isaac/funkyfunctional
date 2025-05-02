@@ -99,8 +99,6 @@ impl Lexer {
         let tt = match str.as_str() {
             "true" | "false" => TokenType::BoolLit,
             "match" => TokenType::Match,
-            "then" => TokenType::Then,
-            "else" => TokenType::Else,
             "forall" => TokenType::Forall,
             "type" => TokenType::KWType,
             "data" => TokenType::KWData,
