@@ -68,6 +68,22 @@ impl Context {
             next_placeholder_assignvar_i: 0,
         }
     }
+    
+    pub fn assigns_only(&self) -> Self {
+        let mut vec = vec![];
+        
+        for i in self.vec.iter() {
+            if let ContextItem::TypeAssignment(n, t) = i {
+                vec.push(i.clone());
+            }
+        }
+
+        Self {
+            vec,
+            next_exid: 0,
+            next_placeholder_assignvar_i: 0,
+        }
+    }
 
     pub fn append(&self, item: ContextItem) -> Self {
         let mut new = self.clone();
