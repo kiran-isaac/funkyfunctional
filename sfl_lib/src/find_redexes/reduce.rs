@@ -334,7 +334,7 @@ pub fn find_single_redex_contraction_pair(
                             msg_before: format!("Match to pattern {}", case_str),
                         });
                     }
-                    PatternMatchResult::MoreEvalRequired => {
+                    PatternMatchResult::Unknown => {
                         // return if let Some(rc) = find_single_redex_contraction_pair(ast, module, unpack_expr, lt) {
                         //     let mut match_cloned = ast.clone_node(expr);
                         //     let match_expr = match_cloned.get_match_unpack_pattern(match_cloned.root);

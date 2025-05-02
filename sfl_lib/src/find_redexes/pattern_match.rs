@@ -3,24 +3,12 @@ use std::collections::HashMap;
 
 pub enum PatternMatchResult {
     Refute,
+    // The bindings if successful
     Sucess(HashMap<String, usize>),
-    MoreEvalRequired,
+    Unknown,
 }
 
 use PatternMatchResult::*;
-
-// fn moreEvalIsRequired(ast: &AST, expr: usize, pattern: usize) -> bool {
-//     let expr_n = ast.get(expr);
-//     let pattern_n = ast.get(pattern); 
-
-//     match (expr_n.t, pattern_n.t) {
-//         (Literal, Literal) => false,
-//         (Identifier, Identifier) => {
-//             let expr_name = expr_n.get_value();
-//             let pat_
-//         }
-//     }
-// }
 
 /// Get if pattern is matched, and returns bindings
 pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResult {
@@ -58,7 +46,7 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResu
                             }
                         },
                         // If its not a constructor we cant resolve the pattern
-                        _ => return MoreEvalRequired,
+                        _ => return Unknown,
                     }
                 }
                 ASTNodeType::Application => {
@@ -68,11 +56,11 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResu
                     if head_n.is_constructor() {
                         return Refute;
                     } else {
-                        return MoreEvalRequired;
+                        return Unknown;
                     }
                 },
                 ASTNodeType::Literal | ASTNodeType::Pair => return Refute,
-                ASTNodeType::Abstraction | ASTNodeType::Match  => return MoreEvalRequired,
+                ASTNodeType::Abstraction | ASTNodeType::Match  => return Unknown,
                 _ => unreachable!("Not an expression")
             },
             _ => unreachable!(),
@@ -88,13 +76,12 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResu
                     lhs.extend(rhs);
                     Sucess(lhs)
                 }
-                (MoreEvalRequired, _) | (_, MoreEvalRequired) => MoreEvalRequired,
+                (Unknown, _) | (_, Unknown) => Unknown,
                 (Refute, _) | (_, Refute) => Refute,
             }
         }
-        (_, ASTNodeType::Application) => MoreEvalRequired,
+        (_, ASTNodeType::Application) => Unknown,
         (ASTNodeType::Pair, ASTNodeType::Pair) => {
-            // TODO: fix this 
             let lhs = pattern_match(ast, ast.get_first(expr), ast.get_first(pattern));
             let rhs = pattern_match(ast, ast.get_second(expr), ast.get_second(pattern));
             match (lhs, rhs) {
@@ -102,7 +89,7 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResu
                     lhs.extend(rhs);
                     Sucess(lhs)
                 }
-                (MoreEvalRequired, _) | (_, MoreEvalRequired) => MoreEvalRequired,
+                (Unknown, _) | (_, Unknown) => Unknown,
                 (Refute, _) | (_, Refute) => Refute,
             }
         }
@@ -111,7 +98,7 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResu
             if ast.get(ast.get_app_head(expr)).is_constructor() {
                 Refute
             } else {
-                MoreEvalRequired
+                Unknown
             }
         }
         (ASTNodeType::Literal, ASTNodeType::Pair) => Refute,
@@ -122,6 +109,6 @@ pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResu
                 Refute
             }
         }
-        _ => MoreEvalRequired,
+        _ => Unknown,
     }
 }
