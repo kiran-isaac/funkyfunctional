@@ -2,8 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-const isProd = process.env.NODE_ENV === 'production'
-
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -44,7 +42,7 @@ export default defineConfig({
       }
     })
   ],
-  base: isProd ? 'https://functional.kiransturt.co.uk' : '/',
+  base: '/',
   server: {
     fs: {
       strict: false,
