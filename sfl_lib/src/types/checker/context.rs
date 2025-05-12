@@ -58,7 +58,10 @@ impl Context {
 
         for (k, v) in labels.get_type_map() {
             if !yet_to_bind.contains(&k) {
-                vec.push(ContextItem::TypeAssignment(k.clone(), Ok(v.clone().unwrap())));
+                vec.push(ContextItem::TypeAssignment(
+                    k.clone(),
+                    Ok(v.clone().unwrap()),
+                ));
             }
         }
 
@@ -68,12 +71,12 @@ impl Context {
             next_placeholder_assignvar_i: 0,
         }
     }
-    
+
     pub fn assigns_only(&self) -> Self {
         let mut vec = vec![];
-        
+
         for i in self.vec.iter() {
-            if let ContextItem::TypeAssignment(n, t) = i {
+            if let ContextItem::TypeAssignment(_, _) = i {
                 vec.push(i.clone());
             }
         }

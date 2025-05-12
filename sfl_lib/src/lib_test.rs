@@ -1,7 +1,9 @@
 use super::*;
 
 fn full_run_test(program: &str, typechecked: bool) -> String {
-    let pr = Parser::from_string(program.to_string()).parse_module(true).unwrap();
+    let pr = Parser::from_string(program.to_string())
+        .parse_module(true)
+        .unwrap();
     let mut ast = pr.ast;
     let mut lt = pr.lt;
     let tm = pr.tm;
@@ -85,7 +87,6 @@ fn pairs_wtf() {
     main :: Coords
     main = add_scalar 10 (2, 3)
     "#;
-    
 
     full_run_test(program, true);
 }
@@ -104,8 +105,10 @@ fn pattern_match_sucks() {
       | _ -> false
     }
     "#;
-    
-    let pr = Parser::from_string(program.to_string()).parse_module(true).unwrap();
+
+    let pr = Parser::from_string(program.to_string())
+        .parse_module(true)
+        .unwrap();
     let ast = pr.ast;
     let lt = pr.lt;
 
@@ -134,7 +137,39 @@ fn pattern_match_sucks2() {
     }*/
     "#;
 
-    let pr = Parser::from_string(program.to_string()).parse_module(true).unwrap();
+    let pr = Parser::from_string(program.to_string())
+        .parse_module(true)
+        .unwrap();
+    let ast = pr.ast;
+    let lt = pr.lt;
+
+    let main_expr = ast.get_assign_exp(ast.get_main(ast.root).unwrap());
+    let rc = find_single_redex_contraction_pair(&ast, Some(ast.root), main_expr, &lt).unwrap();
+    println!("{:?}", rc.msg_before)
+}
+
+#[test]
+fn pairs_again() {
+    let program = r#"
+data Suit = Hearts | Clubs | Spades | Diamonds
+
+data Rank = Num Int | Jack | Queen | King | Ace
+
+type Card = (Suit, Rank)
+
+main :: Int
+main = match (Diamonds, King) {
+  | (_, Num n) 	-> n
+  | (_, Jack) 	-> 11
+  | (_, Queen) 	-> 12
+  | (_, King) 	-> 13
+  | (_, Ace) 		-> 14
+}
+    "#;
+
+    let pr = Parser::from_string(program.to_string())
+        .parse_module(true)
+        .unwrap();
     let ast = pr.ast;
     let lt = pr.lt;
 

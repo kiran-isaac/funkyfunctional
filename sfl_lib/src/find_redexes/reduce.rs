@@ -77,14 +77,13 @@ fn check_for_valid_call(
                             return None;
                         }
                     }
-                    
+
                     let argv_comma_str = comma_ify(argv_strs.iter().rev().cloned().collect());
                     if label.is_inbuilt() {
                         if literals_only {
                             Some(RCPair {
                                 from: expr,
-                                to: label
-                                    .call_inbuilt(f_node, argv),
+                                to: label.call_inbuilt(f_node, argv),
                                 msg_after: format!(
                                     "Applied inbuilt {} to {}",
                                     name, &argv_comma_str
@@ -109,10 +108,13 @@ fn check_for_valid_call(
                         if ast.get_n_abstr_vars(assign_exp, argv.len()).len() != argv.len() {
                             return None;
                         }
-                        
+
                         #[cfg(debug_assertions)]
-                        let _n_abstr_vars_strs = n_args.iter().map(|a| ast.to_string_sugar(*a, false)).collect::<Vec<_>>();
-                        
+                        let _n_abstr_vars_strs = n_args
+                            .iter()
+                            .map(|a| ast.to_string_sugar(*a, false))
+                            .collect::<Vec<_>>();
+
                         // Stop it being a ready call when a pair is expected but we dont have it
                         for i in 0..argv.len() {
                             let _cmp_pair = (&argv[i].t, &ast.get(n_args[i]).t);
@@ -316,7 +318,7 @@ pub fn find_single_redex_contraction_pair(
             for (i, (pattern, pattern_expr)) in ast.get_match_cases(expr).into_iter().enumerate() {
                 let result = pattern_match(ast, unpack_expr, pattern);
                 match result {
-                    PatternMatchResult::Sucess(bindings) => {
+                    PatternMatchResult::Success(bindings) => {
                         let case_str = ast.to_string_sugar(pattern, false);
                         let mut pat_expr_cloned = ast.clone_node(pattern_expr);
                         for (var, replacement) in bindings {
@@ -324,7 +326,8 @@ pub fn find_single_redex_contraction_pair(
                             let usages = pat_expr_cloned
                                 .get_all_free_instances_of_var_in_exp(pat_expr_cloned.root, &var);
                             for usage in usages {
-                                pat_expr_cloned.replace_references_to_node(usage, replacement_appended);
+                                pat_expr_cloned
+                                    .replace_references_to_node(usage, replacement_appended);
                             }
                         }
                         return Some(RCPair {
@@ -353,8 +356,8 @@ pub fn find_single_redex_contraction_pair(
                         // } else {
                         //     None
                         // }
-                        return find_single_redex_contraction_pair(ast, module, unpack_expr, lt)
-                    },
+                        return find_single_redex_contraction_pair(ast, module, unpack_expr, lt);
+                    }
                     PatternMatchResult::Refute => {
                         refuted.push(i);
                     }

@@ -8,9 +8,11 @@ interface RCProp {
 }
 
 const RC: React.FC<RCProp> = ({ i, text, onClick, from, to, msg }) => {
+    const isFirst = i == 1;
     if (!text) {
         return <><button
             className="rc single"
+            id={isFirst ? "" : "first_button"}
             onClick={() => onClick(i)}
         >
             <div></div>
@@ -20,6 +22,7 @@ const RC: React.FC<RCProp> = ({ i, text, onClick, from, to, msg }) => {
     } else {
         return <><button
             className="rc multiple"
+            id={isFirst ? "" : "first_button"}
             onClick={() => onClick(i)}
         >
             <div className="from">

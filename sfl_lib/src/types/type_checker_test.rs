@@ -358,5 +358,6 @@ fn tests_for_diss() -> Result<(), TypeError> {
     tc_test_should_pass_no_prelude(
         r#"
     plus a b = a + b
-    "#)
+    "#,
+    )
 }
