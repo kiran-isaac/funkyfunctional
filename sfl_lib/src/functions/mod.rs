@@ -57,16 +57,19 @@ impl KnownTypeLabelTable {
         s.populate_inbuilts();
         s
     }
-    
+
     pub fn get_type_map(&self) -> HashMap<String, Option<Type>> {
-        self.func_map.iter().map(| (name, label) | (name.clone(), label.label_type.clone())).collect()
+        self.func_map
+            .iter()
+            .map(|(name, label)| (name.clone(), label.label_type.clone()))
+            .collect()
     }
 
     pub fn get_type(&self, name: &str) -> Option<Option<Type>> {
         if let Some(label) = self.get(&name.to_string()) {
             Some(label.label_type.clone())
         } else {
-            None   
+            None
         }
     }
 
@@ -101,7 +104,7 @@ impl KnownTypeLabelTable {
             },
         );
     }
-    
+
     pub fn add_no_type(&mut self, name: String) {
         self.func_map.insert(
             name,
@@ -112,7 +115,7 @@ impl KnownTypeLabelTable {
             },
         );
     }
-    
+
     pub fn consume_from_module(&mut self, ast: &AST, module: usize) -> Result<(), TypeError> {
         for (name, assign) in ast.get_assigns_map(module) {
             let ass_n = &ast.get(assign);
@@ -335,7 +338,7 @@ impl KnownTypeLabelTable {
     pub fn get_starting_bindings_map() -> Vec<String> {
         let mut bindings = vec![];
         for inbuilt in &KnownTypeLabelTable::new().func_map {
-                bindings.push(inbuilt.0.clone());
+            bindings.push(inbuilt.0.clone());
         }
 
         bindings
@@ -349,7 +352,6 @@ impl KnownTypeLabelTable {
                 continue;
             }
             type_map.insert(name.clone(), inbuilt.label_type.clone());
-        
         }
 
         type_map

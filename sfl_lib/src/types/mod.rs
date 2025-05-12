@@ -151,7 +151,10 @@ impl Type {
             unfulfilled_vars.push(v);
             i = inner;
             if let Type::Union(n, _) = i {
-                return Err(format!("Incomplete union type {n}: Type variables {:?} not fulfilled", unfulfilled_vars))
+                return Err(format!(
+                    "Incomplete union type {n}: Type variables {:?} not fulfilled",
+                    unfulfilled_vars
+                ));
             }
         }
         if !unfulfilled_vars.is_empty() {

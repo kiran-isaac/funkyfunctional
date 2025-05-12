@@ -54,6 +54,28 @@ const ASTHistory = ({ astHistory, resetTo, rcFromHistory, rcToHistory }: ASTHist
 
     astLIs.push(<li className='expr_history' key={0}><pre>{wasm.main_to_string(astHistory[0])}</pre></li>);
 
+    const listener = (e: KeyboardEvent) => {
+        const quickProgress = () =>         {
+            const button = document.getElementById("first_button");
+            if (button == null) {
+                return
+            }
+            button.click();
+        };
+        switch (e.key) {
+        case "ArrowLeft":
+            if (astHistory.length > 1) {
+                resetTo(astHistory.length - 1);
+            }
+            break;
+        case "ArrowRight":
+            quickProgress();
+            break;
+        }
+    };
+
+    document.addEventListener("keydown", listener, {once: true});
+
     return (
         <div id="ASTHistoryWrapper">
             <table id="ASTHistory">

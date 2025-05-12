@@ -8,9 +8,6 @@ pub enum TokenType {
     Id,
     UppercaseId,
 
-    Then,
-    Else,
-
     Match,
     LBrace,
     RBrace,
@@ -26,8 +23,6 @@ pub enum TokenType {
     Forall,
     KWType,
     KWData,
-
-    Silence, // @
 
     LParen,
     RParen,

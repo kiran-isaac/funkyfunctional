@@ -261,7 +261,10 @@ fn data_decl() -> Result<(), ParserError> {
         format!("{}", lt.get_type("Some").unwrap().unwrap()),
         "∀a. a -> Maybe a"
     );
-    assert_eq!(format!("{}", lt.get_type("None").unwrap().unwrap()), "∀a. Maybe a");
+    assert_eq!(
+        format!("{}", lt.get_type("None").unwrap().unwrap()),
+        "∀a. Maybe a"
+    );
     assert_eq!(
         format!("{}", tm.types.get("Maybe").unwrap().to_string()),
         "∀a. Maybe a"
@@ -281,7 +284,10 @@ fn data_decl2() -> Result<(), ParserError> {
         format!("{}", lt.get_type("Some").unwrap().unwrap()),
         "∀a. a -> Maybe a"
     );
-    assert_eq!(format!("{}", lt.get_type("None").unwrap().unwrap()), "∀a. Maybe a");
+    assert_eq!(
+        format!("{}", lt.get_type("None").unwrap().unwrap()),
+        "∀a. Maybe a"
+    );
     assert_eq!(
         format!("{}", lt.get_type("Bingus").unwrap().unwrap()),
         "∀maybevar. Maybe maybevar -> DataTest maybevar"
@@ -309,7 +315,10 @@ fn list_decl() -> Result<(), ParserError> {
         format!("{}", lt.get_type("Cons").unwrap().unwrap()),
         "∀a. a -> List a -> List a"
     );
-    assert_eq!(format!("{}", lt.get_type("Nil").unwrap().unwrap()), "∀a. List a");
+    assert_eq!(
+        format!("{}", lt.get_type("Nil").unwrap().unwrap()),
+        "∀a. List a"
+    );
     assert_eq!(
         format!("{}", tm.types.get("List").unwrap().to_string()),
         "∀a. List a"

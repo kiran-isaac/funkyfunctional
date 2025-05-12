@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import {useCallback, useState} from 'react'
 import Input from './Input'
 import * as wasm from 'sfl_wasm_lib'
 import './App.css'
@@ -88,13 +88,13 @@ function App() {
     }
   };
 
-  const resetTo = (n: number) => {
+  const resetTo = useCallback((n: number) => {
     setAstHistory((prevAstHistory) => {
       const new_slice = prevAstHistory.slice(0, n);
       generateRCs(new_slice[new_slice.length - 1], multiple);
       return new_slice
     });
-  }
+  }, [generateRCs, multiple])
 
   return (
     <div id="themeContainer" className={isLightTheme ? "light" : 'dark'}>

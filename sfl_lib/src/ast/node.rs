@@ -64,8 +64,8 @@ impl ASTNode {
             None => panic!("Cannot get value of node {:?}", self),
         }
     }
-    
-    pub fn is_constructor(&self) -> bool {
+
+    pub fn is_uppercase(&self) -> bool {
         if self.t == ASTNodeType::Identifier {
             return self.get_value().chars().nth(0).unwrap().is_uppercase();
         }

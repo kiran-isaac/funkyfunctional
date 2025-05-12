@@ -108,7 +108,8 @@ pub fn typecheck(
                     assign_var.clone(),
                     Ok(type_assignment.clone()),
                 ));
-                c = check_type(c, &type_assignment, ast, assign_expr, type_map, false)?;
+                c = check_type(c, &type_assignment, ast, assign_expr, type_map, false)?
+                    .assigns_only();
             }
             None => {
                 if MUST_ASSIGN {
@@ -124,9 +125,9 @@ pub fn typecheck(
                     Err(type_error(format!("Cannot infer type of expression containing recursive call. Assign a type to label '{}'", &assign_var), ast, assign_expr)),
                 ));
                 let (t, _) = infer_type_with_context(c2, &ast, assign_expr, type_map)?;
-                
+
                 let t = t.forall_ify();
-                c = c.append(ContextItem::TypeAssignment(
+                c = c.assigns_only().append(ContextItem::TypeAssignment(
                     assign_var.clone(),
                     Ok(t.clone()),
                 ));

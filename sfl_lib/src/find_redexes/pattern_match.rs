@@ -3,125 +3,199 @@ use std::collections::HashMap;
 
 pub enum PatternMatchResult {
     Refute,
-    Sucess(HashMap<String, usize>),
-    MoreEvalRequired,
+    // The bindings if successful
+    Success(HashMap<String, usize>),
+    Unknown,
 }
 
 use PatternMatchResult::*;
 
-// fn moreEvalIsRequired(ast: &AST, expr: usize, pattern: usize) -> bool {
-//     let expr_n = ast.get(expr);
-//     let pattern_n = ast.get(pattern); 
-
-//     match (expr_n.t, pattern_n.t) {
-//         (Literal, Literal) => false,
-//         (Identifier, Identifier) => {
-//             let expr_name = expr_n.get_value();
-//             let pat_
-//         }
-//     }
-// }
-
-/// Get if pattern is matched, and returns bindings
-pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResult {
+fn match_against_app(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResult {
     let expr_n = ast.get(expr);
     let pattern_n = ast.get(pattern);
-    
+
     #[cfg(debug_assertions)]
     let _expr_str = ast.to_string_sugar(expr, false);
     #[cfg(debug_assertions)]
     let _pat_str = ast.to_string_sugar(pattern, false);
-    
-    if pattern_n.t == ASTNodeType::Identifier {
-        let pat_first_char = pattern_n.get_value().chars().nth(0).unwrap();
-        match pat_first_char {
-            // Wildcard
-            'a'..='z' => {
-                let mut map: HashMap<String, usize> = HashMap::new();
-                map.insert(pattern_n.get_value(), expr);
-                return Sucess(map);
-            }
-            // Non binding wildcard
-            '_' => return Sucess(HashMap::new()),
 
-            // Constructor
-            'A'..='Z' => match expr_n.t {
-                ASTNodeType::Identifier => {
-                    let expr_first_char = expr_n.get_value().chars().nth(0).unwrap();
-                    match expr_first_char {
-                        'A'..='Z' => {
-                            // If its another constructor, then we can refute the pattern
-                            return if expr_n.get_value() == pattern_n.get_value() {
-                                Sucess(HashMap::new())
-                            } else {
-                                Refute
-                            }
-                        },
-                        // If its not a constructor we cant resolve the pattern
-                        _ => return MoreEvalRequired,
-                    }
-                }
-                ASTNodeType::Application => {
-                    let head_n = ast.get(ast.get_app_head(expr));
-                    // We can only refute if the head of our application is a constructor as that means
-                    // it will definitely not eval to this pattern  
-                    if head_n.is_constructor() {
-                        return Refute;
-                    } else {
-                        return MoreEvalRequired;
-                    }
-                },
-                ASTNodeType::Literal | ASTNodeType::Pair => return Refute,
-                ASTNodeType::Abstraction | ASTNodeType::Match  => return MoreEvalRequired,
-                _ => unreachable!("Not an expression")
-            },
-            _ => unreachable!(),
-        }
-    }
+    assert_eq!(pattern_n.t, ASTNodeType::Application);
 
-    match (expr_n.t, pattern_n.t) {
-        (ASTNodeType::Application, ASTNodeType::Application) => {
+    match expr_n.t {
+        ASTNodeType::Application => {
             let lhs = pattern_match(ast, ast.get_func(expr), ast.get_func(pattern));
             let rhs = pattern_match(ast, ast.get_arg(expr), ast.get_arg(pattern));
             match (lhs, rhs) {
-                (Sucess(mut lhs), Sucess(rhs)) => {
+                (Success(mut lhs), Success(rhs)) => {
                     lhs.extend(rhs);
-                    Sucess(lhs)
+                    Success(lhs)
                 }
-                (MoreEvalRequired, _) | (_, MoreEvalRequired) => MoreEvalRequired,
+                (Unknown, _) | (_, Unknown) => Unknown,
                 (Refute, _) | (_, Refute) => Refute,
             }
         }
-        (_, ASTNodeType::Application) => MoreEvalRequired,
-        (ASTNodeType::Pair, ASTNodeType::Pair) => {
-            // TODO: fix this 
+        ASTNodeType::Pair | ASTNodeType::Literal | ASTNodeType::Abstraction => Refute,
+        ASTNodeType::Identifier => {
+            if expr_n.is_uppercase() {
+                Refute
+            } else {
+                Unknown
+            }
+        }
+        ASTNodeType::Match => Unknown,
+        _ => unreachable!(),
+    }
+}
+
+fn match_against_pair(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResult {
+    let expr_n = ast.get(expr);
+    let pattern_n = ast.get(pattern);
+
+    #[cfg(debug_assertions)]
+    let _expr_str = ast.to_string_sugar(expr, false);
+    #[cfg(debug_assertions)]
+    let _pat_str = ast.to_string_sugar(pattern, false);
+
+    assert_eq!(pattern_n.t, ASTNodeType::Pair);
+
+    match expr_n.t {
+        ASTNodeType::Application => {
+            // If the head is a constructor then refute
+            if ast.get(ast.get_app_head(expr)).is_uppercase() {
+                Refute
+            } else {
+                Unknown
+            }
+        }
+        ASTNodeType::Pair => {
             let lhs = pattern_match(ast, ast.get_first(expr), ast.get_first(pattern));
             let rhs = pattern_match(ast, ast.get_second(expr), ast.get_second(pattern));
             match (lhs, rhs) {
-                (Sucess(mut lhs), Sucess(rhs)) => {
+                (Success(mut lhs), Success(rhs)) => {
                     lhs.extend(rhs);
-                    Sucess(lhs)
+                    Success(lhs)
                 }
-                (MoreEvalRequired, _) | (_, MoreEvalRequired) => MoreEvalRequired,
+                (Unknown, _) | (_, Unknown) => Unknown,
                 (Refute, _) | (_, Refute) => Refute,
             }
         }
-        (ASTNodeType::Application, ASTNodeType::Pair) => {
+        ASTNodeType::Identifier => {
+            if expr_n.is_uppercase() {
+                Refute
+            } else {
+                Unknown
+            }
+        }
+        ASTNodeType::Literal | ASTNodeType::Abstraction => Refute,
+        ASTNodeType::Match => Unknown,
+        _ => unreachable!(),
+    }
+}
+
+fn match_against_literal(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResult {
+    let expr_n = ast.get(expr);
+    let pattern_n = ast.get(pattern);
+
+    #[cfg(debug_assertions)]
+    let _expr_str = ast.to_string_sugar(expr, false);
+    #[cfg(debug_assertions)]
+    let _pat_str = ast.to_string_sugar(pattern, false);
+
+    assert_eq!(pattern_n.t, ASTNodeType::Literal);
+
+    match expr_n.t {
+        ASTNodeType::Application => {
             // If the head is a constructor then refute
-            if ast.get(ast.get_app_head(expr)).is_constructor() {
+            if ast.get(ast.get_app_head(expr)).is_uppercase() {
                 Refute
             } else {
-                MoreEvalRequired
+                Unknown
             }
         }
-        (ASTNodeType::Literal, ASTNodeType::Pair) => Refute,
-        (ASTNodeType::Literal, ASTNodeType::Literal) => {
+        ASTNodeType::Literal => {
             if expr_n.get_value() == pattern_n.get_value() {
-                Sucess(HashMap::new())
+                Success(HashMap::new())
             } else {
                 Refute
             }
         }
-        _ => MoreEvalRequired,
+        ASTNodeType::Identifier => {
+            if expr_n.is_uppercase() {
+                Refute
+            } else {
+                Unknown
+            }
+        }
+        ASTNodeType::Abstraction | ASTNodeType::Pair => Refute,
+        ASTNodeType::Match => Unknown,
+        _ => unreachable!(),
+    }
+}
+
+fn match_against_identifier(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResult {
+    let expr_n = ast.get(expr);
+    let pattern_n = ast.get(pattern);
+
+    #[cfg(debug_assertions)]
+    let _expr_str = ast.to_string_sugar(expr, false);
+    #[cfg(debug_assertions)]
+    let _pat_str = ast.to_string_sugar(pattern, false);
+
+    assert_eq!(pattern_n.t, ASTNodeType::Identifier);
+
+    let pat_first_char = pattern_n.get_value().chars().nth(0).unwrap();
+    match pat_first_char {
+        // Wildcard
+        'a'..='z' => {
+            let mut map: HashMap<String, usize> = HashMap::new();
+            map.insert(pattern_n.get_value(), expr);
+            return Success(map);
+        }
+        // Non binding wildcard
+        '_' => return Success(HashMap::new()),
+
+        // Constructor
+        'A'..='Z' => match expr_n.t {
+            ASTNodeType::Identifier => {
+                let expr_first_char = expr_n.get_value().chars().nth(0).unwrap();
+                match expr_first_char {
+                    'A'..='Z' => {
+                        // If its another constructor, then we can refute the pattern
+                        if expr_n.get_value() == pattern_n.get_value() {
+                            Success(HashMap::new())
+                        } else {
+                            Refute
+                        }
+                    }
+                    // If its not a constructor we cant resolve the pattern
+                    _ => Unknown,
+                }
+            }
+            ASTNodeType::Application => {
+                let head_n = ast.get(ast.get_app_head(expr));
+                // We can only refute if the head of our application is a constructor as that means
+                // it will definitely not eval to this pattern
+                if head_n.is_uppercase() {
+                    Refute
+                } else {
+                    Unknown
+                }
+            }
+            ASTNodeType::Literal | ASTNodeType::Pair | ASTNodeType::Abstraction => Refute,
+            ASTNodeType::Match => Unknown,
+            _ => unreachable!("Not an expression"),
+        },
+        _ => unreachable!("invalid first char"),
+    }
+}
+
+/// Get if pattern is matched, and returns bindings
+pub fn pattern_match(ast: &AST, expr: usize, pattern: usize) -> PatternMatchResult {
+    match ast.get(pattern).t {
+        ASTNodeType::Identifier => match_against_identifier(ast, expr, pattern),
+        ASTNodeType::Application => match_against_app(ast, expr, pattern),
+        ASTNodeType::Pair => match_against_pair(ast, expr, pattern),
+        ASTNodeType::Literal => match_against_literal(ast, expr, pattern),
+        _ => unreachable!(),
     }
 }

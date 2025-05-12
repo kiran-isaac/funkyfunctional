@@ -2,8 +2,8 @@ mod utils;
 
 #[cfg(target_arch = "wasm32")]
 mod wasm_only {
-    use sfl_lib::*;
     use super::utils::*;
+    use sfl_lib::*;
 
     use std::collections::BTreeMap;
     use wasm_bindgen::prelude::*;
@@ -18,7 +18,7 @@ mod wasm_only {
     impl ParseOptions {
         #[wasm_bindgen(constructor)]
         pub fn new(typed: bool, prelude: bool) -> Self {
-            ParseOptions {typed, prelude}
+            ParseOptions { typed, prelude }
         }
     }
 
