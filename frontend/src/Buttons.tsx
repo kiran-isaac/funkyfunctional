@@ -5,7 +5,7 @@ const eg_programs = import.meta.glob("./../../examples/*", {
     import: 'default',
 });
 
-const default_program = "square_sum";
+const default_program = "cards";
 
 function ProgramDropdown({ setEditorValue }: { setEditorValue: (x: string) => void }) {
     const [egProgramsMap, setEgProgramsMap] = useState<Map<string, string>>(new Map());
